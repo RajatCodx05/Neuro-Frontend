@@ -62,7 +62,7 @@ export default function Landing() {
     <AppShell>
       <div className="relative overflow-x-clip">
       {/* HERO */}
-      <section className="relative isolate pt-16 pb-20 sm:pt-24 sm:pb-28">
+      <section className="relative isolate pt-16 pb-20 sm:pt-24 sm:pb-28" style={{ paddingBottom: "calc(5rem + 1px)" }}>
         <NeuralBackground />
         <div className="relative mx-auto max-w-7xl px-6">
           <motion.div
@@ -137,10 +137,12 @@ export default function Landing() {
 
           </motion.div>
         </div>
+        {/* Seamless fade into stats section */}
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-[oklch(0.15_0.028_255)]" style={{ zIndex: 1 }} />
       </section>
 
       {/* STATS */}
-      <section className="relative border-y border-white/5 bg-[oklch(0.15_0.028_255)]/60 py-16">
+      <section className="relative border-b border-white/5 bg-[oklch(0.15_0.028_255)] py-16">
         <div className="mx-auto max-w-7xl px-6">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             {stats.map((s) => (
