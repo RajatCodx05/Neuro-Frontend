@@ -31,8 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // On mount: ask the Node backend if there is an active session (cookie-based).
     // No subscription needed — httpOnly cookies don't push events.
-    api.auth
-      .me()
+    const loadSession = () => api.auth.me()
       .then(async (u) => {
         setUser(u);
         await loadProfile();
@@ -42,6 +41,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
       })
       .finally(() => setLoading(false));
+    void loadSession();
+    window.addEventListener("neuro-auth-changed", loadSession);
+    return () => window.removeEventListener("neuro-auth-changed", loadSession);
   }, []);
 
   const refreshProfile = async () => {

@@ -2,216 +2,148 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { z } from "zod";
 import { Brain, Eye, EyeOff, Loader2 } from "lucide-react";
-import { api, demoGoogleSignIn } from "@/lib/api-client";
+import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
-  validateSearch: (s: Record<string, unknown>) => ({
-    redirect: typeof s.redirect === "string" ? s.redirect : undefined,
-    mode: (s.mode === "signup" ? "signup" : "login") as "signup" | "login",
-  }),
+  validateSearch: (s: Record<string, unknown>) => ({ redirect: typeof s.redirect === "string" ? s.redirect : undefined, mode: (s.mode === "signup" ? "signup" : "login") as "signup" | "login" }),
   component: AuthPage,
 });
 
-const loginSchema = z.object({
-  email: z.string().trim().email("Enter a valid email").max(255),
-  password: z.string().min(6, "Password must be at least 6 characters").max(72),
-});
+const loginSchema = z.object({ email: z.string().trim().email("Enter a valid email").max(255), password: z.string().min(6, "Password must be at least 6 characters").max(72) });
+const signupSchema = z.object({ fullName: z.string().trim().min(1, "Full name is required").max(100), email: z.string().trim().email("Enter a valid email").max(255), phone: z.string().trim().min(5, "Phone is required").max(30), password: z.string().min(6, "Password must be at least 6 characters").max(72), confirmPassword: z.string() }).refine((d) => d.password === d.confirmPassword, { message: "Passwords do not match", path: ["confirmPassword"] });
 
-const signupSchema = z.object({
-  fullName: z.string().trim().min(1, "Full name is required").max(100),
-  email: z.string().trim().email("Enter a valid email").max(255),
-  phone: z.string().trim().min(5, "Phone is required").max(30),
-  password: z.string().min(6, "Password must be at least 6 characters").max(72),
-  confirmPassword: z.string(),
-}).refine((d) => d.password === d.confirmPassword, {
-  message: "Passwords do not match", path: ["confirmPassword"],
-});
+type GoogleCredentialResponse = { credential: string };
+type GoogleIdentity = {
+  accounts: {
+    id: {
+      initialize: (config: { client_id: string; callback: (response: GoogleCredentialResponse) => void; ux_mode?: string; context?: string }) => void;
+      renderButton: (parent: HTMLElement, options: { theme?: string; size?: string; width?: number; text?: string; shape?: string }) => void;
+      prompt: () => void;
+    };
+  };
+};
+
+declare global { interface Window { google?: GoogleIdentity } }
+
+function loadGoogleIdentity(): Promise<GoogleIdentity> {
+  if (window.google) return Promise.resolve(window.google);
+  return new Promise<GoogleIdentity>((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>('script[src="https://accounts.google.com/gsi/client"]');
+    const script = existing ?? document.createElement("script");
+    const onLoad = () => (window.google ? resolve(window.google) : reject(new Error("Google Sign-In did not load.")));
+    script.addEventListener("load", onLoad, { once: true });
+    script.addEventListener("error", () => reject(new Error("Google Sign-In could not be loaded. Check your internet connection.")), { once: true });
+    if (!existing) { script.src = "https://accounts.google.com/gsi/client"; script.async = true; document.head.appendChild(script); }
+    else if (window.google) resolve(window.google);
+  });
+}
 
 function AuthPage() {
-  const search = Route.useSearch();
-  const navigate = useNavigate();
+  const search = Route.useSearch(); const navigate = useNavigate();
   const [mode, setMode] = useState<"login" | "signup">(search.mode);
-  const [loading, setLoading] = useState(false);
-  const [showPw, setShowPw] = useState(false);
-
-  const redirectTo = (path?: string) => {
-    const target = path && path.startsWith("/") ? path : "/";
-    navigate({ to: target, replace: true });
-  };
+  const [loading, setLoading] = useState(false); const [showPw, setShowPw] = useState(false);
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
+  const redirectTo = (path?: string) => navigate({ to: path?.startsWith("/") ? path : "/", replace: true });
 
   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    const parsed = loginSchema.safeParse({
-      email: form.get("email"), password: form.get("password"),
-    });
-    if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
-    setLoading(true);
-    try {
-      await api.auth.login(parsed.data.email, parsed.data.password);
-      toast.success("Welcome back");
-      redirectTo(search.redirect);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Login failed");
-    } finally {
-      setLoading(false);
-    }
+    e.preventDefault(); const form = new FormData(e.currentTarget); const parsed = loginSchema.safeParse({ email: form.get("email"), password: form.get("password") });
+    if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; } setLoading(true);
+    try { await api.auth.login(parsed.data.email, parsed.data.password); toast.success("Welcome back"); redirectTo(search.redirect); }
+    catch (err) {
+      const message = err instanceof Error ? err.message : "Login failed";
+      if (message === "Please verify your email before logging in.") setPendingVerificationEmail(parsed.data.email);
+      toast.error(message);
+    } finally { setLoading(false); }
   };
-
   const handleSignup = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    const parsed = signupSchema.safeParse({
-      fullName: form.get("fullName"),
-      email: form.get("email"),
-      phone: form.get("phone"),
-      password: form.get("password"),
-      confirmPassword: form.get("confirmPassword"),
-    });
-    if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
+    e.preventDefault(); const form = new FormData(e.currentTarget); const parsed = signupSchema.safeParse({ fullName: form.get("fullName"), email: form.get("email"), phone: form.get("phone"), password: form.get("password"), confirmPassword: form.get("confirmPassword") });
+    if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; } setLoading(true);
+    try { await api.auth.signup({ email: parsed.data.email, password: parsed.data.password, full_name: parsed.data.fullName, phone: parsed.data.phone }); setPendingVerificationEmail(parsed.data.email); toast.success("Verification code sent to your email"); }
+    catch (err) { toast.error(err instanceof Error ? err.message : "Signup failed"); } finally { setLoading(false); }
+  };
+  const handleVerifyOtp = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault(); if (!pendingVerificationEmail) return; const otp = String(new FormData(e.currentTarget).get("otp") ?? "").trim();
+    if (!/^\d{6}$/.test(otp)) { toast.error("Enter the 6-digit verification code"); return; } setLoading(true);
+    try { await api.auth.verifyOtp(pendingVerificationEmail, otp); toast.success("Email verified"); redirectTo("/_authenticated/onboarding"); }
+    catch (err) { toast.error(err instanceof Error ? err.message : "Verification failed"); } finally { setLoading(false); }
+  };
+
+  const handleGoogleSignIn = async () => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) { toast.error("Google Sign-In is not configured."); return; }
     setLoading(true);
     try {
-      await api.auth.signup({
-        email: parsed.data.email,
-        password: parsed.data.password,
-        full_name: parsed.data.fullName,
-        phone: parsed.data.phone,
-        email_signup: true, // tells Node this is a complete signup — skip onboarding
+      const google = await loadGoogleIdentity();
+
+      await new Promise<void>((resolve, reject) => {
+        let container = document.getElementById("__google-btn-container__");
+        if (!container) {
+          container = document.createElement("div");
+          container.id = "__google-btn-container__";
+          container.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none;";
+          document.body.appendChild(container);
+        }
+
+        google.accounts.id.initialize({
+          client_id: clientId,
+          callback: (credential) => {
+            void (async () => {
+              try {
+                const result = await api.auth.google(credential.credential);
+                toast.success("Signed in with Google");
+                redirectTo(result.isOnboarded ? search.redirect : "/_authenticated/onboarding");
+                resolve();
+              } catch (err) { reject(err); }
+            })();
+          },
+          ux_mode: "popup",
+          context: mode === "signup" ? "signup" : "signin",
+        });
+
+        google.accounts.id.renderButton(container, {
+          theme: "outline",
+          size: "large",
+          width: 300,
+          text: mode === "signup" ? "signup_with" : "signin_with",
+          shape: "pill",
+        });
+
+        setTimeout(() => {
+          const btn = container!.querySelector<HTMLElement>("div[role=button]") ?? container!.querySelector<HTMLElement>("button");
+          if (btn) { btn.click(); }
+          else {
+            google.accounts.id.prompt();
+          }
+        }, 150);
+
+        const timeout = setTimeout(() => reject(new Error("Google Sign-In timed out or was cancelled.")), 90_000);
+        void Promise.race([
+          new Promise<never>((_, r) => setTimeout(() => r(new Error("timeout")), 90_000)),
+        ]).catch(() => clearTimeout(timeout));
       });
-      toast.success("Account created — welcome!");
-      redirectTo(search.redirect);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Signup failed");
-    } finally {
-      setLoading(false);
+      const msg = err instanceof Error ? err.message : "Google Sign-In failed";
+      if (msg.toLowerCase().includes("not display") || msg.toLowerCase().includes("skip") || msg.toLowerCase().includes("unavailable")) {
+        toast.error("Google Sign-In popup was blocked. Make sure popups are allowed for this site.");
+      } else {
+        toast.error(msg);
+      }
     }
+    finally { setLoading(false); }
   };
 
-  const handleGoogle = () => {
-    // DEMO MODE: demoGoogleSignIn() logs in as the regular demo user instantly.
-    // When connecting the real backend, replace this block with:
-    //   window.location.href = `${api.BASE_URL}/auth/google?redirect_uri=...`
-    setLoading(true);
-    try {
-      demoGoogleSignIn();
-      toast.success("Signed in with Google (demo)");
-      redirectTo(search.redirect);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Google sign-in failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="relative flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="pointer-events-none absolute inset-0 hero-bg" />
-      <div className="relative w-full max-w-md">
-        <Link to="/" className="mb-8 flex items-center justify-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] glow-cyan">
-            <Brain className="h-4 w-4 text-[oklch(0.15_0.03_258)]" strokeWidth={2.5} />
-          </span>
-          <span className="font-display text-lg font-semibold">NeuroSearch <span className="text-cyan">AI</span></span>
-        </Link>
-
-        <div className="glass-strong card-elevated rounded-3xl p-6 sm:p-8">
-          <div className="flex rounded-full border border-white/10 bg-white/5 p-1 text-sm">
-            <button
-              onClick={() => setMode("login")}
-              className={`flex-1 rounded-full py-1.5 transition ${mode === "login" ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}
-            >Log in</button>
-            <button
-              onClick={() => setMode("signup")}
-              className={`flex-1 rounded-full py-1.5 transition ${mode === "signup" ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}
-            >Sign up</button>
-          </div>
-
-          <h1 className="mt-6 font-display text-2xl font-semibold">
-            {mode === "login" ? "Welcome back" : "Create your account"}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "login" ? "Sign in to search and save datasets." : "Join to save datasets and track your research."}
-          </p>
-
-          {mode === "login" ? (
-            <form onSubmit={handleLogin} className="mt-6 space-y-3">
-              <Field label="Email" name="email" type="email" placeholder="you@lab.edu" required />
-              <PasswordField name="password" show={showPw} onToggle={() => setShowPw((v) => !v)} />
-              <button type="submit" disabled={loading}
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] py-2.5 text-sm font-medium text-[oklch(0.15_0.03_258)] disabled:opacity-50">
-                {loading && <Loader2 className="h-4 w-4 animate-spin" />}Continue
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleSignup} className="mt-6 space-y-3">
-              <Field label="Full name" name="fullName" placeholder="Ada Lovelace" required />
-              <Field label="Email" name="email" type="email" placeholder="you@lab.edu" required />
-              <Field label="Phone number" name="phone" type="tel" placeholder="+1 555 123 4567" required />
-              <PasswordField name="password" show={showPw} onToggle={() => setShowPw((v) => !v)} />
-              <Field label="Confirm password" name="confirmPassword" type={showPw ? "text" : "password"} required />
-              <button type="submit" disabled={loading}
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] py-2.5 text-sm font-medium text-[oklch(0.15_0.03_258)] disabled:opacity-50">
-                {loading && <Loader2 className="h-4 w-4 animate-spin" />}Create account
-              </button>
-            </form>
-          )}
-
-          <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-widest text-muted-foreground">
-            <span className="h-px flex-1 bg-white/10" />or<span className="h-px flex-1 bg-white/10" />
-          </div>
-
-          <button onClick={handleGoogle} disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 py-2.5 text-sm hover:bg-white/10 disabled:opacity-50">
-            <GoogleIcon /> Continue with Google
-          </button>
-
-          <p className="mt-6 text-center text-xs text-muted-foreground">
-            {mode === "login" ? (
-              <>New here? <button onClick={() => setMode("signup")} className="text-cyan hover:text-foreground">Create an account</button></>
-            ) : (
-              <>Already have an account? <button onClick={() => setMode("login")} className="text-cyan hover:text-foreground">Log in</button></>
-            )}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+  return <div className="relative flex min-h-screen items-center justify-center px-4 py-12"><div className="pointer-events-none absolute inset-0 hero-bg" /><div className="relative w-full max-w-md">
+    <Link to="/" className="mb-8 flex items-center justify-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] glow-cyan"><Brain className="h-4 w-4 text-[oklch(0.15_0.03_258)]" strokeWidth={2.5} /></span><span className="font-display text-lg font-semibold">NeuroSearch <span className="text-cyan">AI</span></span></Link>
+    <div className="glass-strong card-elevated rounded-3xl p-6 sm:p-8">
+      <div className="flex rounded-full border border-white/10 bg-white/5 p-1 text-sm"><button onClick={() => { setMode("login"); setPendingVerificationEmail(null); }} className={`flex-1 rounded-full py-1.5 transition ${mode === "login" ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}>Log in</button><button onClick={() => { setMode("signup"); setPendingVerificationEmail(null); }} className={`flex-1 rounded-full py-1.5 transition ${mode === "signup" ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}>Sign up</button></div>
+      <h1 className="mt-6 font-display text-2xl font-semibold">{pendingVerificationEmail ? "Verify your email" : mode === "login" ? "Welcome back" : "Create your account"}</h1>
+      <p className="mt-1 text-sm text-muted-foreground">{pendingVerificationEmail ? `Enter the verification code sent to ${pendingVerificationEmail}.` : mode === "login" ? "Sign in to search and save datasets." : "Join to save datasets and track your research."}</p>
+      {pendingVerificationEmail ? <form onSubmit={handleVerifyOtp} className="mt-6 space-y-3"><Field label="Verification code" name="otp" inputMode="numeric" maxLength={6} required /><Submit loading={loading}>Verify email</Submit></form> : mode === "login" ? <form onSubmit={handleLogin} className="mt-6 space-y-3"><Field label="Email" name="email" type="email" placeholder="you@lab.edu" required /><PasswordField name="password" show={showPw} onToggle={() => setShowPw((v) => !v)} /><Submit loading={loading}>Continue</Submit></form> : <form onSubmit={handleSignup} className="mt-6 space-y-3"><Field label="Full name" name="fullName" placeholder="Ada Lovelace" required /><Field label="Email" name="email" type="email" placeholder="you@lab.edu" required /><Field label="Phone number" name="phone" type="tel" placeholder="+91 9876543210" required /><PasswordField name="password" show={showPw} onToggle={() => setShowPw((v) => !v)} /><Field label="Confirm password" name="confirmPassword" type={showPw ? "text" : "password"} required /><Submit loading={loading}>Create account</Submit></form>}
+      {!pendingVerificationEmail && <><div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-widest text-muted-foreground"><span className="h-px flex-1 bg-white/10" />or<span className="h-px flex-1 bg-white/10" /></div><button onClick={handleGoogleSignIn} disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 py-2.5 text-sm hover:bg-white/10 disabled:opacity-50 transition"><GoogleIcon /> Continue with Google</button><p className="mt-6 text-center text-xs text-muted-foreground">{mode === "login" ? <><span>New here? </span><button onClick={() => setMode("signup")} className="text-cyan hover:text-foreground">Create an account</button></> : <><span>Already have an account? </span><button onClick={() => setMode("login")} className="text-cyan hover:text-foreground">Log in</button></>}</p></>}
+    </div></div></div>;
 }
-
-function Field({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
-  return (
-    <label className="block">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <input {...props}
-        className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/60 focus:border-cyan/50" />
-    </label>
-  );
-}
-
-function PasswordField({ name, show, onToggle }: { name: string; show: boolean; onToggle: () => void }) {
-  return (
-    <label className="block">
-      <span className="text-xs text-muted-foreground">Password</span>
-      <div className="relative mt-1">
-        <input name={name} type={show ? "text" : "password"} required minLength={6}
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 pr-10 text-sm outline-none focus:border-cyan/50" />
-        <button type="button" onClick={onToggle}
-          className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground hover:bg-white/5">
-          {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-        </button>
-      </div>
-    </label>
-  );
-}
-
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4">
-      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.26 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-      <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.83z"/>
-      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/>
-    </svg>
-  );
-}
+function Submit({ loading, children }: { loading: boolean; children: React.ReactNode }) { return <button type="submit" disabled={loading} className="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] py-2.5 text-sm font-medium text-[oklch(0.15_0.03_258)] disabled:opacity-50">{loading && <Loader2 className="h-4 w-4 animate-spin" />}{children}</button>; }
+function Field({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) { return <label className="block"><span className="text-xs text-muted-foreground">{label}</span><input {...props} className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/60 focus:border-cyan/50" /></label>; }
+function PasswordField({ name, show, onToggle }: { name: string; show: boolean; onToggle: () => void }) { return <label className="block"><span className="text-xs text-muted-foreground">Password</span><div className="relative mt-1"><input name={name} type={show ? "text" : "password"} required minLength={6} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 pr-10 text-sm outline-none focus:border-cyan/50" /><button type="button" onClick={onToggle} className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground hover:bg-white/5">{show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}</button></div></label>; }
+function GoogleIcon() { return <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>; }
