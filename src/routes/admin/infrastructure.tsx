@@ -28,12 +28,24 @@ function InfraPage() {
 
   const mongo = useQuery({
     queryKey: ["infra-mongo"],
-    queryFn: () => api.admin.infra.mongo(), // TODO: confirm Node path /admin/infrastructure/mongo
+    queryFn: () => api.admin.infra.mongo() as Promise<{
+      totalSizeBytes: number;
+      collections: Array<{ name: string; count: number; sizeBytes: number }>;
+      growth: Array<{ day: string; sizeBytes: number }>;
+    } | null>,
     enabled: tab !== "redis",
   });
   const redis = useQuery({
     queryKey: ["infra-redis"],
-    queryFn: () => api.admin.infra.redis(), // TODO: confirm Node path /admin/infrastructure/redis
+    queryFn: () => api.admin.infra.redis() as Promise<{
+      uptimeSeconds: number;
+      connectedClients: number;
+      activeSseConnections: number;
+      memoryUsedBytes: number;
+      inFlightQueries: number;
+      messageThroughputPerMin: number;
+      pubsubChannels: Array<{ channel: string; subscribers: number }>;
+    } | null>,
     enabled: tab === "redis",
   });
 

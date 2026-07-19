@@ -12,7 +12,7 @@ export const Route = createFileRoute("/admin/analytics")({
 function AnalyticsPage() {
   const { data } = useQuery({
     queryKey: ["admin-analytics"],
-    queryFn: () => api.admin.analytics(), // TODO: confirm Node path /admin/analytics
+    queryFn: () => api.admin.analytics(),
   });
 
   const kpis = [

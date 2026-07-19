@@ -21,7 +21,7 @@ function RepositoriesPage() {
 
   const { data: repos = [] } = useQuery({
     queryKey: ["admin-repos"],
-    queryFn: () => api.admin.repositories.list(), // TODO: confirm Node path /admin/repositories
+    queryFn: () => api.admin.repositories.list() as Promise<Array<{ id: string; name: string; trust_tier: string; sync_status: string; dataset_count: number; last_sync_at: string }>>,
   });
 
   const add = async () => {
@@ -29,7 +29,7 @@ function RepositoriesPage() {
     try {
       await api.admin.repositories.create({
         name: name.trim(), trust_tier: tier, endpoint_config: endpoint ? { url: endpoint.trim() } : {},
-      }); // TODO: confirm Node path
+      });
       setName(""); setEndpoint("");
       toast.success("Repository added");
       qc.invalidateQueries({ queryKey: ["admin-repos"] });
@@ -38,7 +38,7 @@ function RepositoriesPage() {
 
   const resync = async (id: string) => {
     try {
-      await api.admin.repositories.resync(id); // TODO: confirm Node path
+      await api.admin.repositories.resync(id);
       toast.success("Resync triggered");
       qc.invalidateQueries({ queryKey: ["admin-repos"] });
     } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
@@ -47,7 +47,7 @@ function RepositoriesPage() {
   const remove = async (id: string) => {
     if (!confirm("Remove this repository?")) return;
     try {
-      await api.admin.repositories.delete(id); // TODO: confirm Node path
+      await api.admin.repositories.delete(id);
       qc.invalidateQueries({ queryKey: ["admin-repos"] });
     } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
   };

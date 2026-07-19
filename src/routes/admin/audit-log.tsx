@@ -14,7 +14,7 @@ function AuditLogPage() {
   const [q, setQ] = useState("");
   const { data: rows = [] } = useQuery({
     queryKey: ["audit-log"],
-    queryFn: () => api.admin.auditLog.list(500), // TODO: confirm Node path, limit 500 preserved
+    queryFn: () => api.admin.auditLog.list(500) as Promise<Array<{ id: string; action: string; target_type: string; target_id: string; admin_id: string; metadata: Record<string, unknown>; created_at: string }>>,
   });
 
   const filtered = useMemo(() => {

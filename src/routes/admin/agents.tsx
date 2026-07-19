@@ -11,7 +11,7 @@ export const Route = createFileRoute("/admin/agents")({
 function AgentsPage() {
   const { data = [] } = useQuery({
     queryKey: ["admin-agents"],
-    queryFn: () => api.admin.infra.agents(), // TODO: confirm Node path /admin/agents
+    queryFn: () => api.admin.infra.agents() as Promise<Array<{ id: string; agent: string; query: string; durationMs: number; resultCount: number; status: string; createdAt: string }>>,
   });
 
   return (

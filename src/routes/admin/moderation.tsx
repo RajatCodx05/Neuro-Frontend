@@ -19,11 +19,11 @@ function ModerationPage() {
 
   const { data: queue = [] } = useQuery({
     queryKey: ["mod-queue"],
-    queryFn: () => api.admin.moderation.queue(), // TODO: confirm Node path
+    queryFn: () => api.admin.moderation.queue() as Promise<Array<{ id: string; dataset_snapshot: Record<string, unknown>; source_query: string; confidence_score: number; discovered_at: string }>>,
   });
   const { data: published = [] } = useQuery({
     queryKey: ["mod-published"],
-    queryFn: () => api.admin.moderation.published() as Promise<Array<{ id: string; dataset_id: string; dataset_snapshot: Record<string, unknown>; created_at: string }>>, // TODO: confirm Node path
+    queryFn: () => api.admin.moderation.published() as Promise<Array<{ id: string; dataset_id: string; dataset_snapshot: Record<string, unknown>; created_at: string }>>,
   });
 
   const act = async (id: string, action: "approve" | "reject", reason?: string) => {

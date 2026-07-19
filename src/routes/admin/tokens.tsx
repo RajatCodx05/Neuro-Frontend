@@ -17,9 +17,9 @@ function TokensPage() {
   const [userFilter, setUserFilter] = useState("");
   const [agentFilter, setAgentFilter] = useState<string>("");
 
-  const { data: events = [] } = useQuery<{ id: string; userId: string; userEmail: string; agent: string; model: string; tokens: number; createdAt: string }[]>({
+  const { data: events = [] } = useQuery<Array<{ id: string; userId: string; userEmail: string; agent: string; model: string; tokens: number; createdAt: string }>>({
     queryKey: ["admin-tokens"],
-    queryFn: () => api.admin.infra.tokens(), // TODO: confirm Node path /admin/tokens
+    queryFn: () => api.admin.infra.tokens() as Promise<Array<{ id: string; userId: string; userEmail: string; agent: string; model: string; tokens: number; createdAt: string }>>,
   });
 
   const filtered = useMemo(() => events.filter((e) =>

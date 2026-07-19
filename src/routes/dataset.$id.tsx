@@ -1,26 +1,38 @@
-import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { datasets } from "@/lib/mock-data";
-import { ArrowLeft, CheckCircle2, Download, Bookmark, Share2, ExternalLink, FileText } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { ArrowLeft, CheckCircle2, Download, Bookmark, Share2, ExternalLink, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
-import { api } from "@/lib/api-client";
+import { api, type SearchResult } from "@/lib/api-client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dataset/$id")({
-  loader: ({ params }) => {
-    const d = datasets.find((x) => x.id === params.id) ?? datasets[0];
-    if (!d) throw notFound();
-    return { dataset: d };
-  },
   component: DatasetPage,
 });
 
 function DatasetPage() {
-  const { dataset: d } = Route.useLoaderData();
+  const { id } = Route.useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [d, setD] = useState<SearchResult | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    // Fetch dataset detail via search API — there is no single GET /datasets/:id endpoint.
+    api.datasets
+      .search(id)
+      .then((res) => {
+        const found = res.results?.find((r: SearchResult) => r.id === id);
+        if (found) setD(found);
+      })
+      .catch((err) => { toast.error(err instanceof Error ? err.message : "Failed to load dataset"); })
+      .finally(() => setLoading(false));
+  }, [id]);
+
   const save = async () => {
-    if (!user) { navigate({ to: "/auth", search: { redirect: `/dataset/${d.id}`, mode: "login" } }); return; }
+    if (!user) { navigate({ to: "/auth", search: { redirect: `/dataset/${id}`, mode: "login" } }); return; }
+    if (!d) return;
     try {
       await api.savedDatasets.upsert({ dataset_id: d.id, dataset_snapshot: JSON.parse(JSON.stringify(d)) });
       toast.success("Saved to your library");
@@ -28,6 +40,30 @@ function DatasetPage() {
       toast.error(err instanceof Error ? err.message : "Save failed");
     }
   };
+
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!d) {
+    return (
+      <AppShell>
+        <div className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6">
+          <Link to="/search" search={{ q: "" }} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-3 w-3" /> Back to results
+          </Link>
+          <div className="mt-10 text-center text-muted-foreground">Dataset not found.</div>
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
       <div className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6">
@@ -52,19 +88,23 @@ function DatasetPage() {
             <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-widest text-muted-foreground">
               <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-foreground">{d.repo}</span>
               <span>· {d.id}</span>
-              <span className="inline-flex items-center gap-1 text-cyan"><CheckCircle2 className="h-3 w-3" /> Verified {d.verified}</span>
+              {d.verified && (
+                <span className="inline-flex items-center gap-1 text-cyan"><CheckCircle2 className="h-3 w-3" /> Verified {d.verified}</span>
+              )}
             </div>
             <h1 className="mt-2 font-display text-3xl font-semibold sm:text-4xl">{d.name}</h1>
             <p className="mt-3 max-w-3xl text-muted-foreground">{d.description}</p>
             <div className="mt-6 flex flex-wrap gap-2">
               <button className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-sm font-medium text-[oklch(0.15_0.03_258)]">
-                <Download className="h-3.5 w-3.5" /> Download {d.size}
+                <Download className="h-3.5 w-3.5" /> Download{d.size ? ` ${d.size}` : ""}
               </button>
               <button onClick={save} className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-sm hover:bg-white/10"><Bookmark className="h-3.5 w-3.5" /> Save</button>
               <button className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-sm hover:bg-white/10"><Share2 className="h-3.5 w-3.5" /> Share</button>
-              <a href="#" className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-sm hover:bg-white/10">
-                <ExternalLink className="h-3.5 w-3.5" /> Open in {d.repo}
-              </a>
+              {d.url && (
+                <a href={d.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-sm hover:bg-white/10">
+                  <ExternalLink className="h-3.5 w-3.5" /> Open in {d.repo}
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -75,9 +115,9 @@ function DatasetPage() {
               <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
                 {[
                   ["Modality", d.modality], ["Brain region", d.region], ["Species", d.species],
-                  ["Age group", d.ageGroup], ["Disease", d.disease], ["Subjects", d.subjects.toString()],
+                  ["Age group", d.ageGroup], ["Disease", d.disease], ["Subjects", d.subjects?.toString()],
                   ["License", d.license], ["Access tier", d.access], ["Size", d.size],
-                ].map(([k, v]) => (
+                ].filter(([, v]) => v != null && v !== "" && v !== "null").map(([k, v]) => (
                   <div key={k}>
                     <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{k}</div>
                     <div className="mt-0.5">{v}</div>
@@ -97,21 +137,7 @@ function DatasetPage() {
             <Section title="Citation">
               <div className="rounded-xl bg-white/5 p-4 font-mono text-xs text-muted-foreground">
                 Author, A. et al. ({new Date().getFullYear()}). <span className="text-foreground">{d.name}</span>.
-                {" "}{d.repo}. doi:{d.doi}
-              </div>
-            </Section>
-
-            <Section title="Related datasets">
-              <div className="grid gap-3 sm:grid-cols-2">
-                {datasets.filter((x) => x.id !== d.id).slice(0, 4).map((r) => (
-                  <Link key={r.id} to="/dataset/$id" params={{ id: r.id }} className="flex items-start gap-3 rounded-xl bg-white/5 p-3 hover:bg-white/10">
-                    <span className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-cyan/40 to-neural/40 text-[10px] font-bold">{r.modality}</span>
-                    <div className="min-w-0">
-                      <div className="truncate text-sm">{r.name}</div>
-                      <div className="text-[11px] text-muted-foreground">{r.repo} · {r.subjects} subj</div>
-                    </div>
-                  </Link>
-                ))}
+                {" "}{d.repo}.{d.doi ? ` doi:${d.doi}` : ""}
               </div>
             </Section>
           </div>
@@ -124,26 +150,16 @@ function DatasetPage() {
                 </div>
                 <div>
                   <div className="text-sm font-medium">{d.repo}</div>
-                  <div className="text-[11px] text-muted-foreground">Last verified {d.verified}</div>
+                  {d.verified && <div className="text-[11px] text-muted-foreground">Last verified {d.verified}</div>}
                 </div>
               </div>
             </Section>
             <Section title="Access">
               <div className="text-sm">
-                <div className="flex justify-between py-1"><span className="text-muted-foreground">License</span><span>{d.license}</span></div>
-                <div className="flex justify-between py-1"><span className="text-muted-foreground">Tier</span><span>{d.access}</span></div>
-                <div className="flex justify-between py-1"><span className="text-muted-foreground">DOI</span><span className="truncate max-w-[160px] font-mono text-xs">{d.doi}</span></div>
+                <div className="flex justify-between py-1"><span className="text-muted-foreground">License</span><span>{d.license ?? "—"}</span></div>
+                <div className="flex justify-between py-1"><span className="text-muted-foreground">Tier</span><span>{d.access ?? "—"}</span></div>
+                {d.doi && <div className="flex justify-between py-1"><span className="text-muted-foreground">DOI</span><span className="truncate max-w-[160px] font-mono text-xs">{d.doi}</span></div>}
               </div>
-            </Section>
-            <Section title="Research papers">
-              <ul className="space-y-2 text-sm">
-                {["Cortical connectivity in early-stage cohorts", "Cross-site harmonization of multi-modal imaging", "Longitudinal biomarker discovery"].map((p) => (
-                  <li key={p} className="flex items-start gap-2 rounded-lg bg-white/5 p-2">
-                    <FileText className="mt-0.5 h-3.5 w-3.5 text-cyan" />
-                    <span className="text-foreground/90">{p}</span>
-                  </li>
-                ))}
-              </ul>
             </Section>
           </div>
         </div>

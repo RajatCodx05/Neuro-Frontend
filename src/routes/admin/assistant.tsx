@@ -13,7 +13,7 @@ function AssistantPage() {
   const { data } = useQuery({
     queryKey: ["assistant-oversight"],
     queryFn: async () => {
-      const recent = await api.admin.queries.recent(30); // TODO: confirm Node path, limit 30 preserved
+      const recent = await api.admin.queries.recent(30) as Array<{ id: string; query: string; created_at: string }>;
       return { recent };
     },
   });

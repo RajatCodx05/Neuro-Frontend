@@ -32,16 +32,17 @@ type SearchResult = {
   repo?: string;
   modality?: string;
   description?: string;
-  subjects?: number;
-  size?: string;
-  region?: string;
-  species?: string;
-  ageGroup?: string;
-  disease?: string;
-  license?: string;
-  access?: string;
-  verified?: string;
-  doi?: string;
+  subjects?: number | null;
+  size?: string | null;
+  region?: string | null;
+  species?: string | null;
+  ageGroup?: string | null;
+  disease?: string | null;
+  license?: string | null;
+  access?: string | null;
+  verified?: string | null;
+  doi?: string | null;
+  url?: string | null;
   [key: string]: unknown;
 };
 
@@ -91,33 +92,6 @@ function SearchResults() {
       }
     })();
     return () => { cancelled = true; esRef.current?.close(); esRef.current = null; };
-
-    // Log search to history if user is signed in (fire-and-forget, identical to before)
-    // Close any previous stream
-    // GET VITE_API_BASE_URL/search/stream?q=<query>  (EventSource with credentials)
-    // TODO: confirm Node SSE path
-    es.onmessage = (event) => {
-      try {
-        const item = JSON.parse(event.data as string) as SearchResult;
-        setResults((prev) => [...prev, item]);
-      } catch {
-        // malformed frame — skip
-      }
-    };
-
-    es.onerror = () => {
-      // Server closed the connection (normal end-of-stream) or network error.
-      // Either way, stop the loading indicator.
-      es.close();
-      esRef.current = null;
-      setStreaming(false);
-    };
-
-    return () => {
-      es.close();
-      esRef.current = null;
-      setStreaming(false);
-    };
   }, [search.q, user]);
 
   const submit = (e: FormEvent) => {

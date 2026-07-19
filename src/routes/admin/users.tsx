@@ -16,7 +16,7 @@ function UsersPage() {
   const [q, setQ] = useState("");
   const { data: users = [] } = useQuery({
     queryKey: ["admin-users"],
-    queryFn: () => api.admin.users.list(), // TODO: confirm Node path /admin/users
+    queryFn: () => api.admin.users.list(),
   });
 
   const filtered = useMemo(() => {
@@ -27,24 +27,12 @@ function UsersPage() {
     );
   }, [q, users]);
 
-  const toggleSuspend = async (id: string, suspended: boolean) => {
-    try {
-      await api.admin.users.update(id, { suspended }); // TODO: confirm Node path
-      toast.success(suspended ? "User suspended" : "User reinstated");
-      qc.invalidateQueries({ queryKey: ["admin-users"] });
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Action failed"); }
-  };
-  const toggleAdmin = async (id: string, is_admin: boolean) => {
-    try {
-      await api.admin.users.update(id, { is_admin }); // TODO: confirm Node path
-      toast.success(is_admin ? "Granted admin" : "Revoked admin");
-      qc.invalidateQueries({ queryKey: ["admin-users"] });
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Action failed"); }
-  };
+  // PATCH /admin/users/:id does not exist on the backend — only DELETE is available.
+  // Toggle suspend/promote handlers removed as there is no backend route for them.
   const remove = async (id: string) => {
     if (!confirm("Permanently delete this user?")) return;
     try {
-      await api.admin.users.delete(id); // TODO: confirm Node path
+      await api.admin.users.delete(id);
       toast.success("User deleted");
       qc.invalidateQueries({ queryKey: ["admin-users"] });
     } catch (err) { toast.error(err instanceof Error ? err.message : "Action failed"); }
@@ -88,14 +76,14 @@ function UsersPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1.5">
-                      <button onClick={() => toggleAdmin(u.id, !u.is_admin)} title={u.is_admin ? "Revoke admin" : "Grant admin"}
-                        className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 hover:text-cyan">
-                        <Shield className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => toggleSuspend(u.id, !u.suspended)} title={u.suspended ? "Reinstate" : "Suspend"}
-                        className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 hover:text-amber-400">
-                        {u.suspended ? <CheckCircle2 className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
-                      </button>
+                      <span title={u.is_admin ? "Is admin" : "Not admin"}
+                        className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground cursor-default">
+                        <Shield className={`h-4 w-4 ${u.is_admin ? "text-cyan" : ""}`} />
+                      </span>
+                      <span title={u.suspended ? "Suspended" : "Active"}
+                        className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground cursor-default">
+                        {u.suspended ? <Ban className="h-4 w-4 text-amber-400" /> : <CheckCircle2 className="h-4 w-4 text-emerald-400" />}
+                      </span>
                       <button onClick={() => remove(u.id)} title="Delete"
                         className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 hover:text-rose-400">
                         <Trash2 className="h-4 w-4" />

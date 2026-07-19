@@ -19,16 +19,16 @@ function HelpDeskPage() {
 
   const { data: tickets = [] } = useQuery({
     queryKey: ["support-tickets"],
-    queryFn: () => api.admin.helpDesk.tickets(), // TODO: confirm Node path
+    queryFn: () => api.admin.helpDesk.tickets() as Promise<Array<{ id: string; subject: string; message: string; status: string; created_at: string }>>,
   });
   const { data: articles = [] } = useQuery({
     queryKey: ["help-articles"],
-    queryFn: () => api.admin.helpDesk.articles(), // TODO: confirm Node path
+    queryFn: () => api.admin.helpDesk.articles() as Promise<Array<{ id: string; title: string; slug: string; published: boolean; updated_at: string }>>,
   });
 
   const setTicketStatus = async (id: string, status: "open" | "in_progress" | "resolved") => {
     const patchData = { status, ...(status === "resolved" ? { resolved_at: new Date().toISOString() } : {}) };
-    await api.admin.helpDesk.updateTicket(id, patchData); // TODO: confirm Node path
+    await api.admin.helpDesk.updateTicket(id, patchData);
     qc.invalidateQueries({ queryKey: ["support-tickets"] });
   };
 
@@ -39,14 +39,14 @@ function HelpDeskPage() {
   const addArticle = async () => {
     if (!title.trim() || !slug.trim() || !body.trim()) return;
     try {
-      await api.admin.helpDesk.createArticle({ title, slug, body, published }); // TODO: confirm Node path
+      await api.admin.helpDesk.createArticle({ title, slug, body, published });
       setTitle(""); setSlug(""); setBody("");
       qc.invalidateQueries({ queryKey: ["help-articles"] });
     } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
   };
   const removeArticle = async (id: string) => {
     if (!confirm("Delete article?")) return;
-    await api.admin.helpDesk.deleteArticle(id); // TODO: confirm Node path
+    await api.admin.helpDesk.deleteArticle(id);
     qc.invalidateQueries({ queryKey: ["help-articles"] });
   };
 

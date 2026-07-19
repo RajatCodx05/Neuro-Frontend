@@ -12,14 +12,18 @@ export const Route = createFileRoute("/admin/")({
 function AdminDashboard() {
   const { data } = useQuery({
     queryKey: ["admin-dashboard"],
-    queryFn: () => api.admin.dashboard(), // TODO: confirm Node path /admin/dashboard
+    queryFn: () => api.admin.dashboard() as Promise<{
+      totalUsers: number;
+      repositories: Array<{ id: string; name: string; sync_status: string; dataset_count: number; last_sync_at: string }>;
+      recentAudit: Array<{ id: string; action: string; target_type: string; target_id: string; created_at: string }>;
+    }>,
   });
 
   const stats = [
     { label: "Total users", value: data?.totalUsers ?? "—", icon: Users, to: "/admin/users" },
-    { label: "Pending moderation", value: data?.pendingModeration ?? "—", icon: ShieldCheck, to: "/admin/moderation" },
-    { label: "Repositories", value: data?.repositories.length ?? "—", icon: Database, to: "/admin/repositories" },
-    { label: "Datasets indexed", value: data?.repositories.reduce((a, r) => a + (r.dataset_count ?? 0), 0) ?? "—", icon: TrendingUp, to: "/admin/analytics" },
+    { label: "Repositories", value: data?.repositories?.length ?? "—", icon: Database, to: "/admin/repositories" },
+    { label: "Datasets indexed", value: (data?.repositories ?? []).reduce((a: number, r: Record<string, unknown>) => a + Number(r.dataset_count ?? 0), 0) ?? "—", icon: TrendingUp, to: "/admin/analytics" },
+    { label: "Recent audits", value: (data?.recentAudit ?? []).length ?? "—", icon: ShieldCheck, to: "/admin/audit-log" },
   ];
 
   return (

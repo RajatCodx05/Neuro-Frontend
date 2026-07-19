@@ -18,13 +18,13 @@ function AnnouncementsPage() {
 
   const { data: items = [] } = useQuery({
     queryKey: ["announcements"],
-    queryFn: () => api.admin.announcements.list(), // TODO: confirm Node path
+    queryFn: () => api.admin.announcements.list() as Promise<Array<{ id: string; title: string; body: string; active: boolean; created_at: string }>>,
   });
 
   const publish = async () => {
     if (!title.trim() || !body.trim()) return;
     try {
-      await api.admin.announcements.create({ title: title.trim(), body: body.trim(), active: true }); // TODO: confirm Node path
+      await api.admin.announcements.create({ title: title.trim(), body: body.trim(), active: true });
       setTitle(""); setBody("");
       toast.success("Announcement published");
       qc.invalidateQueries({ queryKey: ["announcements"] });
@@ -32,13 +32,13 @@ function AnnouncementsPage() {
   };
 
   const toggle = async (id: string, active: boolean) => {
-    await api.admin.announcements.toggle(id, active); // TODO: confirm Node path
+    await api.admin.announcements.toggle(id, active);
     qc.invalidateQueries({ queryKey: ["announcements"] });
   };
 
   const remove = async (id: string) => {
     if (!confirm("Delete announcement?")) return;
-    await api.admin.announcements.delete(id); // TODO: confirm Node path
+    await api.admin.announcements.delete(id);
     qc.invalidateQueries({ queryKey: ["announcements"] });
   };
 
