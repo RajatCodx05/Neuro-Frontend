@@ -44,12 +44,23 @@ function AuthPage() {
   const [mode, setMode] = useState<"login" | "signup">(search.mode);
   const [loading, setLoading] = useState(false); const [showPw, setShowPw] = useState(false);
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
+  const [isAdminMode, setIsAdminMode] = useState(search.redirect?.startsWith("/admin") || false);
   const redirectTo = (path?: string) => navigate({ to: path?.startsWith("/") ? path : "/", replace: true });
 
   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault(); const form = new FormData(e.currentTarget); const parsed = loginSchema.safeParse({ email: form.get("email"), password: form.get("password") });
     if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; } setLoading(true);
-    try { await api.auth.login(parsed.data.email, parsed.data.password); toast.success("Welcome back"); redirectTo(search.redirect); }
+    try {
+      if (isAdminMode) {
+        await api.admin.auth.login(parsed.data.email, parsed.data.password);
+        setPendingVerificationEmail(parsed.data.email);
+        toast.success("Verification code sent to your email");
+      } else {
+        await api.auth.login(parsed.data.email, parsed.data.password);
+        toast.success("Welcome back");
+        redirectTo(search.redirect);
+      }
+    }
     catch (err) {
       const message = err instanceof Error ? err.message : "Login failed";
       if (message === "Please verify your email before logging in.") setPendingVerificationEmail(parsed.data.email);
@@ -65,7 +76,17 @@ function AuthPage() {
   const handleVerifyOtp = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault(); if (!pendingVerificationEmail) return; const otp = String(new FormData(e.currentTarget).get("otp") ?? "").trim();
     if (!/^\d{6}$/.test(otp)) { toast.error("Enter the 6-digit verification code"); return; } setLoading(true);
-    try { await api.auth.verifyOtp(pendingVerificationEmail, otp); toast.success("Email verified"); redirectTo("/onboarding"); }
+    try {
+      if (isAdminMode) {
+        await api.admin.auth.verifyLoginOtp(pendingVerificationEmail, otp);
+        toast.success("Admin login successful");
+        redirectTo("/admin");
+      } else {
+        await api.auth.verifyOtp(pendingVerificationEmail, otp);
+        toast.success("Email verified");
+        redirectTo("/onboarding");
+      }
+    }
     catch (err) { toast.error(err instanceof Error ? err.message : "Verification failed"); } finally { setLoading(false); }
   };
 
@@ -136,11 +157,100 @@ function AuthPage() {
   return <div className="relative flex min-h-screen items-center justify-center px-4 py-12"><div className="pointer-events-none absolute inset-0 hero-bg" /><div className="relative w-full max-w-md">
     <Link to="/" className="mb-8 flex items-center justify-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] glow-cyan"><Brain className="h-4 w-4 text-[oklch(0.15_0.03_258)]" strokeWidth={2.5} /></span><span className="font-display text-lg font-semibold">NeuroSearch <span className="text-cyan">AI</span></span></Link>
     <div className="glass-strong card-elevated rounded-3xl p-6 sm:p-8">
-      <div className="flex rounded-full border border-white/10 bg-white/5 p-1 text-sm"><button onClick={() => { setMode("login"); setPendingVerificationEmail(null); }} className={`flex-1 rounded-full py-1.5 transition ${mode === "login" ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}>Log in</button><button onClick={() => { setMode("signup"); setPendingVerificationEmail(null); }} className={`flex-1 rounded-full py-1.5 transition ${mode === "signup" ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}>Sign up</button></div>
-      <h1 className="mt-6 font-display text-2xl font-semibold">{pendingVerificationEmail ? "Verify your email" : mode === "login" ? "Welcome back" : "Create your account"}</h1>
-      <p className="mt-1 text-sm text-muted-foreground">{pendingVerificationEmail ? `Enter the verification code sent to ${pendingVerificationEmail}.` : mode === "login" ? "Sign in to search and save datasets." : "Join to save datasets and track your research."}</p>
-      {pendingVerificationEmail ? <form onSubmit={handleVerifyOtp} className="mt-6 space-y-3"><Field label="Verification code" name="otp" inputMode="numeric" maxLength={6} required /><Submit loading={loading}>Verify email</Submit></form> : mode === "login" ? <form onSubmit={handleLogin} className="mt-6 space-y-3"><Field label="Email" name="email" type="email" placeholder="you@lab.edu" required /><PasswordField name="password" show={showPw} onToggle={() => setShowPw((v) => !v)} /><Submit loading={loading}>Continue</Submit></form> : <form onSubmit={handleSignup} className="mt-6 space-y-3"><Field label="Full name" name="fullName" placeholder="Ada Lovelace" required /><Field label="Email" name="email" type="email" placeholder="you@lab.edu" required /><Field label="Phone number" name="phone" type="tel" placeholder="+91 9876543210" required /><PasswordField name="password" show={showPw} onToggle={() => setShowPw((v) => !v)} /><Field label="Confirm password" name="confirmPassword" type={showPw ? "text" : "password"} required /><Submit loading={loading}>Create account</Submit></form>}
-      {!pendingVerificationEmail && <><div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-widest text-muted-foreground"><span className="h-px flex-1 bg-white/10" />or<span className="h-px flex-1 bg-white/10" /></div><button onClick={handleGoogleSignIn} disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 py-2.5 text-sm hover:bg-white/10 disabled:opacity-50 transition"><GoogleIcon /> Continue with Google</button><p className="mt-6 text-center text-xs text-muted-foreground">{mode === "login" ? <><span>New here? </span><button onClick={() => setMode("signup")} className="text-cyan hover:text-foreground">Create an account</button></> : <><span>Already have an account? </span><button onClick={() => setMode("login")} className="text-cyan hover:text-foreground">Log in</button></>}</p></>}
+      {isAdminMode ? (
+        <div className="text-center text-xs font-semibold uppercase tracking-widest text-cyan bg-cyan/10 rounded-full py-2 border border-cyan/20">
+          Administrator Portal
+        </div>
+      ) : (
+        <div className="flex rounded-full border border-white/10 bg-white/5 p-1 text-sm">
+          <button onClick={() => { setMode("login"); setPendingVerificationEmail(null); }} className={`flex-1 rounded-full py-1.5 transition ${mode === "login" ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}>Log in</button>
+          <button onClick={() => { setMode("signup"); setPendingVerificationEmail(null); }} className={`flex-1 rounded-full py-1.5 transition ${mode === "signup" ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}>Sign up</button>
+        </div>
+      )}
+      <h1 className="mt-6 font-display text-2xl font-semibold">
+        {pendingVerificationEmail
+          ? "Verify your email"
+          : isAdminMode
+            ? "Admin Portal Login"
+            : mode === "login"
+              ? "Welcome back"
+              : "Create your account"}
+      </h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {pendingVerificationEmail
+          ? `Enter the verification code sent to ${pendingVerificationEmail}.`
+          : isAdminMode
+            ? "Sign in with your administrator credentials."
+            : mode === "login"
+              ? "Sign in to search and save datasets."
+              : "Join to save datasets and track your research."}
+      </p>
+      {pendingVerificationEmail ? (
+        <form onSubmit={handleVerifyOtp} className="mt-6 space-y-3">
+          <Field label="Verification code" name="otp" inputMode="numeric" maxLength={6} required />
+          <Submit loading={loading}>Verify email</Submit>
+        </form>
+      ) : mode === "login" || isAdminMode ? (
+        <form onSubmit={handleLogin} className="mt-6 space-y-3">
+          <Field label="Email" name="email" type="email" placeholder="you@lab.edu" required />
+          <PasswordField name="password" show={showPw} onToggle={() => setShowPw((v) => !v)} />
+          <Submit loading={loading}>Continue</Submit>
+        </form>
+      ) : (
+        <form onSubmit={handleSignup} className="mt-6 space-y-3">
+          <Field label="Full name" name="fullName" placeholder="Ada Lovelace" required />
+          <Field label="Email" name="email" type="email" placeholder="you@lab.edu" required />
+          <Field label="Phone number" name="phone" type="tel" placeholder="+91 9876543210" required />
+          <PasswordField name="password" show={showPw} onToggle={() => setShowPw((v) => !v)} />
+          <Field label="Confirm password" name="confirmPassword" type={showPw ? "text" : "password"} required />
+          <Submit loading={loading}>Create account</Submit>
+        </form>
+      )}
+      {!pendingVerificationEmail && (
+        <>
+          <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-widest text-muted-foreground">
+            <span className="h-px flex-1 bg-white/10" />
+            or
+            <span className="h-px flex-1 bg-white/10" />
+          </div>
+          {!isAdminMode && (
+            <button onClick={handleGoogleSignIn} disabled={loading} className="mb-4 flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 py-2.5 text-sm hover:bg-white/10 disabled:opacity-50 transition">
+              <GoogleIcon /> Continue with Google
+            </button>
+          )}
+          <p className="mt-6 text-center text-xs text-muted-foreground">
+            {isAdminMode ? (
+              <button onClick={() => setIsAdminMode(false)} className="text-cyan hover:text-foreground">
+                Standard Portal Login
+              </button>
+            ) : mode === "login" ? (
+              <>
+                <span>New here? </span>
+                <button onClick={() => setMode("signup")} className="text-cyan hover:text-foreground">Create an account</button>
+              </>
+            ) : (
+              <>
+                <span>Already have an account? </span>
+                <button onClick={() => setMode("login")} className="text-cyan hover:text-foreground">Log in</button>
+              </>
+            )}
+          </p>
+          {!isAdminMode && (
+            <div className="mt-4 text-center">
+              <button
+                onClick={() => {
+                  setIsAdminMode(true);
+                  setMode("login");
+                  setPendingVerificationEmail(null);
+                }}
+                className="text-[11px] text-muted-foreground/60 hover:text-foreground underline transition"
+              >
+                Administrator Login
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div></div></div>;
 }
 function Submit({ loading, children }: { loading: boolean; children: React.ReactNode }) { return <button type="submit" disabled={loading} className="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] py-2.5 text-sm font-medium text-[oklch(0.15_0.03_258)] disabled:opacity-50">{loading && <Loader2 className="h-4 w-4 animate-spin" />}{children}</button>; }
