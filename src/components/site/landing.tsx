@@ -349,8 +349,8 @@ export default function Landing() {
               <p className="mt-4 text-muted-foreground">
                 Join thousands of neuroscientists and clinical researchers already searching smarter.
               </p>
-              <div className="mt-8 flex flex-wrap justify-center gap-3">
-                <Link to="/search" search={{ q: "" }} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-5 py-3 text-sm font-medium text-[oklch(0.15_0.03_258)] glow-cyan">
+              <div className="mt-8 flex flex-wrap justify-center gap-3 hover:scale-x-75">
+                <Link to="/" search={{ q: "" }} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-5 py-3 text-sm font-medium text-[oklch(0.15_0.03_258)] glow-cyan">
                   Start Searching <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link to="/" className="inline-flex items-center gap-2 rounded-full glass px-5 py-3 text-sm hover:bg-white/10">
