@@ -24,9 +24,9 @@ export function SiteFooter() {
           </div>
         </div>
         {[
-          { title: "Product", items: ["Search", "Repositories", "AI Assistant", "API", "Changelog"] },
+          { title: "Product", items: ["Search", "Repositories"] },
           { title: "Research", items: ["Datasets", "Collections", "Papers", "Guides", "Benchmarks"] },
-          { title: "Company", items: ["About", "Careers", "Security", "Contact", "Privacy"] },
+          { title: "Company", items: ["About", "Contact", "Privacy"] },
         ].map((col) => (
           <div key={col.title}>
             <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{col.title}</div>
