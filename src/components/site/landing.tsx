@@ -273,49 +273,7 @@ export default function Landing() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="relative py-24">
-        <div className="mx-auto max-w-7xl px-6">
-          <SectionHead
-            eyebrow="How it works"
-            title={<>From natural language to <span className="gradient-text">verified research data</span></>}
-            subtitle="A neural pipeline that understands your question and cross-references every open repository."
-          />
-          <div className="relative mt-16">
-            <div className="pointer-events-none absolute left-6 top-0 h-full w-px bg-gradient-to-b from-transparent via-cyan/40 to-transparent md:left-1/2" />
-            <ol className="space-y-8">
-              {[
-                { icon: MessageSquare, title: "Natural Language Query", desc: "Ask like you'd ask a colleague — clinical constraints, cohorts, modalities, all in plain English.", },
-                { icon: BrainCircuit, title: "AI Query Understanding", desc: "Neural parser extracts intent, entities, modalities and inclusion criteria." },
-                { icon: Wand2, title: "Semantic Search", desc: "Embeddings match your intent against 5,000+ datasets across every indexed repository." },
-                { icon: Shield, title: "Dataset Verification", desc: "Automatic DOI resolution, license validation and metadata normalization." },
-                { icon: Database, title: "Cross-Repository Results", desc: "Unified, ranked results with rich metadata and comparable schema." },
-                { icon: Download, title: "Download & Research", desc: "Download, cite, bookmark or hand off to your analysis pipeline." },
-              ].map((s, i) => (
-                <motion.li
-                  key={s.title}
-                  initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-60px" }} transition={{ duration: 0.5, delay: i * 0.05 }}
-                  className={`relative grid gap-4 md:grid-cols-2 md:gap-16 ${i % 2 ? "md:[&>*:first-child]:col-start-2" : ""}`}
-                >
-                  <div className={`glass card-elevated rounded-2xl p-6 ${i % 2 ? "md:text-left" : "md:text-right"}`}>
-                    <div className={`inline-flex items-center gap-2 text-xs uppercase tracking-widest text-cyan`}>
-                      Step {String(i + 1).padStart(2, "0")}
-                    </div>
-                    <h3 className="mt-2 font-display text-xl font-semibold">{s.title}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">{s.desc}</p>
-                  </div>
-                  <div className="hidden md:block" />
-                  <div className="absolute left-6 top-6 grid h-12 w-12 -translate-x-1/2 place-items-center rounded-full bg-[oklch(0.22_0.05_255)] ring-4 ring-background md:left-1/2">
-                    <div className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] text-[oklch(0.15_0.03_258)]">
-                      <s.icon className="h-4 w-4" strokeWidth={2.5} />
-                    </div>
-                  </div>
-                </motion.li>
-              ))}
-            </ol>
-          </div>
-        </div>
-      </section>
+   
 
       {/* FEATURES BENTO */}
       <section className="relative py-24">
@@ -349,7 +307,7 @@ export default function Landing() {
               <p className="mt-4 text-muted-foreground">
                 Join thousands of neuroscientists and clinical researchers already searching smarter.
               </p>
-              <div className="mt-8 flex flex-wrap justify-center gap-3 hover:scale-x-75">
+              <div className="mt-8 flex flex-wrap justify-center gap-3">
                 <Link to="/" search={{ q: "" }} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-5 py-3 text-sm font-medium text-[oklch(0.15_0.03_258)] glow-cyan">
                   Start Searching <ArrowRight className="h-4 w-4" />
                 </Link>
