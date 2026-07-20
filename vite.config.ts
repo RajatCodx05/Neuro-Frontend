@@ -14,7 +14,7 @@ export default defineConfig({
         // requests to the local Express backend on :5000 — keeping everything
         // same-origin from the browser's perspective so CORS never fires.
         "/api/v1": {
-          target: "http://localhost:5000",
+          target: "https://neuro-server.vercel.app",
           changeOrigin: true,
           secure: false,
         },
