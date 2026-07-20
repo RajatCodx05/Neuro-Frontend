@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Sparkles, Mic, SlidersHorizontal, ArrowRight, ArrowUpRight, Play,
-  CheckCircle2, Shield, Zap, Database, Activity, Bookmark, Share2, Download,
+  CheckCircle2, Shield, Zap, Database, Activity, Bookmark, Share2, 
   MessageSquare, Wand2, Search, BrainCircuit, Waves,
 } from "lucide-react";
 import { NeuralBackground } from "@/components/site/neural-background";
@@ -190,9 +190,16 @@ export default function Landing() {
                 <div className="mt-1 text-xs text-muted-foreground">{r.datasets.toLocaleString()} datasets · {r.tier} tier</div>
                 <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3 text-xs text-muted-foreground">
                   <span>Synced {r.lastSync}</span>
-                  <Link to="/search" search={{ q: "" }} className="inline-flex items-center gap-1 text-cyan hover:text-foreground">
-                    Explore <ArrowRight className="h-3 w-3" />
-                  </Link>
+                  {/* ponytail: use external <a> links with target_blank if URL exists, fallback to disabled text */}
+                  {r.url ? (
+                    <a href={r.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-cyan hover:text-foreground">
+                      Explore <ArrowRight className="h-3 w-3" />
+                    </a>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-muted-foreground/30 cursor-not-allowed" title="Link coming soon">
+                      Explore <ArrowRight className="h-3 w-3" />
+                    </span>
+                  )}
                 </div>
               </motion.div>
             ))}
@@ -249,7 +256,7 @@ export default function Landing() {
                   </dl>
                   <div className="mt-5 flex items-center gap-2 border-t border-white/5 pt-4">
                     <Link to="/dataset/$id" params={{ id: d.id }} className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium hover:bg-white/10">
-                      <Download className="h-3 w-3" /> Download
+                      <ArrowRight className="h-3 w-3" /> Visit
                     </Link>
                     <Link to="/dataset/$id" params={{ id: d.id }} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">
                       Details <ArrowRight className="h-3 w-3" />
