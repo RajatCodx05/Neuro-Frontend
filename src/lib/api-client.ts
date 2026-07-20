@@ -1,13 +1,6 @@
 export const BASE_URL = (() => {
   if (import.meta.env.DEV) return "/api/v1";
-  const url = import.meta.env.VITE_API_BASE_URL;
-  if (!url) {
-    console.warn(
-      "[api-client] VITE_API_BASE_URL is not set. The app will not be able to reach the backend in production."
-    );
-    return "";
-  }
-  return url;
+  return import.meta.env.VITE_API_BASE_URL || "https://neuro-server.vercel.app/api/v1";
 })().replace(/\/$/, "");
 
 export type AuthUser = { id: string; email: string; isAdmin: boolean };
