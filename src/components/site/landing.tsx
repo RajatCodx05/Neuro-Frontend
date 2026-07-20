@@ -4,7 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Sparkles, Mic, SlidersHorizontal, ArrowRight, ArrowUpRight, Play,
   CheckCircle2, Shield, Zap, Database, Activity, Bookmark, Share2, 
-  MessageSquare, Wand2, Search, BrainCircuit, Waves,
+  MessageSquare, Wand2, Search, BrainCircuit, Waves, Download
 } from "lucide-react";
 import { NeuralBackground } from "@/components/site/neural-background";
 import { SiteFooter } from "@/components/site/site-footer";
@@ -288,7 +288,7 @@ export default function Landing() {
                 { icon: Wand2, title: "Semantic Search", desc: "Embeddings match your intent against 5,000+ datasets across every indexed repository." },
                 { icon: Shield, title: "Dataset Verification", desc: "Automatic DOI resolution, license validation and metadata normalization." },
                 { icon: Database, title: "Cross-Repository Results", desc: "Unified, ranked results with rich metadata and comparable schema." },
-                // { icon: Download, title: "Download & Research", desc: "Download, cite, bookmark or hand off to your analysis pipeline." },
+                { icon: Download, title: "Download & Research", desc: "Download, cite, bookmark or hand off to your analysis pipeline." },
               ].map((s, i) => (
                 <motion.li
                   key={s.title}
