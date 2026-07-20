@@ -4,7 +4,8 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Sparkles, Mic, SlidersHorizontal, ArrowRight, ArrowUpRight, Play,
   CheckCircle2, Shield, Zap, Database, Activity, Bookmark, Share2, 
-  MessageSquare, Wand2, Search, BrainCircuit, Waves, Download
+  MessageSquare, Wand2, Search, BrainCircuit, Waves, Download,
+  Rocket
 } from "lucide-react";
 import { NeuralBackground } from "@/components/site/neural-background";
 import { SiteFooter } from "@/components/site/site-footer";
@@ -256,7 +257,7 @@ export default function Landing() {
                   </dl>
                   <div className="mt-5 flex items-center gap-2 border-t border-white/5 pt-4">
                     <Link to="/dataset/$id" params={{ id: d.id }} className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium hover:bg-white/10">
-                      <ArrowRight className="h-3 w-3" /> Visit
+                      <Rocket className="h-3 w-3" /> Visit
                     </Link>
                     <Link to="/dataset/$id" params={{ id: d.id }} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">
                       Details <ArrowRight className="h-3 w-3" />
