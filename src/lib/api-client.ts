@@ -314,8 +314,11 @@ const admin = {
   auth: {
     login: (email: string, password: string) =>
       request<{ accessToken: string; user: Record<string, unknown> }>("/admin/login", { method: "POST", body: JSON.stringify({ email, password }) }, false),
-    verifyLoginOtp: (email: string, otp: string) =>
-      request<{ accessToken: string; user: Record<string, unknown> }>("/admin/verify-login-otp", { method: "POST", body: JSON.stringify({ email, otp }) }, false),
+    verifyLoginOtp: async (email: string, otp: string) => {
+      const data = await request<{ accessToken: string; admin: Record<string, unknown> }>("/admin/verify-login-otp", { method: "POST", body: JSON.stringify({ email, otp }) }, false);
+      setAccessToken(data.accessToken);
+      return data;
+    },
   },
   async dashboard() {
     return request<Record<string, unknown>>("/admin/dashboard");

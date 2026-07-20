@@ -32,7 +32,7 @@ const suggestions = [
   "Resting-state fMRI in children with ADHD",
   "Longitudinal Alzheimer's MRI cohorts",
   "EEG datasets for epilepsy localization",
-  "Rodent two-photon calcium imaging",
+  
 ];
 
 const trending = [
@@ -118,7 +118,7 @@ export default function Landing() {
                   placeholder="Find resting-state fMRI datasets for children under 12 with ADHD..."
                 />
                 <button type="button" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl hover:bg-white/5" title="Voice">
-                  <Mic className="h-4 w-4" />
+                  <Mic className="h-4 w-4 opacity-25" />
                 </button>
                 <button type="submit" className="ml-1 inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-sm font-medium text-[oklch(0.15_0.03_258)]">
                   Search <ArrowRight className="h-3.5 w-3.5" />
