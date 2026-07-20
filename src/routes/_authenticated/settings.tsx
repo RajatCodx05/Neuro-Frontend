@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { Loader2, Save, Trash2, Plus, AlertTriangle } from "lucide-react";
-import { api } from "@/lib/api-client";
+import { api, type UserProfile } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { AppShell } from "@/components/app/app-shell";
 import { toast } from "sonner";
@@ -40,7 +40,7 @@ function SettingsPage() {
         full_name: String(form.get("full_name") ?? "").trim().slice(0, 100),
         phone: String(form.get("phone") ?? "").trim().slice(0, 30),
         institute: String(form.get("institute") ?? "").trim().slice(0, 150),
-        role: (form.get("role") || null) as "student" | "researcher" | "clinician" | "other" | null,
+        role: (form.get("role") || null) as UserProfile["role"],
       });
     } catch (err) {
       setSaving(false);
@@ -115,8 +115,8 @@ function SettingsPage() {
                 <option value="">—</option>
                 <option value="student">Student</option>
                 <option value="researcher">Researcher</option>
-                <option value="clinician">Clinician</option>
-                <option value="other">Other</option>
+                <option value="scientist">Scientist</option>
+                <option value="working_professional">Working Professional</option>
               </select>
             </label>
           </div>

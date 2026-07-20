@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_authenticated/onboarding")({
 const schema = z.object({
   full_name: z.string().trim().min(1).max(100),
   phone: z.string().trim().min(5).max(30),
-  role: z.enum(["student", "researcher", "clinician", "other"]),
+  role: z.enum(["student", "researcher", "scientist", "working_professional"]),
   institute: z.string().trim().max(150).optional().or(z.literal("")),
 }).refine((d) => d.role !== "student" || (d.institute && d.institute.length > 0), {
   message: "Institute is required for students", path: ["institute"],
@@ -87,8 +87,8 @@ function OnboardingPage() {
                 <option value="">Select a role</option>
                 <option value="student">Student</option>
                 <option value="researcher">Researcher</option>
-                <option value="clinician">Clinician</option>
-                <option value="other">Other</option>
+                <option value="scientist">Scientist</option>
+                <option value="working_professional">Working Professional</option>
               </select>
             </label>
             <Field

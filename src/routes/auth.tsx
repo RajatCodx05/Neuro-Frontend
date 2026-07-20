@@ -65,7 +65,7 @@ function AuthPage() {
   const handleVerifyOtp = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault(); if (!pendingVerificationEmail) return; const otp = String(new FormData(e.currentTarget).get("otp") ?? "").trim();
     if (!/^\d{6}$/.test(otp)) { toast.error("Enter the 6-digit verification code"); return; } setLoading(true);
-    try { await api.auth.verifyOtp(pendingVerificationEmail, otp); toast.success("Email verified"); redirectTo("/_authenticated/onboarding"); }
+    try { await api.auth.verifyOtp(pendingVerificationEmail, otp); toast.success("Email verified"); redirectTo("/onboarding"); }
     catch (err) { toast.error(err instanceof Error ? err.message : "Verification failed"); } finally { setLoading(false); }
   };
 
@@ -92,7 +92,7 @@ function AuthPage() {
               try {
                 const result = await api.auth.google(credential.credential);
                 toast.success("Signed in with Google");
-                redirectTo(result.isOnboarded ? search.redirect : "/_authenticated/onboarding");
+                redirectTo(result.isOnboarded ? search.redirect : "/onboarding");
                 resolve();
               } catch (err) { reject(err); }
             })();

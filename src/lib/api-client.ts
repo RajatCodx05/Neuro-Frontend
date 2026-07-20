@@ -9,7 +9,7 @@ export type UserProfile = {
   full_name: string | null;
   email: string | null;
   phone: string | null;
-  role: "student" | "researcher" | "clinician" | "other" | null;
+  role: "student" | "researcher" | "scientist" | "working_professional" | null;
   institute: string | null;
   notifications_enabled: boolean;
   onboarding_complete: boolean;
