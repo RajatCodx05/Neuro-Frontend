@@ -4,7 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Sparkles, Mic, SlidersHorizontal, ArrowRight, ArrowUpRight, Play,
   CheckCircle2, Shield, Zap, Database, Activity, Bookmark, Share2, 
-  MessageSquare, Wand2, Search, BrainCircuit, Waves,
+  MessageSquare, Wand2, Search, BrainCircuit, Waves, Download,
 } from "lucide-react";
 import { NeuralBackground } from "@/components/site/neural-background";
 import { SiteFooter } from "@/components/site/site-footer";
@@ -46,7 +46,7 @@ export default function Landing() {
 
   const guard = () => {
     if (!user) {
-      navigate({ to: "/auth", search: { redirect: "/search", mode: "login" } });
+      navigate({ to: "/auth", search: { redirect: "/", mode: "login" } });
       return false;
     }
     return true;

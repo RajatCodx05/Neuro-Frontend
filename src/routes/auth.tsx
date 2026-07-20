@@ -44,7 +44,10 @@ function AuthPage() {
   const [mode, setMode] = useState<"login" | "signup">(search.mode);
   const [loading, setLoading] = useState(false); const [showPw, setShowPw] = useState(false);
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
-  const redirectTo = (path?: string) => navigate({ to: path?.startsWith("/") ? path : "/", replace: true });
+  const redirectTo = (path?: string) => {
+    const target = path && path.startsWith("/") && !path.startsWith("/search") ? path : "/";
+    navigate({ to: target, replace: true });
+  };
 
   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault(); const form = new FormData(e.currentTarget); const parsed = loginSchema.safeParse({ email: form.get("email"), password: form.get("password") });
