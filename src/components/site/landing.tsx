@@ -47,7 +47,7 @@ export default function Landing() {
 
   const guard = () => {
     if (!user) {
-      navigate({ to: "/auth", search: { redirect: "/search", mode: "login" } });
+      navigate({ to: "/auth", search: { redirect: "/", mode: "login" } });
       return false;
     }
     return true;
