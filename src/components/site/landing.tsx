@@ -5,12 +5,22 @@ import {
   Sparkles, Mic, SlidersHorizontal, ArrowRight, ArrowUpRight, Play,
   CheckCircle2, Shield, Zap, Database, Activity, Bookmark, Share2, 
   MessageSquare, Wand2, Search, BrainCircuit, Waves, Download,
-  Rocket
+  Rocket, Bell, BellRing, LogIn, UserPlus, LogOut, Settings, ShieldCheck,
+  Megaphone, Volume2, VolumeX
 } from "lucide-react";
 import { NeuralBackground } from "@/components/site/neural-background";
 import { SiteFooter } from "@/components/site/site-footer";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
+import { api } from "@/lib/api-client";
+import { toast } from "sonner";
+import {
+  Popover, PopoverTrigger, PopoverContent
+} from "@/components/ui/popover";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 import brainCardImg from "@/assets/brain-card.jpg";
 import { datasets, repositories, stats } from "@/lib/mock-data";
 
@@ -32,7 +42,6 @@ const suggestions = [
   "Resting-state fMRI in children with ADHD",
   "Longitudinal Alzheimer's MRI cohorts",
   "EEG datasets for epilepsy localization",
-  
 ];
 
 const trending = [
@@ -41,9 +50,37 @@ const trending = [
 ];
 
 export default function Landing() {
-  const { user } = useAuth();
+  const { user, profile, refreshProfile, signOut } = useAuth();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
+  const [togglingNotifs, setTogglingNotifs] = useState(false);
+  const [announcements, setAnnouncements] = useState<Array<{ id: string; title: string; body: string; created_at: string }>>([]);
+
+  const notificationsEnabled = profile?.notifications_enabled ?? true;
+
+  useEffect(() => {
+    api.admin.announcements.list()
+      .then((items) => setAnnouncements((items as any[]).filter((a) => a.active)))
+      .catch(() => setAnnouncements([]));
+  }, []);
+
+  const handleToggleNotifications = async (enabled: boolean) => {
+    if (!user) {
+      toast.info("Please sign in to manage notification settings.");
+      navigate({ to: "/auth", search: { redirect: "/", mode: "login" } });
+      return;
+    }
+    setTogglingNotifs(true);
+    try {
+      await api.profiles.update({ notifications_enabled: enabled });
+      await refreshProfile();
+      toast.success(enabled ? "Admin notifications enabled" : "Admin notifications muted");
+    } catch {
+      toast.error("Failed to update notification settings");
+    } finally {
+      setTogglingNotifs(false);
+    }
+  };
 
   const guard = () => {
     if (!user) {
@@ -62,10 +99,114 @@ export default function Landing() {
   return (
     <AppShell>
       <div className="relative overflow-x-clip">
+      {/* Top Right Options: Notification & Auth positioned at extreme top-right */}
+      <div className="fixed top-4 right-6 sm:top-5 sm:right-8 z-40 flex items-center gap-2 sm:gap-3">
+        {/* Notification Option */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              className="relative grid h-10 w-10 place-items-center rounded-full glass border border-white/10 text-foreground/80 hover:bg-white/10 hover:text-foreground transition-all shadow-md backdrop-blur-xl"
+              title="Admin Notifications"
+            >
+              <Bell className="h-4 w-4 text-cyan" />
+              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-cyan animate-pulse ring-2 ring-background" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80 sm:w-96 rounded-2xl glass-strong border border-white/10 p-4 shadow-2xl backdrop-blur-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Megaphone className="h-4 w-4 text-cyan" />
+                <span className="font-display text-sm font-semibold text-foreground">Admin Notifications</span>
+              </div>
+            </div>
+
+            <div className="mt-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-cyan/90 font-medium">
+                <Volume2 className="h-3.5 w-3.5" /> Admin broadcasts & alerts
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-2 max-h-56 overflow-y-auto pr-1">
+              {announcements.length > 0 ? (
+                announcements.map((a) => (
+                  <div key={a.id} className="rounded-xl border border-white/5 bg-white/5 p-3 text-xs">
+                    <div className="font-medium text-foreground">{a.title}</div>
+                    <div className="mt-1 text-muted-foreground leading-relaxed">{a.body}</div>
+                    <div className="mt-2 text-[10px] text-muted-foreground/60">{new Date(a.created_at).toLocaleDateString()}</div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-xl border border-dashed border-white/10 p-4 text-center text-xs text-muted-foreground">
+                  No active broadcast announcements from Admin right now.
+                </div>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {/* Login & Sign Up Options */}
+        {user ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-2 rounded-full glass border border-white/10 px-3 py-1.5 text-xs font-medium hover:bg-white/10 transition-all shadow-md backdrop-blur-xl">
+                <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-neural to-electric text-[10px] font-bold text-white">
+                  {(profile?.full_name || user.email || "?").slice(0, 1).toUpperCase()}
+                </span>
+                <span className="max-w-[100px] truncate text-foreground">
+                  {profile?.full_name || user.email?.split("@")[0]}
+                </span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 rounded-2xl glass-strong border border-white/10 p-2 shadow-2xl">
+              <DropdownMenuLabel className="px-3 py-2 text-xs truncate">
+                <div className="font-semibold text-foreground">{profile?.full_name || "User Account"}</div>
+                <div className="text-[11px] text-muted-foreground font-normal truncate">{user.email}</div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
+                <Link to="/settings"><Settings className="mr-2 h-4 w-4" />Profile & Settings</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
+                <Link to="/saved"><Bookmark className="mr-2 h-4 w-4" />Saved Datasets</Link>
+              </DropdownMenuItem>
+              {profile?.role === "admin" && (
+                <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
+                  <Link to="/admin"><ShieldCheck className="mr-2 h-4 w-4 text-cyan" />Admin Portal</Link>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuItem onClick={() => signOut()} className="rounded-xl cursor-pointer text-rose-400 focus:text-rose-400">
+                <LogOut className="mr-2 h-4 w-4" />Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Link
+              to="/auth"
+              search={{ redirect: "/", mode: "login" }}
+              className="inline-flex items-center gap-1.5 rounded-full glass border border-white/10 px-3.5 py-1.5 text-xs font-medium text-foreground hover:bg-white/10 transition-all shadow-md backdrop-blur-xl"
+            >
+              <LogIn className="h-3.5 w-3.5 text-cyan" />
+              <span>Log in</span>
+            </Link>
+            <Link
+              to="/auth"
+              search={{ redirect: "/", mode: "signup" }}
+              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-3.5 py-1.5 text-xs font-medium text-[oklch(0.15_0.03_258)] glow-cyan hover:shadow-lg transition-all"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              <span>Sign up</span>
+            </Link>
+          </div>
+        )}
+      </div>
+
       {/* HERO */}
       <section className="relative isolate pt-16 pb-20 sm:pt-24 sm:pb-28" style={{ paddingBottom: "calc(5rem + 1px)" }}>
         <NeuralBackground />
         <div className="relative mx-auto max-w-7xl px-6">
+
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}

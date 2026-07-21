@@ -153,11 +153,11 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/search': typeof SearchRoute
+  '/help': typeof AuthenticatedHelpRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/saved': typeof AuthenticatedSavedRoute
   '/settings': typeof AuthenticatedSettingsRoute
-  '/help': typeof AuthenticatedHelpRoute
   '/admin/agents': typeof AdminAgentsRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
@@ -176,11 +176,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/search': typeof SearchRoute
+  '/help': typeof AuthenticatedHelpRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/saved': typeof AuthenticatedSavedRoute
   '/settings': typeof AuthenticatedSettingsRoute
-  '/help': typeof AuthenticatedHelpRoute
   '/admin/agents': typeof AdminAgentsRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
@@ -202,11 +202,11 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/search': typeof SearchRoute
+  '/_authenticated/help': typeof AuthenticatedHelpRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/saved': typeof AuthenticatedSavedRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
-  '/_authenticated/help': typeof AuthenticatedHelpRoute
   '/admin/agents': typeof AdminAgentsRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
@@ -228,11 +228,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/search'
+    | '/help'
     | '/history'
     | '/onboarding'
     | '/saved'
     | '/settings'
-    | '/help'
     | '/admin/agents'
     | '/admin/analytics'
     | '/admin/announcements'
@@ -251,11 +251,11 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/search'
+    | '/help'
     | '/history'
     | '/onboarding'
     | '/saved'
     | '/settings'
-    | '/help'
     | '/admin/agents'
     | '/admin/analytics'
     | '/admin/announcements'
@@ -276,11 +276,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/search'
+    | '/_authenticated/help'
     | '/_authenticated/history'
     | '/_authenticated/onboarding'
     | '/_authenticated/saved'
     | '/_authenticated/settings'
-    | '/_authenticated/help'
     | '/admin/agents'
     | '/admin/analytics'
     | '/admin/announcements'
@@ -472,19 +472,19 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedHelpRoute: typeof AuthenticatedHelpRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedSavedRoute: typeof AuthenticatedSavedRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
-  AuthenticatedHelpRoute: typeof AuthenticatedHelpRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedHelpRoute: AuthenticatedHelpRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedSavedRoute: AuthenticatedSavedRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
-  AuthenticatedHelpRoute: AuthenticatedHelpRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
