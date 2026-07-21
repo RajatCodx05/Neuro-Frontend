@@ -193,19 +193,19 @@ function AuthPage() {
   };
 
   return <div className="relative flex min-h-screen items-center justify-center px-4 py-12"><div className="pointer-events-none absolute inset-0 hero-bg" /><div className="relative w-full max-w-md">
-    <Link to="/" className="mb-8 flex items-center justify-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] glow-cyan"><Brain className="h-4 w-4 text-[oklch(0.15_0.03_258)]" strokeWidth={2.5} /></span><span className="font-display text-lg font-semibold">NeuroSearch <span className="text-cyan">AI</span></span></Link>
+    <Link to="/" className="mb-8 flex items-center justify-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] glow-cyan"><Brain className="h-4 w-4 text-[oklch(0.15_0.03_258)]" strokeWidth={2.5} /></span><span className="font-display text-lg font-semibold text-foreground">NeuroSearch <span className="text-cyan-600 dark:text-cyan">AI</span></span></Link>
     <div className="glass-strong card-elevated rounded-3xl p-6 sm:p-8">
       {isAdminMode ? (
-        <div className="text-center text-xs font-semibold uppercase tracking-widest text-cyan bg-cyan/10 rounded-full py-2 border border-cyan/20">
+        <div className="text-center text-xs font-semibold uppercase tracking-widest text-cyan-600 dark:text-cyan bg-cyan/10 rounded-full py-2 border border-cyan/30">
           Administrator Portal
         </div>
       ) : (
-        <div className="flex rounded-full border border-white/10 bg-white/5 p-1 text-sm">
-          <button onClick={() => { setMode("login"); setPendingVerificationEmail(null); }} className={`flex-1 rounded-full py-1.5 transition ${mode === "login" ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}>Log in</button>
-          <button onClick={() => { setMode("signup"); setPendingVerificationEmail(null); }} className={`flex-1 rounded-full py-1.5 transition ${mode === "signup" ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}>Sign up</button>
+        <div className="flex rounded-full border border-black/10 bg-black/5 p-1 text-sm dark:border-white/10 dark:bg-white/5">
+          <button onClick={() => { setMode("login"); setPendingVerificationEmail(null); }} className={`flex-1 rounded-full py-1.5 font-medium transition ${mode === "login" ? "bg-white text-foreground shadow-sm dark:bg-white/15 dark:text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Log in</button>
+          <button onClick={() => { setMode("signup"); setPendingVerificationEmail(null); }} className={`flex-1 rounded-full py-1.5 font-medium transition ${mode === "signup" ? "bg-white text-foreground shadow-sm dark:bg-white/15 dark:text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Sign up</button>
         </div>
       )}
-      <h1 className="mt-6 font-display text-2xl font-semibold">
+      <h1 className="mt-6 font-display text-2xl font-semibold text-foreground">
         {pendingVerificationEmail
           ? "Verify your email"
           : isAdminMode
@@ -214,7 +214,7 @@ function AuthPage() {
               ? "Welcome back"
               : "Create your account"}
       </h1>
-      <p className="mt-1 text-sm text-muted-foreground">
+      <p className="mt-1 text-sm text-foreground/70 dark:text-muted-foreground">
         {pendingVerificationEmail
           ? `Enter the verification code sent to ${pendingVerificationEmail}.`
           : isAdminMode
@@ -246,30 +246,30 @@ function AuthPage() {
       )}
       {!pendingVerificationEmail && (
         <>
-          <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-widest text-muted-foreground">
-            <span className="h-px flex-1 bg-white/10" />
+          <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-widest text-foreground/60 dark:text-muted-foreground">
+            <span className="h-px flex-1 bg-black/15 dark:bg-white/10" />
             or
-            <span className="h-px flex-1 bg-white/10" />
+            <span className="h-px flex-1 bg-black/15 dark:bg-white/10" />
           </div>
           {!isAdminMode && (
-            <button onClick={handleGoogleSignIn} disabled={loading} className="mb-4 flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 py-2.5 text-sm hover:bg-white/10 disabled:opacity-50 transition">
+            <button onClick={handleGoogleSignIn} disabled={loading} className="mb-4 flex w-full items-center justify-center gap-2 rounded-full border border-black/15 bg-black/[0.03] text-foreground font-medium py-2.5 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10 disabled:opacity-50 transition">
               <GoogleIcon /> Continue with Google
             </button>
           )}
-          <p className="mt-6 text-center text-xs text-muted-foreground">
+          <p className="mt-6 text-center text-xs text-foreground/70 dark:text-muted-foreground">
             {isAdminMode ? (
-              <button onClick={() => setIsAdminMode(false)} className="text-cyan hover:text-foreground">
+              <button onClick={() => setIsAdminMode(false)} className="text-cyan-600 dark:text-cyan font-medium hover:underline">
                 Standard Portal Login
               </button>
             ) : mode === "login" ? (
               <>
                 <span>New here? </span>
-                <button onClick={() => setMode("signup")} className="text-cyan hover:text-foreground">Create an account</button>
+                <button onClick={() => setMode("signup")} className="text-cyan-600 dark:text-cyan font-medium hover:underline">Create an account</button>
               </>
             ) : (
               <>
                 <span>Already have an account? </span>
-                <button onClick={() => setMode("login")} className="text-cyan hover:text-foreground">Log in</button>
+                <button onClick={() => setMode("login")} className="text-cyan-600 dark:text-cyan font-medium hover:underline">Log in</button>
               </>
             )}
           </p>
@@ -281,7 +281,7 @@ function AuthPage() {
                   setMode("login");
                   setPendingVerificationEmail(null);
                 }}
-                className="text-[11px] text-muted-foreground/60 hover:text-foreground underline transition"
+                className="text-[11px] font-medium text-foreground/70 dark:text-muted-foreground/70 hover:text-foreground underline transition"
               >
                 Administrator Login
               </button>
@@ -291,22 +291,22 @@ function AuthPage() {
       )}
     </div></div></div>;
 }
-function Submit({ loading, children }: { loading: boolean; children: React.ReactNode }) { return <button type="submit" disabled={loading} className="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] py-2.5 text-sm font-medium text-[oklch(0.15_0.03_258)] disabled:opacity-50">{loading && <Loader2 className="h-4 w-4 animate-spin" />}{children}</button>; }
-function Field({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) { return <label className="block"><span className="text-xs text-muted-foreground">{label}</span><input {...props} className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/60 focus:border-cyan/50" /></label>; }
-function PasswordField({ name, show, onToggle }: { name: string; show: boolean; onToggle: () => void }) { return <label className="block"><span className="text-xs text-muted-foreground">Password</span><div className="relative mt-1"><input name={name} type={show ? "text" : "password"} required minLength={6} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 pr-10 text-sm outline-none focus:border-cyan/50" /><button type="button" onClick={onToggle} className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground hover:bg-white/5">{show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}</button></div></label>; }
+function Submit({ loading, children }: { loading: boolean; children: React.ReactNode }) { return <button type="submit" disabled={loading} className="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] py-2.5 text-sm font-medium text-[oklch(0.15_0.03_258)] disabled:opacity-50 shadow-sm hover:shadow-md transition">{loading && <Loader2 className="h-4 w-4 animate-spin" />}{children}</button>; }
+function Field({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) { return <label className="block"><span className="text-xs font-medium text-foreground/80 dark:text-muted-foreground">{label}</span><input {...props} className="mt-1 w-full rounded-xl border border-black/15 bg-black/[0.03] px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/70 focus:border-cyan focus:ring-1 focus:ring-cyan dark:border-white/10 dark:bg-white/5 dark:placeholder:text-muted-foreground/60" /></label>; }
+function PasswordField({ name, show, onToggle }: { name: string; show: boolean; onToggle: () => void }) { return <label className="block"><span className="text-xs font-medium text-foreground/80 dark:text-muted-foreground">Password</span><div className="relative mt-1"><input name={name} type={show ? "text" : "password"} required minLength={6} className="w-full rounded-xl border border-black/15 bg-black/[0.03] px-3 py-2 pr-10 text-sm text-foreground outline-none focus:border-cyan focus:ring-1 focus:ring-cyan dark:border-white/10 dark:bg-white/5" /><button type="button" onClick={onToggle} className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-lg text-foreground/60 hover:bg-black/5 dark:text-muted-foreground dark:hover:bg-white/5">{show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}</button></div></label>; }
 function SignupPhoneField() {
   return (
     <div className="block">
-      <span className="text-xs text-muted-foreground">Phone number</span>
+      <span className="text-xs font-medium text-foreground/80 dark:text-muted-foreground">Phone number</span>
       <div className="mt-1 flex gap-2">
         <select name="countryCode" defaultValue="+91" required
-          className="w-36 shrink-0 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm outline-none focus:border-cyan/50">
+          className="w-36 shrink-0 rounded-xl border border-black/15 bg-black/[0.03] px-2 py-2 text-sm text-foreground outline-none focus:border-cyan dark:border-white/10 dark:bg-white/5 [.light_&]:bg-white [.light_&]:text-slate-900">
           {COUNTRY_CODES.map((c) => (
-            <option key={c.code} value={c.code}>{c.label}</option>
+            <option key={c.code} value={c.code} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{c.label}</option>
           ))}
         </select>
         <input name="phone" type="tel" required placeholder="9876543210"
-          className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/60 focus:border-cyan/50" />
+          className="min-w-0 flex-1 rounded-xl border border-black/15 bg-black/[0.03] px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/70 focus:border-cyan focus:ring-1 focus:ring-cyan dark:border-white/10 dark:bg-white/5 dark:placeholder:text-muted-foreground/60" />
       </div>
     </div>
   );
