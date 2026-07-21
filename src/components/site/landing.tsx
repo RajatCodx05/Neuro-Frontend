@@ -139,11 +139,11 @@ export default function Landing() {
           </motion.div>
         </div>
         {/* Seamless fade into stats section */}
-        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-[oklch(0.15_0.028_255)]" style={{ zIndex: 1 }} />
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-[oklch(0.15_0.028_255)] [.light_&]:to-muted" style={{ zIndex: 1 }} />
       </section>
 
       {/* STATS */}
-      <section className="relative border-b border-white/5 bg-[oklch(0.15_0.028_255)] py-16">
+      <section className="relative border-b border-border bg-[oklch(0.15_0.028_255)] [.light_&]:bg-muted py-10">
         <div className="mx-auto max-w-7xl px-6">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             {stats.map((s) => (

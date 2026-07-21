@@ -159,6 +159,7 @@ html.light {
   }
   html {
     color-scheme: dark;
+    scroll-behavior: smooth;
   }
   html.light {
     color-scheme: light;

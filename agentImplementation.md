@@ -185,3 +185,39 @@ Browser
 - Responsive layout (single column mobile, max-w-4xl desktop)
 - Dark/light mode compatible via existing theme tokens
 - Semantic headings, keyboard-navigable accordion
+
+---
+
+## Phase 4 — Light-mode sidebar hover fixes + dashboard dark-band fix + smooth scrolling
+
+### Files modified
+
+#### `src/components/app/app-shell.tsx`
+- **Sidebar panel** (`<aside>`): Added `hover:bg-sidebar-accent/20 transition-all` — subtle background tint on panel hover; works in both collapsed and expanded modes.
+- **All white-alpha hover/active classes replaced** with theme-aware `bg-sidebar-accent`:
+  - Nav items (Dashboard, Saved & Collections, History, Settings) — `hover:bg-white/5` → `hover:bg-sidebar-accent`, `bg-white/10` → `bg-sidebar-accent`
+  - Theme toggle button — `hover:bg-white/5` → `hover:bg-sidebar-accent`
+  - Help & Docs link — same pattern
+  - Collapse/expand buttons — same pattern
+  - Profile/user button — `hover:bg-white/5` → `hover:bg-sidebar-accent`
+  - Mobile drawer close button — same pattern
+  - Mobile drawer nav items — same pattern (added missing hover states)
+  - Mobile sign out button — same pattern
+- **All hover targets** gained `transition-colors` for smooth background transitions.
+- **Border colors**: `border-white/5` → `border-sidebar-border` for theme-aware dividers.
+
+In dark mode `bg-sidebar-accent` resolves to `oklch(0.24 0.032 258)` (lighter than sidebar bg `0.18`). In light mode it resolves to `oklch(0.92 0.01 250)` (darker than sidebar bg `0.96`). Both produce visible greyish hover/active backgrounds.
+
+#### `src/components/site/landing.tsx`
+- **Fade div** (line 142): Added `[.light_&]:to-muted` so the hero→stats gradient fades to a soft light grey in light mode instead of black.
+- **STATS section** (line 146): Added `[.light_&]:bg-muted` for a soft light-grey background in light mode; reduced `py-16` → `py-10` to shorten the dark band. Dark mode preserves the original `oklch(0.15 0.028 255)` background.
+
+#### `src/styles.css`
+- **`html` rule**: Added `scroll-behavior: smooth` for smooth in-page scrolling on the dashboard/landing page.
+
+**Verification:**
+1. Light mode: hovering each sidebar item shows a greyish background; active page item stays highlighted.
+2. Collapsed sidebar (w-16) shows hover effects on icons and panel in light mode.
+3. Light mode dashboard: the dark band under the hero is shorter, uses a soft light background, and blends smoothly.
+4. Dark mode: everything looks exactly as before (sidebar hover uses `bg-sidebar-accent`, stats section keeps original dark color).
+5. Page scrolling is smooth on the dashboard.

@@ -41,7 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="relative min-h-screen">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-30 hidden ${sidebarWidth} flex-col border-r border-sidebar-border bg-sidebar/85 backdrop-blur-xl transition-[width] duration-200 md:flex`}>
+      <aside className={`fixed inset-y-0 left-0 z-30 hidden ${sidebarWidth} flex-col border-r border-sidebar-border bg-sidebar/85 backdrop-blur-xl transition-all duration-200 hover:bg-sidebar-accent/20 md:flex`}>
         <div className={`flex items-center ${collapsed ? "justify-center" : "justify-between"} px-3 py-5`}>
           <Link to="/" className="flex items-center gap-2">
             <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] glow-cyan shrink-0">
@@ -56,7 +56,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {!collapsed && (
             <button
               onClick={() => setCollapsed(true)}
-              className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground"
+              className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors"
               title="Collapse sidebar"
             >
               <PanelLeftClose className="h-4 w-4" />
@@ -67,7 +67,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {collapsed && (
           <button
             onClick={() => setCollapsed(false)}
-            className="mx-auto mb-2 grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground"
+            className="mx-auto mb-2 grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors"
             title="Expand sidebar"
           >
             <PanelLeft className="h-4 w-4" />
@@ -82,8 +82,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 key={n.to}
                 to={n.to}
                 title={collapsed ? n.label : undefined}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${
-                  active ? "bg-white/10 text-foreground" : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors ${
+                  active ? "bg-sidebar-accent text-foreground" : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
                 } ${collapsed ? "justify-center" : ""}`}
               >
                 <n.icon className={`h-4 w-4 shrink-0 ${active ? "text-cyan" : ""}`} />
@@ -99,7 +99,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button
             onClick={toggleTheme}
             title={collapsed ? (theme === "dark" ? "Light mode" : "Dark mode") : undefined}
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-muted-foreground transition hover:bg-white/5 hover:text-foreground ${collapsed ? "justify-center" : ""}`}
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground ${collapsed ? "justify-center" : ""}`}
           >
             {theme === "dark" ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
             {!collapsed && <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>}
@@ -107,8 +107,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link
             to="/help"
             title={collapsed ? "Help & Docs" : undefined}
-            className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${
-              isActive("/help") ? "bg-white/10 text-foreground" : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+            className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors ${
+              isActive("/help") ? "bg-sidebar-accent text-foreground" : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
             } ${collapsed ? "justify-center" : ""}`}
           >
             <HelpCircle className={`h-4 w-4 shrink-0 ${isActive("/help") ? "text-cyan" : ""}`} />
@@ -118,11 +118,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         {/* Profile container — bottom */}
-        <div className="border-t border-white/5 p-3">
+        <div className="border-t border-sidebar-border p-3">
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className={`flex w-full items-center gap-3 rounded-xl p-2 hover:bg-white/5 ${collapsed ? "justify-center" : ""}`}>
+                <button className={`flex w-full items-center gap-3 rounded-xl p-2 hover:bg-sidebar-accent transition-colors ${collapsed ? "justify-center" : ""}`}>
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-neural to-electric text-xs font-semibold text-white">
                     {initials}
                   </span>
@@ -184,29 +184,29 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </span>
                 <span className="font-display text-sm font-semibold">NeuroSearch AI</span>
               </Link>
-              <button onClick={() => setMobileOpen(false)} className="grid h-8 w-8 place-items-center rounded-lg hover:bg-white/5">
+              <button onClick={() => setMobileOpen(false)} className="grid h-8 w-8 place-items-center rounded-lg hover:bg-sidebar-accent transition-colors">
                 <X className="h-4 w-4" />
               </button>
             </div>
             <div className="mt-6 flex-1 space-y-1">
               {nav.map((n) => (
                 <Link key={n.to} to={n.to} onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${
-                    isActive(n.to) ? "bg-white/10 text-foreground" : "text-muted-foreground"
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors ${
+                    isActive(n.to) ? "bg-sidebar-accent text-foreground" : "text-muted-foreground hover:bg-sidebar-accent"
                   }`}>
                   <n.icon className="h-4 w-4" /> {n.label}
                 </Link>
               ))}
             </div>
             <Link to="/help" onClick={() => setMobileOpen(false)}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${
-                isActive("/help") ? "bg-white/10 text-foreground" : "text-muted-foreground"
+              className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors ${
+                isActive("/help") ? "bg-sidebar-accent text-foreground" : "text-muted-foreground hover:bg-sidebar-accent"
               }`}>
               <HelpCircle className="h-4 w-4" /> Help & Docs
             </Link>
-            <div className="mt-2 border-t border-white/5 pt-3">
+            <div className="mt-2 border-t border-sidebar-border pt-3">
               {user ? (
-                <button onClick={handleSignOut} className="flex w-full items-center gap-3 rounded-xl p-2 hover:bg-white/5">
+                <button onClick={handleSignOut} className="flex w-full items-center gap-3 rounded-xl p-2 hover:bg-sidebar-accent transition-colors">
                   <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-neural to-electric text-xs font-semibold text-white">
                     {initials}
                   </span>
