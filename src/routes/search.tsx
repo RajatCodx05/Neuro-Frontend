@@ -1,10 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, SlidersHorizontal, CheckCircle2, Download, Bookmark, ArrowRight, ChevronDown, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
-import { api, mapDataset } from "@/lib/api-client";
+import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/search")({
@@ -54,44 +54,27 @@ function SearchResults() {
   const [open, setOpen] = useState<string[]>(["Dataset Type", "Disease"]);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [streaming, setStreaming] = useState(false);
-  const esRef = useRef<EventSource | null>(null);
+
 
   const toggle = (t: string) => setOpen((s) => s.includes(t) ? s.filter((x) => x !== t) : [...s, t]);
 
-  // ── SSE: open a live search stream whenever search.q changes ───────────────
   useEffect(() => {
     if (!search.q?.trim() || !user) return;
-
     let cancelled = false;
-    esRef.current?.close();
     setResults([]);
     setStreaming(true);
     void (async () => {
       try {
         const response = await api.datasets.search(search.q.trim());
         if (cancelled) return;
-        if (response.source === "cache") {
-          setResults(response.results);
-          setStreaming(false);
-          return;
-        }
-        if (!response.queryId) throw new Error("Search did not return a stream identifier.");
-        const es = new EventSource(api.streamUrl(response.queryId), { withCredentials: true });
-        esRef.current = es;
-        es.onmessage = (event) => {
-          try {
-            const payload = JSON.parse(event.data as string) as { status?: string; datasets?: Record<string, unknown>[]; results?: Record<string, unknown>[] };
-            const datasets = payload.datasets ?? payload.results;
-            if (datasets) setResults(datasets.map(mapDataset));
-            if (payload.status === "timeout") setStreaming(false);
-          } catch { /* ignore malformed stream frames */ }
-        };
-        es.onerror = () => { es.close(); if (!cancelled) setStreaming(false); };
+        setResults(response.results ?? []);
       } catch (err) {
-        if (!cancelled) { toast.error(err instanceof Error ? err.message : "Search failed"); setStreaming(false); }
+        if (!cancelled) toast.error(err instanceof Error ? err.message : "Search failed");
+      } finally {
+        if (!cancelled) setStreaming(false);
       }
     })();
-    return () => { cancelled = true; esRef.current?.close(); esRef.current = null; };
+    return () => { cancelled = true; };
   }, [search.q, user]);
 
   const submit = (e: FormEvent) => {
