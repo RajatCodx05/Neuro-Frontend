@@ -116,13 +116,13 @@ export default function Landing() {
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
                 <Megaphone className="h-4 w-4 text-cyan" />
-                <span className="font-display text-sm font-semibold text-foreground">Admin Notifications</span>
+                <span className="font-display text-sm font-semibold text-foreground">Notifications</span>
               </div>
             </div>
 
             <div className="mt-3 text-xs text-muted-foreground">
               <div className="flex items-center gap-1.5 text-cyan/90 font-medium">
-                <Volume2 className="h-3.5 w-3.5" /> Admin broadcasts & alerts
+                <Volume2 className="h-3.5 w-3.5" /> Broadcasts & Alerts
               </div>
             </div>
 
@@ -137,7 +137,7 @@ export default function Landing() {
                 ))
               ) : (
                 <div className="rounded-xl border border-dashed border-white/10 p-4 text-center text-xs text-muted-foreground">
-                  No active broadcast announcements from Admin right now.
+                  No active broadcast announcements from Platform right now.
                 </div>
               )}
             </div>
