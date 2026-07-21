@@ -235,7 +235,7 @@ export default function Landing() {
                 Start Searching
                 <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
               </Link>
-              <a href="#docs" className="inline-flex items-center gap-2 rounded-full glass px-5 py-3 text-sm font-medium hover:bg-white/10">
+              <a href="/help" className="inline-flex items-center gap-2 rounded-full glass px-5 py-3 text-sm font-medium hover:bg-white/10">
                 <Play className="h-3.5 w-3.5" /> View Documentation
               </a>
             </div>
