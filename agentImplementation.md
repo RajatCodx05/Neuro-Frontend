@@ -159,3 +159,29 @@ Browser
 3. **Supply `VITE_API_BASE_URL`** in `.env` (currently set to `http://localhost:5000` for local dev; update for staging/production).
 4. **Test Google OAuth flow**: verify Node's `/auth/google` sets the cookie and redirects back correctly.
 5. **Test SSE stream**: verify `GET /search/stream?q=` sends `data: <json>\n\n` frames that the `EventSource.onmessage` handler can parse.
+
+---
+
+## Phase 3 — Help & Docs Page
+
+**Files created:**
+- `src/routes/_authenticated/help.tsx` — new authenticated static page with all hardcoded content
+
+**Files modified:**
+- `src/components/app/app-shell.tsx` — updated both Help & Docs links (desktop sidebar + mobile menu) from `to="/"` to `to="/help"`, added active-state styling
+- `src/routeTree.gen.ts` — registered the new `/help` route under `_authenticated`
+
+**Page sections:**
+1. Hero header ("Help & Docs" with subtitle)
+2. Introduction card (what NeuroSearch AI is)
+3. 4-step "How it works" guide cards
+4. Two detailed how-to guides (save data, create collections)
+5. 10 FAQ items using shadcn `Accordion`
+6. Contact/support card with `mailto:rohit.paliwal@lifelancer.com` link
+
+**Constraints met:**
+- Frontend only, no API calls, no backend changes
+- Route lives under `_authenticated` — unauthenticated users redirected to `/auth`
+- Responsive layout (single column mobile, max-w-4xl desktop)
+- Dark/light mode compatible via existing theme tokens
+- Semantic headings, keyboard-navigable accordion

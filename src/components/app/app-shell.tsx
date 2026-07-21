@@ -105,12 +105,15 @@ export function AppShell({ children }: { children: ReactNode }) {
             {!collapsed && <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>}
           </button>
           <Link
-            to="/"
+            to="/help"
             title={collapsed ? "Help & Docs" : undefined}
-            className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-muted-foreground transition hover:bg-white/5 hover:text-foreground ${collapsed ? "justify-center" : ""}`}
+            className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${
+              isActive("/help") ? "bg-white/10 text-foreground" : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+            } ${collapsed ? "justify-center" : ""}`}
           >
-            <HelpCircle className="h-4 w-4 shrink-0" />
+            <HelpCircle className={`h-4 w-4 shrink-0 ${isActive("/help") ? "text-cyan" : ""}`} />
             {!collapsed && <span>Help & Docs</span>}
+            {!collapsed && isActive("/help") && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-cyan" />}
           </Link>
         </div>
 
@@ -195,7 +198,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </Link>
               ))}
             </div>
-            <Link to="/" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-white/5">
+            <Link to="/help" onClick={() => setMobileOpen(false)}
+              className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${
+                isActive("/help") ? "bg-white/10 text-foreground" : "text-muted-foreground"
+              }`}>
               <HelpCircle className="h-4 w-4" /> Help & Docs
             </Link>
             <div className="mt-2 border-t border-white/5 pt-3">
