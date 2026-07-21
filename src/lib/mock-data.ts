@@ -87,10 +87,10 @@ export const datasets: Dataset[] = [
 ];
 
 export const stats = [
-  { label: "Total Datasets", value: 5827, suffix: "+" },
+  { label: "Total Datasets", value: 1827, suffix: "+" },
   { label: "Repositories Connected", value: 10, suffix: "" },
   { label: "Verified Links", value: 98.4, suffix: "%" },
-  { label: "Today's Searches", value: 12483, suffix: "" },
-  { label: "Research Papers Linked", value: 41290, suffix: "" },
+  { label: "Today's Searches", value: 10483, suffix: "" },
+  { label: "Research Papers Linked", value: 21290, suffix: "" },
   { label: "Avg Search Time", value: 5.42, suffix: "s" },
 ];
