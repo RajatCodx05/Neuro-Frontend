@@ -69,6 +69,9 @@ function AuthPage() {
   const [loading, setLoading] = useState(false); const [showPw, setShowPw] = useState(false);
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
   const [isAdminMode, setIsAdminMode] = useState(search.redirect?.startsWith("/admin") || false);
+  // ponytail: reuse existing mode state — forgotStep adds reset flow without a new route
+  const [forgotStep, setForgotStep] = useState<"idle" | "request" | "sent">("idle");
+  const [forgotEmail, setForgotEmail] = useState("");
   const redirectTo = (path?: string) => {
     const target = path && path.startsWith("/") && !path.startsWith("/search") ? path : "/";
     navigate({ to: target, replace: true });
@@ -126,6 +129,39 @@ function AuthPage() {
       }
     }
     catch (err) { toast.error(err instanceof Error ? err.message : "Verification failed"); } finally { setLoading(false); }
+  };
+
+  const handleForgotRequest = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const email = String(new FormData(e.currentTarget).get("email") ?? "").trim();
+    const parsed = loginSchema.shape.email.safeParse(email);
+    if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
+    setLoading(true);
+    try {
+      await api.auth.forgotPassword(email);
+      setForgotEmail(email);
+      setForgotStep("sent");
+      toast.success("Reset code sent — check your email");
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Request failed"); }
+    finally { setLoading(false); }
+  };
+
+  const handleResetPassword = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const otp = String(form.get("otp") ?? "").trim();
+    const newPassword = String(form.get("newPassword") ?? "");
+    const confirm = String(form.get("confirmPassword") ?? "");
+    if (!/^\d{6}$/.test(otp)) { toast.error("Enter the 6-digit reset code"); return; }
+    if (newPassword.length < 6) { toast.error("Password must be at least 6 characters"); return; }
+    if (newPassword !== confirm) { toast.error("Passwords do not match"); return; }
+    setLoading(true);
+    try {
+      await api.auth.resetPassword(forgotEmail, otp, newPassword);
+      toast.success("Password reset — please log in");
+      setForgotStep("idle"); setForgotEmail(""); setMode("login");
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Reset failed"); }
+    finally { setLoading(false); }
   };
 
   const handleGoogleSignIn = async () => {
@@ -208,31 +244,66 @@ function AuthPage() {
       <h1 className="mt-6 font-display text-2xl font-semibold text-foreground">
         {pendingVerificationEmail
           ? "Verify your email"
-          : isAdminMode
-            ? "Admin Portal Login"
-            : mode === "login"
-              ? "Welcome back"
-              : "Create your account"}
+          : forgotStep === "request"
+            ? "Forgot password?"
+            : forgotStep === "sent"
+              ? "Reset your password"
+              : isAdminMode
+                ? "Admin Portal Login"
+                : mode === "login"
+                  ? "Welcome back"
+                  : "Create your account"}
       </h1>
       <p className="mt-1 text-sm text-foreground/70 dark:text-muted-foreground">
         {pendingVerificationEmail
           ? `Enter the verification code sent to ${pendingVerificationEmail}.`
-          : isAdminMode
-            ? "Sign in with your administrator credentials."
-            : mode === "login"
-              ? "Sign in to search and save datasets."
-              : "Join to save datasets and track your research."}
+          : forgotStep === "request"
+            ? "We'll email you a reset code."
+            : forgotStep === "sent"
+              ? `Enter the reset code sent to ${forgotEmail} and choose a new password.`
+              : isAdminMode
+                ? "Sign in with your administrator credentials."
+                : mode === "login"
+                  ? "Sign in to search and save datasets."
+                  : "Join to save datasets and track your research."}
       </p>
       {pendingVerificationEmail ? (
         <form onSubmit={handleVerifyOtp} className="mt-6 space-y-3">
           <Field label="Verification code" name="otp" inputMode="numeric" maxLength={6} required />
           <Submit loading={loading}>Verify email</Submit>
         </form>
+      ) : forgotStep === "request" ? (
+        /* Forgot password — step 1: request reset code */
+        <form onSubmit={handleForgotRequest} className="mt-6 space-y-3">
+          <Field label="Email" name="email" type="email" placeholder="you@lab.edu" defaultValue={forgotEmail} required />
+          <Submit loading={loading}>Send reset code</Submit>
+          <p className="text-center text-xs text-foreground/70 dark:text-muted-foreground">
+            <button type="button" onClick={() => setForgotStep("idle")} className="text-cyan-600 dark:text-cyan font-medium hover:underline">Back to login</button>
+          </p>
+        </form>
+      ) : forgotStep === "sent" ? (
+        /* Forgot password — step 2: OTP + new password */
+        <form onSubmit={handleResetPassword} className="mt-6 space-y-3">
+          <Field label="Reset code" name="otp" inputMode="numeric" maxLength={6} placeholder="123456" required />
+          <PasswordField name="newPassword" show={showPw} onToggle={() => setShowPw((v) => !v)} />
+          <Field label="Confirm new password" name="confirmPassword" type={showPw ? "text" : "password"} required />
+          <Submit loading={loading}>Reset password</Submit>
+          <p className="text-center text-xs text-foreground/70 dark:text-muted-foreground">
+            <button type="button" onClick={() => { setForgotStep("idle"); setForgotEmail(""); }} className="text-cyan-600 dark:text-cyan font-medium hover:underline">Back to login</button>
+          </p>
+        </form>
       ) : mode === "login" || isAdminMode ? (
         <form onSubmit={handleLogin} className="mt-6 space-y-3">
           <Field label="Email" name="email" type="email" placeholder="you@lab.edu" required />
           <PasswordField name="password" show={showPw} onToggle={() => setShowPw((v) => !v)} />
           <Submit loading={loading}>Continue</Submit>
+          {!isAdminMode && (
+            <p className="text-right">
+              <button type="button" onClick={() => setForgotStep("request")} className="text-xs text-cyan-600 dark:text-cyan hover:underline">
+                Forgot password?
+              </button>
+            </p>
+          )}
         </form>
       ) : (
         <form onSubmit={handleSignup} className="mt-6 space-y-3">

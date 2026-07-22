@@ -106,7 +106,7 @@ export default function Landing() {
           <PopoverTrigger asChild>
             <button
               className="relative grid h-10 w-10 place-items-center rounded-full glass border border-white/10 text-foreground/80 hover:bg-white/10 hover:text-foreground transition-all shadow-md backdrop-blur-xl"
-              title="Admin Notifications"
+              title="Notifications"
             >
               <Bell className="h-4 w-4 text-cyan" />
               <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-cyan animate-pulse ring-2 ring-background" />
