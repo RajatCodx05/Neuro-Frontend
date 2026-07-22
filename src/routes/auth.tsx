@@ -285,7 +285,7 @@ function AuthPage() {
         /* Forgot password — step 2: OTP + new password */
         <form onSubmit={handleResetPassword} className="mt-6 space-y-3">
           <Field label="Reset code" name="otp" inputMode="numeric" maxLength={6} placeholder="123456" required />
-          <PasswordField name="New Password" show={showPw} onToggle={() => setShowPw((v) => !v)} />
+          <PasswordField name="newPassword" show={showPw} onToggle={() => setShowPw((v) => !v)} />
           <Field label="Confirm password" name="confirmNewPassword" type={showPw ? "text" : "password"} required />
           <Submit loading={loading}>Reset password</Submit>
           <p className="text-center text-xs text-foreground/70 dark:text-muted-foreground">
