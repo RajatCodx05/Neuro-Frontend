@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, SlidersHorizontal, CheckCircle2, Download, Bookmark, ArrowRight, ChevronDown, Loader2 } from "lucide-react";
+import { Sparkles, SlidersHorizontal, CheckCircle2, Download, Bookmark, ArrowRight, ChevronDown, Loader2, Check, ExternalLink } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api-client";
@@ -50,10 +50,24 @@ function SearchResults() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const [q, setQ] = useState(search.q || "resting-state fMRI children ADHD");
+  const [q, setQ] = useState(search.q || "Start Searching Datasets (eg: resting-state fMRI children ADHD)");
   const [open, setOpen] = useState<string[]>(["Dataset Type", "Disease"]);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [streaming, setStreaming] = useState(false);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+
+  // Load saved datasets to prevent duplicates and show save state
+  useEffect(() => {
+    if (!user) {
+      setSavedIds(new Set());
+      return;
+    }
+    api.savedDatasets.list()
+      .then((list) => {
+        setSavedIds(new Set(list.map((item) => item.dataset_id)));
+      })
+      .catch(() => {});
+  }, [user]);
 
 
   const toggle = (t: string) => setOpen((s) => s.includes(t) ? s.filter((x) => x !== t) : [...s, t]);
@@ -92,8 +106,17 @@ function SearchResults() {
       navigate({ to: "/auth", search: { redirect: "/search", mode: "login" } });
       return;
     }
+    if (savedIds.has(d.id)) {
+      toast.error("Dataset already saved");
+      return;
+    }
     try {
       await api.savedDatasets.upsert({ dataset_id: d.id, dataset_snapshot: d });
+      setSavedIds((prev) => {
+        const next = new Set(prev);
+        next.add(d.id);
+        return next;
+      });
       toast.success("Saved");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Save failed");
@@ -201,15 +224,27 @@ function SearchResults() {
                   </div>
                 </div>
                 <div className="flex flex-row gap-2 sm:flex-col">
-                  <button className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-3 py-1.5 text-xs font-medium text-[oklch(0.15_0.03_258)]">
-                    <Download className="h-3 w-3" /> Download
-                  </button>
-                  <Link to="/dataset/$id" params={{ id: d.id }} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs hover:bg-white/5">
-                    Metadata <ArrowRight className="h-3 w-3" />
+                  {d.url ? (
+                    <a href={d.url} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-3 py-1.5 text-xs font-medium text-[oklch(0.15_0.03_258)]">
+                      <ExternalLink className="h-3.5 w-3.5" /> Access the Data
+                    </a>
+                  ) : (
+                    <button disabled className="inline-flex items-center justify-center gap-1.5 rounded-full bg-neutral-800 px-3 py-1.5 text-xs font-medium text-neutral-400 cursor-not-allowed">
+                      <ExternalLink className="h-3.5 w-3.5" /> Access the Data
+                    </button>
+                  )}
+                  <Link to="/dataset/$id" params={{ id: d.id }} className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs hover:bg-white/5">
+                    Expand <ArrowRight className="h-3 w-3" />
                   </Link>
-                  <button onClick={() => saveDataset(d)} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs hover:bg-white/5">
-                    <Bookmark className="h-3 w-3" /> Save
-                  </button>
+                  {savedIds.has(d.id) ? (
+                    <button disabled className="inline-flex items-center justify-center gap-1.5 rounded-full border border-green-500/30 px-3 py-1.5 text-xs text-green-500 bg-green-500/5 cursor-default">
+                      <Check className="h-3.5 w-3.5" /> Saved
+                    </button>
+                  ) : (
+                    <button onClick={() => saveDataset(d)} className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs hover:bg-white/5">
+                      <Bookmark className="h-3.5 w-3.5" /> Save
+                    </button>
+                  )}
                 </div>
               </motion.article>
             ))}
