@@ -59,9 +59,19 @@ export default function Landing() {
   const notificationsEnabled = profile?.notifications_enabled ?? true;
 
   useEffect(() => {
-    api.admin.announcements.list()
-      .then((items) => setAnnouncements((items as any[]).filter((a) => a.active)))
-      .catch(() => setAnnouncements([]));
+    const loadAnnouncements = () => {
+      api.admin.announcements.list()
+        .then((items) => setAnnouncements((items as any[]).filter((a) => a.active)))
+        .catch(() => setAnnouncements([]));
+    };
+
+    loadAnnouncements();
+    window.addEventListener("neuro_announcements_updated", loadAnnouncements);
+    window.addEventListener("storage", loadAnnouncements);
+    return () => {
+      window.removeEventListener("neuro_announcements_updated", loadAnnouncements);
+      window.removeEventListener("storage", loadAnnouncements);
+    };
   }, []);
 
   const handleToggleNotifications = async (enabled: boolean) => {
@@ -106,15 +116,17 @@ export default function Landing() {
           <Popover>
             <PopoverTrigger asChild>
               <button
-                className="relative grid h-10 w-10 place-items-center rounded-full glass border border-white/10 text-foreground/80 hover:bg-white/10 hover:text-foreground transition-all shadow-md backdrop-blur-xl"
+                className="relative grid h-10 w-10 place-items-center rounded-full glass border border-white/10 [.light_&]:border-black/15 text-foreground/80 hover:bg-white/10 hover:text-foreground transition-all shadow-md backdrop-blur-xl"
                 title="Notifications"
               >
                 <Bell className="h-4 w-4 text-cyan" />
-                <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-cyan animate-pulse ring-2 ring-background" />
+                {announcements.length > 0 && (
+                  <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-cyan animate-pulse ring-2 ring-background" />
+                )}
               </button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-80 sm:w-96 rounded-2xl glass-strong border border-white/10 p-4 shadow-2xl backdrop-blur-2xl">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <PopoverContent align="end" className="w-80 sm:w-96 rounded-2xl glass-strong border border-white/10 [.light_&]:border-black/15 p-4 shadow-2xl backdrop-blur-2xl">
+              <div className="flex items-center justify-between border-b border-white/10 [.light_&]:border-black/10 pb-3">
                 <div className="flex items-center gap-2">
                   <Megaphone className="h-4 w-4 text-cyan" />
                   <span className="font-display text-sm font-semibold text-foreground">Notifications</span>
@@ -122,7 +134,7 @@ export default function Landing() {
               </div>
 
               <div className="mt-3 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1.5 text-cyan/90 font-medium">
+                <div className="flex items-center gap-1.5 text-cyan/90 [.light_&]:text-cyan font-medium">
                   <Volume2 className="h-3.5 w-3.5" /> Broadcasts & Alerts
                 </div>
               </div>
@@ -130,14 +142,14 @@ export default function Landing() {
               <div className="mt-4 space-y-2 max-h-56 overflow-y-auto pr-1">
                 {announcements.length > 0 ? (
                   announcements.map((a) => (
-                    <div key={a.id} className="rounded-xl border border-white/5 bg-white/5 p-3 text-xs">
+                    <div key={a.id} className="rounded-xl border border-white/5 [.light_&]:border-black/10 bg-white/5 [.light_&]:bg-black/[0.03] p-3 text-xs">
                       <div className="font-medium text-foreground">{a.title}</div>
                       <div className="mt-1 text-muted-foreground leading-relaxed">{a.body}</div>
-                      <div className="mt-2 text-[10px] text-muted-foreground/60">{new Date(a.created_at).toLocaleDateString()}</div>
+                      <div className="mt-2 text-[10px] text-muted-foreground/70">{new Date(a.created_at).toLocaleDateString()}</div>
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-xl border border-dashed border-white/10 p-4 text-center text-xs text-muted-foreground">
+                  <div className="rounded-xl border border-dashed border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.02] p-4 text-center text-xs text-muted-foreground">
                     No active broadcast announcements from Platform right now.
                   </div>
                 )}

@@ -394,10 +394,82 @@ const admin = {
     agents: () => Promise.resolve([]) as Promise<Array<Record<string, unknown>>>,
   },
   announcements: {
-    list: () => Promise.resolve([]) as Promise<Array<Record<string, unknown>>>,
-    create: (_data: { title: string; body: string; active: boolean }) => Promise.resolve(null) as Promise<Record<string, unknown> | null>,
-    toggle: (_id: string, _active: boolean) => Promise.resolve(null),
-    delete: (_id: string) => Promise.resolve(null),
+    list: () => {
+      try {
+        const raw = localStorage.getItem("neuro_announcements");
+        return Promise.resolve(raw ? JSON.parse(raw) : []);
+      } catch {
+        return Promise.resolve([]);
+      }
+    },
+    create: (data: { title: string; body: string; active?: boolean }) => {
+      try {
+        const raw = localStorage.getItem("neuro_announcements");
+        const items = raw ? JSON.parse(raw) : [];
+        const newItem = {
+          id: `announcement_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          title: data.title,
+          body: data.body,
+          active: data.active ?? true,
+          created_at: new Date().toISOString(),
+        };
+        items.unshift(newItem);
+        localStorage.setItem("neuro_announcements", JSON.stringify(items));
+        window.dispatchEvent(new Event("neuro_announcements_updated"));
+        return Promise.resolve(newItem);
+      } catch {
+        return Promise.resolve(null);
+      }
+    },
+    update: (id: string, data: { title: string; body: string; active?: boolean }) => {
+      try {
+        const raw = localStorage.getItem("neuro_announcements");
+        const items: Array<{ id: string; title: string; body: string; active: boolean; created_at: string }> = raw ? JSON.parse(raw) : [];
+        const idx = items.findIndex((a) => a.id === id);
+        if (idx !== -1) {
+          items[idx] = {
+            ...items[idx],
+            title: data.title,
+            body: data.body,
+            active: data.active !== undefined ? data.active : items[idx].active,
+          };
+          localStorage.setItem("neuro_announcements", JSON.stringify(items));
+          window.dispatchEvent(new Event("neuro_announcements_updated"));
+          return Promise.resolve(items[idx]);
+        }
+        return Promise.resolve(null);
+      } catch {
+        return Promise.resolve(null);
+      }
+    },
+    toggle: (id: string, active: boolean) => {
+      try {
+        const raw = localStorage.getItem("neuro_announcements");
+        const items: Array<{ id: string; title: string; body: string; active: boolean; created_at: string }> = raw ? JSON.parse(raw) : [];
+        const idx = items.findIndex((a) => a.id === id);
+        if (idx !== -1) {
+          items[idx].active = active;
+          localStorage.setItem("neuro_announcements", JSON.stringify(items));
+          window.dispatchEvent(new Event("neuro_announcements_updated"));
+          return Promise.resolve(items[idx]);
+        }
+        return Promise.resolve(null);
+      } catch {
+        return Promise.resolve(null);
+      }
+    },
+    delete: (id: string) => {
+      try {
+        const raw = localStorage.getItem("neuro_announcements");
+        let items: Array<{ id: string; title: string; body: string; active: boolean; created_at: string }> = raw ? JSON.parse(raw) : [];
+        items = items.filter((a) => a.id !== id);
+        localStorage.setItem("neuro_announcements", JSON.stringify(items));
+        window.dispatchEvent(new Event("neuro_announcements_updated"));
+        return Promise.resolve(null);
+      } catch {
+        return Promise.resolve(null);
+      }
+    },
   },
   helpDesk: {
     tickets: () => Promise.resolve([]) as Promise<Array<Record<string, unknown>>>,

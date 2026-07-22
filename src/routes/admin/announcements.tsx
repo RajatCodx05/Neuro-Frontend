@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { AdminPageHeader } from "@/components/app/admin-shell";
-import { Trash2, Send } from "lucide-react";
+import { Trash2, Send, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/announcements")({
@@ -15,6 +15,9 @@ function AnnouncementsPage() {
   const qc = useQueryClient();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editBody, setEditBody] = useState("");
 
   const { data: items = [] } = useQuery({
     queryKey: ["announcements"],
@@ -29,6 +32,28 @@ function AnnouncementsPage() {
       toast.success("Announcement published");
       qc.invalidateQueries({ queryKey: ["announcements"] });
     } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
+  };
+
+  const startEdit = (a: { id: string; title: string; body: string }) => {
+    setEditingId(a.id);
+    setEditTitle(a.title);
+    setEditBody(a.body);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditTitle("");
+    setEditBody("");
+  };
+
+  const saveEdit = async (id: string) => {
+    if (!editTitle.trim() || !editBody.trim()) return;
+    try {
+      await (api.admin.announcements as any).update(id, { title: editTitle.trim(), body: editBody.trim() });
+      toast.success("Announcement updated");
+      setEditingId(null);
+      qc.invalidateQueries({ queryKey: ["announcements"] });
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed to update"); }
   };
 
   const toggle = async (id: string, active: boolean) => {
@@ -63,28 +88,53 @@ function AnnouncementsPage() {
         <div className="space-y-3">
           {items.map((a) => (
             <div key={a.id} className="glass rounded-2xl p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <div className="font-display text-base font-semibold">{a.title}</div>
-                    {a.active
-                      ? <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-emerald-400">Active</span>
-                      : <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Draft</span>}
+              {editingId === a.id ? (
+                <div className="space-y-3">
+                  <div className="text-xs uppercase tracking-widest text-cyan font-medium">Edit Announcement</div>
+                  <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Title"
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-cyan/50" />
+                  <textarea value={editBody} onChange={(e) => setEditBody(e.target.value)} placeholder="Body" rows={3}
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-cyan/50" />
+                  <div className="flex justify-end gap-2">
+                    <button onClick={cancelEdit}
+                      className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/5">
+                      <X className="h-3.5 w-3.5" /> Cancel
+                    </button>
+                    <button onClick={() => saveEdit(a.id)}
+                      className="inline-flex items-center gap-1 rounded-full bg-cyan px-3 py-1.5 text-xs font-medium text-[oklch(0.15_0.03_258)]">
+                      <Check className="h-3.5 w-3.5" /> Save Changes
+                    </button>
                   </div>
-                  <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">{a.body}</p>
-                  <div className="mt-2 text-xs text-muted-foreground">{new Date(a.created_at).toLocaleString()}</div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
-                    <input type="checkbox" checked={a.active} onChange={(e) => toggle(a.id, e.target.checked)}
-                      className="h-4 w-8 appearance-none rounded-full bg-white/10 checked:bg-cyan" />
-                    Live
-                  </label>
-                  <button onClick={() => remove(a.id)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-rose-400">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+              ) : (
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <div className="font-display text-base font-semibold">{a.title}</div>
+                      {a.active
+                        ? <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-emerald-400">Active</span>
+                        : <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Draft</span>}
+                    </div>
+                    <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">{a.body}</p>
+                    <div className="mt-2 text-xs text-muted-foreground">{new Date(a.created_at).toLocaleString()}</div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+                      <input type="checkbox" checked={a.active} onChange={(e) => toggle(a.id, e.target.checked)}
+                        className="h-4 w-8 appearance-none rounded-full bg-white/10 checked:bg-cyan" />
+                      Live
+                    </label>
+                    <button onClick={() => startEdit(a)} title="Edit announcement"
+                      className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-cyan">
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => remove(a.id)} title="Delete announcement"
+                      className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-rose-400">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           ))}
           {items.length === 0 && <div className="glass rounded-2xl p-10 text-center text-sm text-muted-foreground">No announcements yet.</div>}
