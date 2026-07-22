@@ -214,7 +214,7 @@ const auth = {
     return request<null>("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) }, false);
   },
   async resetPassword(email: string, otp: string, newPassword: string) {
-    return request<null>("/auth/reset-password", { method: "POST", body: JSON.stringify({ email, otp, newPassword }) }, false);
+    return request<null>("/auth/reset-password", { method: "POST", body: JSON.stringify({ email, otp, newPassword, confirmNewPassword: newPassword }) }, false);
   },
 };
 

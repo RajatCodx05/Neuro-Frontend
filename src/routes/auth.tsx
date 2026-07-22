@@ -151,7 +151,7 @@ function AuthPage() {
     const form = new FormData(e.currentTarget);
     const otp = String(form.get("otp") ?? "").trim();
     const newPassword = String(form.get("newPassword") ?? "");
-    const confirm = String(form.get("confirmPassword") ?? "");
+    const confirm = String(form.get("confirmNewPassword") ?? "");
     if (!/^\d{6}$/.test(otp)) { toast.error("Enter the 6-digit reset code"); return; }
     if (newPassword.length < 6) { toast.error("Password must be at least 6 characters"); return; }
     if (newPassword !== confirm) { toast.error("Passwords do not match"); return; }
@@ -285,8 +285,8 @@ function AuthPage() {
         /* Forgot password — step 2: OTP + new password */
         <form onSubmit={handleResetPassword} className="mt-6 space-y-3">
           <Field label="Reset code" name="otp" inputMode="numeric" maxLength={6} placeholder="123456" required />
-          <PasswordField name="newPassword" show={showPw} onToggle={() => setShowPw((v) => !v)} />
-          <Field label="Confirm new password" name="confirmPassword" type={showPw ? "text" : "password"} required />
+          <PasswordField name="New Password" show={showPw} onToggle={() => setShowPw((v) => !v)} />
+          <Field label="Confirm password" name="confirmNewPassword" type={showPw ? "text" : "password"} required />
           <Submit loading={loading}>Reset password</Submit>
           <p className="text-center text-xs text-foreground/70 dark:text-muted-foreground">
             <button type="button" onClick={() => { setForgotStep("idle"); setForgotEmail(""); }} className="text-cyan-600 dark:text-cyan font-medium hover:underline">Back to login</button>
