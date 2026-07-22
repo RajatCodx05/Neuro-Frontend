@@ -391,8 +391,14 @@ const admin = {
     mongo: () => request<Record<string, unknown>>('/admin/infra/mongo'),
     redis: () => request<Record<string, unknown>>('/admin/infra/redis'),
     storage: () => request<Record<string, unknown>>('/admin/infra/storage'),
-    tokens: () => Promise.resolve([]) as Promise<Array<Record<string, unknown>>>,
-    agents: () => Promise.resolve([]) as Promise<Array<Record<string, unknown>>>,
+    tokens: async () => {
+      const values = await request<Record<string, unknown>[]>('/admin/tokens');
+      return values.map((v) => ({ ...v, id: idOf(v) }));
+    },
+    agents: async () => {
+      const values = await request<Record<string, unknown>[]>('/admin/agents');
+      return values.map((v) => ({ ...v, id: idOf(v) }));
+    },
   },
   announcements: {
     list: () => {
