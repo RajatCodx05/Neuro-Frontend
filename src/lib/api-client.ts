@@ -20,7 +20,8 @@ export type SavedDataset = {
   dataset_snapshot: Record<string, unknown>;
   created_at: string;
 };
-export type Collection = { id: string; name: string; created_at: string };
+export type Collection = { id: string; name: string; created_at: string; itemCount?: number };
+export type CollectionItem = { id: string; savedDatasetId: string; dataset_snapshot: Record<string, unknown> };
 export type SocialLink = { id: string; platform: string; url: string };
 export type SearchResult = {
   id: string;
@@ -285,7 +286,18 @@ const collections = {
     });
     return { id: idOf(v), name: String(v.name), created_at: asDate(v) };
   },
-  delete: (id: string) => request<null>(`/users/collections/${id}`, { method: "DELETE" }),
+  delete: (id: string) => request<null>(`/users/collections/${id}`, { method: 'DELETE' }),
+  async getItems(id: string): Promise<Array<{ id: string; savedDatasetId: { id: string; datasetId: string; datasetSnapshot: Record<string, unknown> } }>> {
+    const values = await request<Record<string, unknown>[]>(`/users/collections/${id}/items`);
+    return values.map((v) => ({
+      id: idOf(v),
+      savedDatasetId: v.savedDatasetId as { id: string; datasetId: string; datasetSnapshot: Record<string, unknown> },
+    }));
+  },
+  addItem: (collectionId: string, savedDatasetId: string) =>
+    request<null>(`/users/collections/${collectionId}/items`, { method: 'POST', body: JSON.stringify({ savedDatasetId }) }),
+  removeItem: (collectionId: string, savedDatasetId: string) =>
+    request<null>(`/users/collections/${collectionId}/items/${savedDatasetId}`, { method: 'DELETE' }),
 };
 const searchHistory = {
   async list() {
@@ -412,6 +424,10 @@ export const api = {
         queryId?: string;
       }>("/datasets/search", { method: "POST", body: JSON.stringify({ query }) });
       return { ...data, results: (data.results ?? []).map(mapDataset) };
+    },
+    async getById(id: string): Promise<SearchResult> {
+      const data = await request<Record<string, unknown>>(`/datasets/${id}`, {}, false);
+      return mapDataset(data);
     },
   },
   streamUrl: (queryId: string) => `${BASE_URL}/stream/${encodeURIComponent(queryId)}`,

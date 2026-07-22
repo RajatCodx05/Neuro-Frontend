@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, CheckCircle2, Download, Bookmark, Share2, ExternalLink, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
-import { api, type SearchResult } from "@/lib/api-client";
+import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dataset/$id")({
@@ -19,13 +19,9 @@ function DatasetPage() {
 
   useEffect(() => {
     setLoading(true);
-    // Fetch dataset detail via search API — there is no single GET /datasets/:id endpoint.
     api.datasets
-      .search(id)
-      .then((res) => {
-        const found = res.results?.find((r: SearchResult) => r.id === id);
-        if (found) setD(found);
-      })
+      .getById(id)
+      .then((res) => setD(res))
       .catch((err) => { toast.error(err instanceof Error ? err.message : "Failed to load dataset"); })
       .finally(() => setLoading(false));
   }, [id]);
