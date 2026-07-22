@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, CheckCircle2, Download, Bookmark, Share2, ExternalLink, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Download, Bookmark, Share2, ExternalLink, Loader2, Check } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
-import { api } from "@/lib/api-client";
+import { api, type SearchResult } from "@/lib/api-client";
 import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/dataset/$id")({
   component: DatasetPage,
@@ -16,25 +17,44 @@ function DatasetPage() {
   const navigate = useNavigate();
   const [d, setD] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
     setLoading(true);
     api.datasets
       .getById(id)
-      .then((res) => setD(res))
+      .then((res) => {
+        setD(res);
+        if (user) {
+          api.savedDatasets.list().then((list) => {
+            setIsSaved(list.some((item) => item.dataset_id === res.id));
+          }).catch(() => {});
+        }
+      })
       .catch((err) => { toast.error(err instanceof Error ? err.message : "Failed to load dataset"); })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, user]);
 
   const save = async () => {
     if (!user) { navigate({ to: "/auth", search: { redirect: `/dataset/${id}`, mode: "login" } }); return; }
     if (!d) return;
+    if (isSaved) {
+      toast.error("Dataset already saved");
+      return;
+    }
     try {
       await api.savedDatasets.upsert({ dataset_id: d.id, dataset_snapshot: JSON.parse(JSON.stringify(d)) });
+      setIsSaved(true);
       toast.success("Saved to your library");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Save failed");
     }
+  };
+
+  const share = () => {
+    const urlToCopy = d?.url || window.location.href;
+    navigator.clipboard.writeText(urlToCopy);
+    toast.success("Copied to Clipboard");
   };
 
   if (loading) {
@@ -91,14 +111,24 @@ function DatasetPage() {
             <h1 className="mt-2 font-display text-3xl font-semibold sm:text-4xl">{d.name}</h1>
             <p className="mt-3 max-w-3xl text-muted-foreground">{d.description}</p>
             <div className="mt-6 flex flex-wrap gap-2">
-              <button className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-sm font-medium text-[oklch(0.15_0.03_258)]">
+              {/* <button className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-sm font-medium text-[oklch(0.15_0.03_258)]">
                 <Download className="h-3.5 w-3.5" /> Download{d.size ? ` ${d.size}` : ""}
+              </button> */}
+              {isSaved ? (
+                <button disabled className="inline-flex items-center gap-1.5 rounded-full border border-green-500/30 px-4 py-2 text-sm text-green-500 bg-green-500/5 cursor-default">
+                  <Check className="h-3.5 w-3.5" /> Saved
+                </button>
+              ) : (
+                <button onClick={save} className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-sm hover:bg-white/10">
+                  <Bookmark className="h-3.5 w-3.5" /> Save
+                </button>
+              )}
+              <button onClick={share} className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-sm hover:bg-white/10">
+                <Share2 className="h-3.5 w-3.5" /> Share
               </button>
-              <button onClick={save} className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-sm hover:bg-white/10"><Bookmark className="h-3.5 w-3.5" /> Save</button>
-              <button className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-sm hover:bg-white/10"><Share2 className="h-3.5 w-3.5" /> Share</button>
               {d.url && (
                 <a href={d.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-sm hover:bg-white/10">
-                  <ExternalLink className="h-3.5 w-3.5" /> Open in {d.repo}
+                  <ExternalLink className="h-3.5 w-3.5" /> Access the Data
                 </a>
               )}
             </div>
@@ -107,7 +137,7 @@ function DatasetPage() {
 
         <div className="mt-8 grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
-            <Section title="Metadata">
+            {/* <Section title="Metadata">
               <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
                 {[
                   ["Modality", d.modality], ["Brain region", d.region], ["Species", d.species],
@@ -128,7 +158,7 @@ function DatasetPage() {
                   <div key={i} className="aspect-square rounded-xl bg-gradient-to-br from-[oklch(0.24_0.08_240)] via-[oklch(0.22_0.06_260)] to-[oklch(0.28_0.1_285)] ring-1 ring-white/10" />
                 ))}
               </div>
-            </Section>
+            </Section> */}
 
             <Section title="Citation">
               <div className="rounded-xl bg-white/5 p-4 font-mono text-xs text-muted-foreground">
@@ -139,7 +169,7 @@ function DatasetPage() {
           </div>
 
           <div className="space-y-6">
-            <Section title="Repository">
+            {/* <Section title="Repository">
               <div className="flex items-center gap-3">
                 <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-cyan to-electric text-sm font-bold text-[oklch(0.15_0.03_258)]">
                   {d.repo.slice(0, 2).toUpperCase()}
@@ -156,7 +186,7 @@ function DatasetPage() {
                 <div className="flex justify-between py-1"><span className="text-muted-foreground">Tier</span><span>{d.access ?? "—"}</span></div>
                 {d.doi && <div className="flex justify-between py-1"><span className="text-muted-foreground">DOI</span><span className="truncate max-w-[160px] font-mono text-xs">{d.doi}</span></div>}
               </div>
-            </Section>
+            </Section> */}
           </div>
         </div>
       </div>
