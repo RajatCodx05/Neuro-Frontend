@@ -10,6 +10,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/search")({
   validateSearch: (s: Record<string, unknown>) => ({
     q: typeof s.q === "string" ? s.q : "",
+    filters: typeof s.filters === "string" ? s.filters : "",
   }),
   component: SearchResults,
 });
@@ -54,6 +55,7 @@ function SearchResults() {
   const [open, setOpen] = useState<string[]>(["Dataset Type", "Disease"]);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [streaming, setStreaming] = useState(false);
+  const [showFilters, setShowFilters] = useState(Boolean(search.filters === "true"));
 
 
   const toggle = (t: string) => setOpen((s) => s.includes(t) ? s.filter((x) => x !== t) : [...s, t]);
@@ -81,10 +83,10 @@ function SearchResults() {
     e.preventDefault();
     if (!q.trim()) return;
     if (!user) {
-      navigate({ to: "/auth", search: { redirect: `/search?q=${encodeURIComponent(q.trim())}`, mode: "login" } });
+      navigate({ to: "/search", search: { redirect: `/search?q=${encodeURIComponent(q.trim())}`, mode: "login" } });
       return;
     }
-    navigate({ to: "/search", search: { q: q.trim() } as never });
+    navigate({ to: "/search", search: { q: q.trim(), filters: showFilters ? "true" : undefined } as never });
   };
 
   const saveDataset = async (d: SearchResult) => {
@@ -111,7 +113,15 @@ function SearchResults() {
             <input value={q} onChange={(e) => setQ(e.target.value)}
               onFocus={() => { if (!user) navigate({ to: "/auth", search: { redirect: "/search", mode: "login" } }); }}
               className="min-w-0 flex-1 bg-transparent px-2 py-3 text-sm outline-none sm:text-base" />
-            <button type="button" className="hidden items-center gap-1.5 rounded-xl border border-white/10 px-3 py-2 text-xs text-muted-foreground hover:text-foreground sm:inline-flex">
+            <button
+              type="button"
+              onClick={() => setShowFilters((v) => !v)}
+              className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
+                showFilters
+                  ? "border-cyan/50 bg-cyan/10 text-cyan"
+                  : "border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] text-muted-foreground [.light_&]:text-foreground/80 hover:text-foreground hover:border-cyan/40"
+              }`}
+            >
               <SlidersHorizontal className="h-3 w-3" /> Filters
             </button>
             <button type="submit" className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-sm font-medium text-[oklch(0.15_0.03_258)]">
@@ -132,37 +142,39 @@ function SearchResults() {
           ) : null}
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[260px_1fr]">
+        <div className={`mt-8 grid grid-cols-1 gap-6 ${showFilters ? "lg:grid-cols-[260px_1fr]" : ""}`}>
           {/* Filters */}
-          <aside className="glass rounded-2xl p-4 lg:sticky lg:top-24 lg:self-start">
-            <div className="flex items-center justify-between">
-              <div className="font-display text-sm font-semibold">Filters</div>
-              <button className="text-[11px] text-muted-foreground hover:text-foreground">Reset</button>
-            </div>
-            <div className="mt-3 space-y-1">
-              {filterGroups.map((g) => {
-                const isOpen = open.includes(g.title);
-                return (
-                  <div key={g.title} className="rounded-xl">
-                    <button onClick={() => toggle(g.title)} className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-xs font-medium uppercase tracking-widest text-muted-foreground hover:bg-white/5">
-                      {g.title}
-                      <ChevronDown className={`h-3 w-3 transition ${isOpen ? "rotate-180" : ""}`} />
-                    </button>
-                    {isOpen && (
-                      <div className="space-y-1 px-2 pb-2">
-                        {g.opts.map((o) => (
-                          <label key={o} className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-sm hover:bg-white/5">
-                            <input type="checkbox" className="h-3.5 w-3.5 accent-cyan" />
-                            <span className="text-foreground/90">{o}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </aside>
+          {showFilters && (
+            <aside className="glass rounded-2xl p-4 lg:sticky lg:top-24 lg:self-start">
+              <div className="flex items-center justify-between">
+                <div className="font-display text-sm font-semibold">Filters</div>
+                <button className="text-[11px] text-muted-foreground hover:text-foreground">Reset</button>
+              </div>
+              <div className="mt-3 space-y-1">
+                {filterGroups.map((g) => {
+                  const isOpen = open.includes(g.title);
+                  return (
+                    <div key={g.title} className="rounded-xl">
+                      <button onClick={() => toggle(g.title)} className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-xs font-medium uppercase tracking-widest text-muted-foreground hover:bg-white/5">
+                        {g.title}
+                        <ChevronDown className={`h-3 w-3 transition ${isOpen ? "rotate-180" : ""}`} />
+                      </button>
+                      {isOpen && (
+                        <div className="space-y-1 px-2 pb-2">
+                          {g.opts.map((o) => (
+                            <label key={o} className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-sm hover:bg-white/5">
+                              <input type="checkbox" className="h-3.5 w-3.5 accent-cyan" />
+                              <span className="text-foreground/90">{o}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </aside>
+          )}
 
           {/* Results */}
           <div className="space-y-4">
@@ -182,7 +194,7 @@ function SearchResults() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-widest text-muted-foreground">
-                    {d.repo && <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-foreground">{d.repo}</span>}
+                    {d.repo && <span className="rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-2 py-0.5 text-foreground">{d.repo}</span>}
                     {d.verified && <span className="inline-flex items-center gap-1 text-cyan"><CheckCircle2 className="h-3 w-3" /> Verified {d.verified}</span>}
                     {d.license && <><span>·</span><span>{d.license}</span></>}
                     {d.access && <><span>·</span><span>{d.access}</span></>}
@@ -204,10 +216,10 @@ function SearchResults() {
                   <button className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-3 py-1.5 text-xs font-medium text-[oklch(0.15_0.03_258)]">
                     <Download className="h-3 w-3" /> Download
                   </button>
-                  <Link to="/dataset/$id" params={{ id: d.id }} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs hover:bg-white/5">
+                  <Link to="/dataset/$id" params={{ id: d.id }} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1.5 text-xs hover:bg-white/5">
                     Metadata <ArrowRight className="h-3 w-3" />
                   </Link>
-                  <button onClick={() => saveDataset(d)} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs hover:bg-white/5">
+                  <button onClick={() => saveDataset(d)} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1.5 text-xs hover:bg-white/5">
                     <Bookmark className="h-3 w-3" /> Save
                   </button>
                 </div>
@@ -221,5 +233,5 @@ function SearchResults() {
 }
 
 function Chip({ children }: { children: React.ReactNode }) {
-  return <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5">{children}</span>;
+  return <span className="rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/[0.04] [.light_&]:bg-black/[0.04] px-2 py-0.5">{children}</span>;
 }
