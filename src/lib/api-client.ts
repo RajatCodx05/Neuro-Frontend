@@ -388,8 +388,9 @@ const admin = {
     reject: (_id: string, _reason?: string) => Promise.resolve(null),
   },
   infra: {
-    mongo: () => Promise.resolve(null) as Promise<Record<string, unknown> | null>,
-    redis: () => Promise.resolve(null) as Promise<Record<string, unknown> | null>,
+    mongo: () => request<Record<string, unknown>>('/admin/infra/mongo'),
+    redis: () => request<Record<string, unknown>>('/admin/infra/redis'),
+    storage: () => request<Record<string, unknown>>('/admin/infra/storage'),
     tokens: () => Promise.resolve([]) as Promise<Array<Record<string, unknown>>>,
     agents: () => Promise.resolve([]) as Promise<Array<Record<string, unknown>>>,
   },
