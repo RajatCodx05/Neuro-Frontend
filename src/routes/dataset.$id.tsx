@@ -51,9 +51,9 @@ function DatasetPage() {
     return (
       <AppShell>
         <div className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6">
-          <Link to="/search" search={{ q: "" }} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-3 w-3" /> Back to results
-          </Link>
+            <button onClick={() => window.history.back()} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="h-3 w-3" /> Back to results
+            </button>
           <div className="mt-10 text-center text-muted-foreground">Dataset not found.</div>
         </div>
       </AppShell>
@@ -63,9 +63,9 @@ function DatasetPage() {
   return (
     <AppShell>
       <div className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6">
-        <Link to="/search" search={{ q: "" }} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+        <button onClick={() => window.history.back()} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-3 w-3" /> Back to results
-        </Link>
+        </button>
 
         {/* Hero */}
         <div className="relative mt-6 overflow-hidden rounded-3xl glass-strong card-elevated">
