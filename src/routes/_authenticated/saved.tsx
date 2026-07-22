@@ -11,7 +11,7 @@ export const Route = createFileRoute("/_authenticated/saved")({
 });
 
 type Snap = { name?: string; repo?: string; modality?: string; description?: string };
-type ColItem = { id: string; savedDatasetId: { _id?: string; id?: string; datasetId: string; datasetSnapshot: Record<string, unknown> } };
+type ColItem = { id: string; savedDatasetId: { id: string; datasetId: string; datasetSnapshot: Snap } };
 
 const LIMIT = 30;
 
@@ -99,17 +99,14 @@ function SavedPage() {
     if (!openCol) return;
     try {
       await api.collections.removeItem(openCol.id, savedDatasetId);
-      setColItems((v) => v.filter((ci) => {
-        const sid = String((ci.savedDatasetId as Record<string, unknown>)?._id ?? ci.savedDatasetId);
-        return sid !== savedDatasetId;
-      }));
+      setColItems((v) => v.filter((ci) => ci.savedDatasetId.id !== savedDatasetId));
       setCollections((v) => v.map((c) => c.id === openCol.id ? { ...c, itemCount: Math.max(0, (c.itemCount ?? 1) - 1) } : c));
       toast.success("Removed from collection");
     } catch (err) { toast.error(err instanceof Error ? err.message : "Failed to remove"); }
   };
 
   // which saved datasets are already in the open collection
-  const inCollection = new Set(colItems.map((ci) => String((ci.savedDatasetId as Record<string, unknown>)?._id ?? ci.savedDatasetId)));
+  const inCollection = new Set(colItems.map((ci) => ci.savedDatasetId.id));
 
   // ── Collection Detail Panel ─────────────────────────────────────────
   if (openCol) {
@@ -134,10 +131,8 @@ function SavedPage() {
             <div className="space-y-3 mb-8">
               <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">In this collection</p>
               {colItems.map((ci) => {
-                const sd = ci.savedDatasetId as Record<string, unknown>;
-                const sid = String(sd?._id ?? sd);
-                const snap = (sd?.datasetSnapshot ?? {}) as Snap;
-                const dsId = String(sd?.datasetId ?? "");
+                const sd = ci.savedDatasetId;
+                const snap = sd.datasetSnapshot;
                 return (
                   <div key={ci.id} className="glass card-elevated flex items-start gap-4 rounded-2xl p-4">
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan/40 to-neural/40 text-xs font-bold text-white">
@@ -145,12 +140,12 @@ function SavedPage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{snap.repo ?? "Dataset"}</div>
-                      <Link to="/dataset/$id" params={{ id: dsId }} className="mt-0.5 block font-display text-sm font-semibold hover:text-cyan">
-                        {snap.name ?? dsId}
+                      <Link to="/dataset/$id" params={{ id: sd.datasetId }} className="mt-0.5 block font-display text-sm font-semibold hover:text-cyan">
+                        {snap.name ?? sd.datasetId}
                       </Link>
                       {snap.description && <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{snap.description}</p>}
                     </div>
-                    <button onClick={() => removeFromCollection(sid)}
+                    <button onClick={() => removeFromCollection(sd.id)}
                       className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/5 shrink-0">
                       <Trash2 className="h-3 w-3" /> Remove
                     </button>

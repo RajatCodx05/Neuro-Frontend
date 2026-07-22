@@ -287,12 +287,19 @@ const collections = {
     return { id: idOf(v), name: String(v.name), created_at: asDate(v) };
   },
   delete: (id: string) => request<null>(`/users/collections/${id}`, { method: 'DELETE' }),
-  async getItems(id: string): Promise<Array<{ id: string; savedDatasetId: { id: string; datasetId: string; datasetSnapshot: Record<string, unknown> } }>> {
+  async getItems(id: string): Promise<Array<{ id: string; savedDatasetId: { id: string; datasetId: string; datasetSnapshot: SearchResult } }>> {
     const values = await request<Record<string, unknown>[]>(`/users/collections/${id}/items`);
-    return values.map((v) => ({
-      id: idOf(v),
-      savedDatasetId: v.savedDatasetId as { id: string; datasetId: string; datasetSnapshot: Record<string, unknown> },
-    }));
+    return values.map((v) => {
+      const sd = (v.savedDatasetId as Record<string, unknown>) ?? {};
+      return {
+        id: idOf(v),
+        savedDatasetId: {
+          id: idOf(sd),
+          datasetId: String(sd.datasetId ?? ""),
+          datasetSnapshot: mapDataset((sd.datasetSnapshot as Record<string, unknown>) ?? {}),
+        },
+      };
+    });
   },
   addItem: (collectionId: string, savedDatasetId: string) =>
     request<null>(`/users/collections/${collectionId}/items`, { method: 'POST', body: JSON.stringify({ savedDatasetId }) }),
