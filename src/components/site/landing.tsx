@@ -92,8 +92,9 @@ export default function Landing() {
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
+    if (!q.trim()) return;
     if (!guard()) return;
-    navigate({ to: "/search", search: { q } as never });
+    navigate({ to: "/search", search: { q: q.trim() } as never });
   };
 
   return (
@@ -266,11 +267,11 @@ export default function Landing() {
                   </button>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 px-3 pb-2 pt-3">
-                  <button className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1 text-xs text-muted-foreground hover:text-foreground">
+                  <button type="button" className="inline-flex items-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1 text-xs text-muted-foreground [.light_&]:text-foreground/80 hover:text-foreground hover:border-cyan/40">
                     <SlidersHorizontal className="h-3 w-3" /> Advanced filters
                   </button>
                   {suggestions.map((s) => (
-                    <button type="button" key={s} onClick={() => setQ(s)} className="rounded-full border border-white/10 px-3 py-1 text-xs text-muted-foreground hover:border-cyan/40 hover:text-foreground">
+                    <button type="button" key={s} onClick={() => setQ(s)} className="rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1 text-xs text-muted-foreground [.light_&]:text-foreground/80 hover:border-cyan/40 hover:text-foreground">
                       {s}
                     </button>
                   ))}

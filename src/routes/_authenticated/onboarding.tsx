@@ -110,12 +110,12 @@ function OnboardingPage() {
             <label className="block">
               <span className="text-xs text-muted-foreground">Role</span>
               <select name="role" required value={role} onChange={(e) => setRole(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-cyan/50">
-                <option value="">Select a role</option>
-                <option value="student">Student</option>
-                <option value="researcher">Researcher</option>
-                <option value="scientist">Scientist</option>
-                <option value="working_professional">Working Professional</option>
+                className="mt-1 w-full rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50">
+                <option value="" className="bg-background text-foreground">Select a role</option>
+                <option value="student" className="bg-background text-foreground">Student</option>
+                <option value="researcher" className="bg-background text-foreground">Researcher</option>
+                <option value="scientist" className="bg-background text-foreground">Scientist</option>
+                <option value="working_professional" className="bg-background text-foreground">Working Professional</option>
               </select>
             </label>
             <Field
@@ -140,7 +140,7 @@ function Field({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> 
     <label className="block">
       <span className="text-xs text-muted-foreground">{label}</span>
       <input {...props}
-        className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/60 focus:border-cyan/50" />
+        className="mt-1 w-full rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-cyan/50" />
     </label>
   );
 }
@@ -155,14 +155,14 @@ function PhoneField({ defaultPhone }: { defaultPhone: string }) {
       <span className="text-xs text-muted-foreground">Phone number</span>
       <div className="mt-1 flex gap-2">
         <select name="countryCode" defaultValue={defaultCode} required
-          className="w-36 shrink-0 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm outline-none focus:border-cyan/50">
+          className="w-36 shrink-0 rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-2 py-2 text-sm text-foreground outline-none focus:border-cyan/50">
           {COUNTRY_CODES.map((c) => (
-            <option key={c.code} value={c.code}>{c.label}</option>
+            <option key={c.code} value={c.code} className="bg-background text-foreground">{c.label}</option>
           ))}
         </select>
         <input name="phone" type="tel" required defaultValue={defaultDigits}
           placeholder="9876543210"
-          className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/60 focus:border-cyan/50" />
+          className="min-w-0 flex-1 rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-cyan/50" />
       </div>
     </div>
   );

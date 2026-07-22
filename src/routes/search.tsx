@@ -79,11 +79,12 @@ function SearchResults() {
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
+    if (!q.trim()) return;
     if (!user) {
-      navigate({ to: "/auth", search: { redirect: `/search?q=${encodeURIComponent(q)}`, mode: "login" } });
+      navigate({ to: "/auth", search: { redirect: `/search?q=${encodeURIComponent(q.trim())}`, mode: "login" } });
       return;
     }
-    navigate({ to: "/search", search: { q } as never });
+    navigate({ to: "/search", search: { q: q.trim() } as never });
   };
 
   const saveDataset = async (d: SearchResult) => {
