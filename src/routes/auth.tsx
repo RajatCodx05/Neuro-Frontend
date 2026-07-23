@@ -268,14 +268,14 @@ function AuthPage() {
                   : "Join to save datasets and track your research."}
       </p>
       {pendingVerificationEmail ? (
-        <form onSubmit={handleVerifyOtp} className="mt-6 space-y-3">
-          <Field label="Verification code" name="otp" inputMode="numeric" maxLength={6} required />
+        <form key="verify-otp" onSubmit={handleVerifyOtp} className="mt-6 space-y-3">
+          <Field key="verify-otp-input" label="Verification code" name="otp" inputMode="numeric" maxLength={6} placeholder="123456" autoComplete="one-time-code" required />
           <Submit loading={loading}>Verify email</Submit>
         </form>
       ) : forgotStep === "request" ? (
         /* Forgot password — step 1: request reset code */
-        <form onSubmit={handleForgotRequest} className="mt-6 space-y-3">
-          <Field label="Email" name="email" type="email" placeholder="you@lab.edu" defaultValue={forgotEmail} required />
+        <form key="forgot-request" onSubmit={handleForgotRequest} className="mt-6 space-y-3">
+          <Field key="forgot-request-email" label="Email" name="email" type="email" placeholder="you@lab.edu" defaultValue={forgotEmail} required />
           <Submit loading={loading}>Send reset code</Submit>
           <p className="text-center text-xs text-foreground/70 dark:text-muted-foreground">
             <button type="button" onClick={() => setForgotStep("idle")} className="text-cyan-600 dark:text-cyan font-medium hover:underline">Back to Sign in</button>
@@ -283,18 +283,18 @@ function AuthPage() {
         </form>
       ) : forgotStep === "sent" ? (
         /* Forgot password — step 2: OTP + new password */
-        <form onSubmit={handleResetPassword} className="mt-6 space-y-3">
-          <Field label="Reset code" name="otp" inputMode="numeric" maxLength={6} placeholder="123456" required />
+        <form key="forgot-sent" onSubmit={handleResetPassword} className="mt-6 space-y-3">
+          <Field key="forgot-sent-otp" label="Reset code" name="otp" inputMode="numeric" maxLength={6} placeholder="123456" autoComplete="one-time-code" required />
           <PasswordField name="newPassword" show={showPw} onToggle={() => setShowPw((v) => !v)} />
-          <Field label="Confirm password" name="confirmNewPassword" type={showPw ? "text" : "password"} required />
+          <Field key="forgot-sent-confirm" label="Confirm password" name="confirmNewPassword" type={showPw ? "text" : "password"} required />
           <Submit loading={loading}>Reset password</Submit>
           <p className="text-center text-xs text-foreground/70 dark:text-muted-foreground">
             <button type="button" onClick={() => { setForgotStep("idle"); setForgotEmail(""); }} className="text-cyan-600 dark:text-cyan font-medium hover:underline">Back to Sign in</button>
           </p>
         </form>
       ) : mode === "login" || isAdminMode ? (
-        <form onSubmit={handleLogin} className="mt-6 space-y-3">
-          <Field label="Email" name="email" type="email" placeholder="you@lab.edu" required />
+        <form key="login" onSubmit={handleLogin} className="mt-6 space-y-3">
+          <Field key="login-email" label="Email" name="email" type="email" placeholder="you@lab.edu" required />
           <PasswordField name="password" show={showPw} onToggle={() => setShowPw((v) => !v)} />
           <Submit loading={loading}>Continue</Submit>
           {!isAdminMode && (
@@ -306,12 +306,12 @@ function AuthPage() {
           )}
         </form>
       ) : (
-        <form onSubmit={handleSignup} className="mt-6 space-y-3">
-          <Field label="Full name" name="fullName" placeholder="Ada Lovelace" required />
-          <Field label="Email" name="email" type="email" placeholder="you@lab.edu" required />
+        <form key="signup" onSubmit={handleSignup} className="mt-6 space-y-3">
+          <Field key="signup-fullname" label="Full name" name="fullName" placeholder="Ada Lovelace" required />
+          <Field key="signup-email" label="Email" name="email" type="email" placeholder="you@lab.edu" required />
           <SignupPhoneField />
           <PasswordField name="password" show={showPw} onToggle={() => setShowPw((v) => !v)} />
-          <Field label="Confirm password" name="confirmPassword" type={showPw ? "text" : "password"} required />
+          <Field key="signup-confirm" label="Confirm password" name="confirmPassword" type={showPw ? "text" : "password"} required />
           <Submit loading={loading}>Create account</Submit>
         </form>
       )}
