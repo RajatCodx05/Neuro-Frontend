@@ -4,6 +4,14 @@ export const BASE_URL = (() => {
 })().replace(/\/$/, "");
 
 export type AuthUser = { id: string; email: string; isAdmin: boolean };
+export type NotificationPreferences = {
+  email_notifications: boolean;
+  in_app_notifications: boolean;
+  dataset_updates: boolean;
+  new_matches: boolean;
+  account_activity: boolean;
+};
+
 export type UserProfile = {
   id: string;
   full_name: string | null;
@@ -12,6 +20,7 @@ export type UserProfile = {
   role: "student" | "researcher" | "scientist" | "working_professional" | null;
   institute: string | null;
   notifications_enabled: boolean;
+  notification_preferences: NotificationPreferences;
   onboarding_complete: boolean;
 };
 export type SavedDataset = {
@@ -120,6 +129,8 @@ function mapUser(data: Record<string, unknown>): AuthUser {
 }
 function mapProfile(data: Record<string, unknown>): UserProfile {
   const phone = data.phone ? `${String(data.countryCode ?? "")}${String(data.phone)}` : null;
+  const prefs = (data.notificationPreferences as Record<string, boolean> | undefined) ?? {};
+  const defaultVal = Boolean(data.notificationsEnabled ?? true);
   return {
     id: idOf(data),
     full_name: (data.name as string | null) ?? null,
@@ -127,7 +138,14 @@ function mapProfile(data: Record<string, unknown>): UserProfile {
     phone,
     role: (data.role as UserProfile["role"]) ?? null,
     institute: (data.institute as string | null) ?? null,
-    notifications_enabled: Boolean(data.notificationsEnabled),
+    notifications_enabled: Boolean(data.notificationsEnabled ?? true),
+    notification_preferences: {
+      email_notifications: prefs.email_notifications ?? defaultVal,
+      in_app_notifications: prefs.in_app_notifications ?? defaultVal,
+      dataset_updates: prefs.dataset_updates ?? defaultVal,
+      new_matches: prefs.new_matches ?? defaultVal,
+      account_activity: prefs.account_activity ?? defaultVal,
+    },
     onboarding_complete: Boolean(data.isOnboarded),
   };
 }
@@ -234,6 +252,11 @@ const profiles = {
           institute: data.institute,
           ...phone,
         }),
+      });
+    } else if (data.notification_preferences !== undefined) {
+      await request("/users/me/notifications", {
+        method: "PATCH",
+        body: JSON.stringify({ notificationPreferences: data.notification_preferences }),
       });
     } else if (data.notifications_enabled !== undefined) {
       await request("/users/me/notifications", {

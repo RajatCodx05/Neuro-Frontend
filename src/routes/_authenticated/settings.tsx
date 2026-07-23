@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { Loader2, Save, Trash2, Plus, AlertTriangle } from "lucide-react";
-import { api, type UserProfile } from "@/lib/api-client";
+import { api, type UserProfile, type NotificationPreferences } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { AppShell } from "@/components/app/app-shell";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -52,10 +53,22 @@ function SettingsPage() {
     toast.success("Profile saved");
   };
 
-  const toggleNotifications = async (enabled: boolean) => {
-    if (!user) return;
-    await api.profiles.update({ notifications_enabled: enabled });
-    await refreshProfile();
+  const updateNotificationPref = async (key: keyof NotificationPreferences, enabled: boolean) => {
+    if (!user || !profile) return;
+    const currentPrefs = profile.notification_preferences || {
+      email_notifications: profile.notifications_enabled,
+      in_app_notifications: profile.notifications_enabled,
+      dataset_updates: profile.notifications_enabled,
+      new_matches: profile.notifications_enabled,
+      account_activity: profile.notifications_enabled,
+    };
+    const updated = { ...currentPrefs, [key]: enabled };
+    try {
+      await api.profiles.update({ notification_preferences: updated });
+      await refreshProfile();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update preference");
+    }
   };
 
   const addSocial = async () => {
@@ -130,19 +143,63 @@ function SettingsPage() {
 
         {/* Notifications */}
         <div className="glass card-elevated rounded-2xl p-6">
-          <div className="text-xs uppercase tracking-widest text-muted-foreground">Notifications</div>
-          <label className="mt-4 flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium">Email & in-app notifications</div>
-              <div className="text-xs text-muted-foreground">Dataset updates, new matches, and account activity.</div>
+          <div className="text-xs uppercase tracking-widest text-muted-foreground mb-4">Notifications</div>
+          <div className="space-y-4 divide-y divide-white/5 [.light_&]:divide-black/5">
+            <div className="flex items-center justify-between pt-3 first:pt-0">
+              <div>
+                <div className="text-sm font-medium">Email notifications</div>
+                <div className="text-xs text-muted-foreground">Receive notification emails at your registered email address.</div>
+              </div>
+              <Switch
+                checked={profile.notification_preferences?.email_notifications ?? profile.notifications_enabled}
+                onCheckedChange={(checked) => updateNotificationPref("email_notifications", checked)}
+              />
             </div>
-            <input
-              type="checkbox"
-              className="h-5 w-9 cursor-pointer appearance-none rounded-full bg-white/10 [.light_&]:bg-black/10 checked:bg-cyan transition"
-              defaultChecked={profile.notifications_enabled}
-              onChange={(e) => toggleNotifications(e.target.checked)}
-            />
-          </label>
+
+            <div className="flex items-center justify-between pt-3">
+              <div>
+                <div className="text-sm font-medium">In-app notifications</div>
+                <div className="text-xs text-muted-foreground">Receive real-time alerts and badges directly inside the application.</div>
+              </div>
+              <Switch
+                checked={profile.notification_preferences?.in_app_notifications ?? profile.notifications_enabled}
+                onCheckedChange={(checked) => updateNotificationPref("in_app_notifications", checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-3">
+              <div>
+                <div className="text-sm font-medium">Dataset updates</div>
+                <div className="text-xs text-muted-foreground">Notifications when saved or followed datasets are updated.</div>
+              </div>
+              <Switch
+                checked={profile.notification_preferences?.dataset_updates ?? profile.notifications_enabled}
+                onCheckedChange={(checked) => updateNotificationPref("dataset_updates", checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-3">
+              <div>
+                <div className="text-sm font-medium">New matches & recommendations</div>
+                <div className="text-xs text-muted-foreground">Alerts for new matching neuroscience datasets and research suggestions.</div>
+              </div>
+              <Switch
+                checked={profile.notification_preferences?.new_matches ?? profile.notifications_enabled}
+                onCheckedChange={(checked) => updateNotificationPref("new_matches", checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-3">
+              <div>
+                <div className="text-sm font-medium">Account activity & security</div>
+                <div className="text-xs text-muted-foreground">Security alerts, password changes, and account login updates.</div>
+              </div>
+              <Switch
+                checked={profile.notification_preferences?.account_activity ?? profile.notifications_enabled}
+                onCheckedChange={(checked) => updateNotificationPref("account_activity", checked)}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Social links */}

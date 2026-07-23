@@ -8,9 +8,9 @@ import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/search")({
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { q: string; filters?: string } => ({
     q: typeof s.q === "string" ? s.q : "",
-    filters: typeof s.filters === "string" ? s.filters : "",
+    filters: typeof s.filters === "string" ? s.filters : undefined,
   }),
   component: SearchResults,
 });
@@ -97,7 +97,7 @@ function SearchResults() {
     e.preventDefault();
     if (!q.trim()) return;
     if (!user) {
-      navigate({ to: "/search", search: { redirect: `/search?q=${encodeURIComponent(q.trim())}`, mode: "login" } });
+      navigate({ to: "/auth", search: { redirect: `/search?q=${encodeURIComponent(q.trim())}`, mode: "login" } });
       return;
     }
     navigate({ to: "/search", search: { q: q.trim(), filters: showFilters ? "true" : undefined } as never });

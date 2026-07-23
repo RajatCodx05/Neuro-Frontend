@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { AdminPageHeader } from "@/components/app/admin-shell";
+import { Switch } from "@/components/ui/switch";
 import { Trash2, Send, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -119,11 +120,10 @@ function AnnouncementsPage() {
                     <div className="mt-2 text-xs text-muted-foreground">{new Date(a.created_at).toLocaleString()}</div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
-                      <input type="checkbox" checked={a.active} onChange={(e) => toggle(a.id, e.target.checked)}
-                        className="h-4 w-8 appearance-none rounded-full bg-white/10 checked:bg-cyan" />
-                      Live
-                    </label>
+                    <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                      <Switch checked={a.active} onCheckedChange={(checked) => toggle(a.id, checked)} />
+                      <span>Live</span>
+                    </div>
                     <button onClick={() => startEdit(a)} title="Edit announcement"
                       className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-cyan">
                       <Pencil className="h-4 w-4" />

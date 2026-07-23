@@ -182,7 +182,7 @@ export default function Landing() {
                 <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
                   <Link to="/saved"><Bookmark className="mr-2 h-4 w-4" />Saved Datasets</Link>
                 </DropdownMenuItem>
-                {profile?.role === "admin" && (
+                {(profile?.role as string) === "admin" && (
                   <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
                     <Link to="/admin"><ShieldCheck className="mr-2 h-4 w-4 text-cyan" />Admin Portal</Link>
                   </DropdownMenuItem>
