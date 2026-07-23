@@ -77,20 +77,23 @@ function SearchResults() {
   useEffect(() => {
     if (!search.q?.trim() || !user) return;
     let cancelled = false;
-    setResults([]);
-    setStreaming(true);
-    void (async () => {
-      try {
-        const response = await api.datasets.search(search.q.trim());
-        if (cancelled) return;
-        setResults(response.results ?? []);
-      } catch (err) {
-        if (!cancelled) toast.error(err instanceof Error ? err.message : "Search failed");
-      } finally {
-        if (!cancelled) setStreaming(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    // ponytail: 300 ms debounce — prevents duplicate requests on rapid query changes.
+    const timer = setTimeout(() => {
+      setResults([]);
+      setStreaming(true);
+      void (async () => {
+        try {
+          const response = await api.datasets.search(search.q.trim());
+          if (cancelled) return;
+          setResults(response.results ?? []);
+        } catch (err) {
+          if (!cancelled) toast.error(err instanceof Error ? err.message : "Search failed");
+        } finally {
+          if (!cancelled) setStreaming(false);
+        }
+      })();
+    }, 300);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [search.q, user]);
 
   const submit = (e: FormEvent) => {
