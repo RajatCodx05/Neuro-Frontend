@@ -488,6 +488,7 @@ const admin = {
   queries: {
     recent: (_limit: number) => Promise.resolve([]) as Promise<Array<Record<string, unknown>>>,
   },
+  getAdmins: () => request<Record<string, unknown>[]>("/admin/admins"),
   auditLog: {
     list: (limit = 100) => request<Record<string, unknown>[]>(`/admin/audit-log?limit=${limit}`),
   },
