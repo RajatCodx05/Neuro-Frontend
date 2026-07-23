@@ -168,7 +168,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <DropdownMenuContent side="top" align="start" className="w-56">
               <DropdownMenuLabel className="truncate">{profile?.full_name || user?.email}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild><Link to="/settings"><UserIcon className="mr-2 h-4 w-4" />Profile & settings</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link to="/admin/settings"><UserIcon className="mr-2 h-4 w-4" />Profile & settings</Link></DropdownMenuItem>
               <DropdownMenuItem asChild><Link to="/"><ArrowLeft className="mr-2 h-4 w-4" />Back to app</Link></DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut}><LogOut className="mr-2 h-4 w-4" />Sign out</DropdownMenuItem>

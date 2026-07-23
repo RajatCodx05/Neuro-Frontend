@@ -138,7 +138,7 @@ function AuditLogPage() {
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <RefreshCw className={`h-3 w-3 ${paused ? "" : "animate-spin"}`} />
-            {paused ? "Updates paused — scroll stopped" : "Live — auto-refreshing every 5s"}
+            {paused ? "Updates paused — scroll stopped" : "Live"}
           </div>
           <span className="text-xs text-muted-foreground">{filtered.length} entries</span>
         </div>
