@@ -198,7 +198,7 @@ function SavedPage() {
         <div className="flex items-end justify-between">
           <div>
             <h1 className="font-display text-3xl font-semibold">Saved &amp; Collections</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Your bookmarked datasets and folders.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Your Saved datasets and folders.</p>
           </div>
         </div>
 

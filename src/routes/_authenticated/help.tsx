@@ -24,7 +24,7 @@ const faqs = [
   },
   {
     q: "Where can I find my saved items?",
-    a: "Open the Saved & Collections page from the sidebar. It shows all your bookmarked datasets in one place, grouped for easy browsing.",
+    a: "Open the Saved & Collections page from the sidebar. It shows all your Saved datasets in one place, grouped for easy browsing.",
   },
   {
     q: "How do I create and manage collections?",

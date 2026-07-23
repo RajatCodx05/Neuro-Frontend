@@ -120,7 +120,7 @@ function AuthPage() {
     try {
       if (isAdminMode) {
         await api.admin.auth.verifyLoginOtp(pendingVerificationEmail, otp);
-        toast.success("Admin login successful");
+        toast.success("Admin SignIn successful");
         redirectTo("/admin");
       } else {
         await api.auth.verifyOtp(pendingVerificationEmail, otp);
@@ -158,7 +158,7 @@ function AuthPage() {
     setLoading(true);
     try {
       await api.auth.resetPassword(forgotEmail, otp, newPassword);
-      toast.success("Password reset — please log in");
+      toast.success("Password reset — please Sign in");
       setForgotStep("idle"); setForgotEmail(""); setMode("login");
     } catch (err) { toast.error(err instanceof Error ? err.message : "Reset failed"); }
     finally { setLoading(false); }
@@ -237,7 +237,7 @@ function AuthPage() {
         </div>
       ) : (
         <div className="flex rounded-full border border-black/10 bg-black/5 p-1 text-sm dark:border-white/10 dark:bg-white/5">
-          <button onClick={() => { setMode("login"); setPendingVerificationEmail(null); }} className={`flex-1 rounded-full py-1.5 font-medium transition ${mode === "login" ? "bg-white text-foreground shadow-sm dark:bg-white/15 dark:text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Log in</button>
+          <button onClick={() => { setMode("login"); setPendingVerificationEmail(null); }} className={`flex-1 rounded-full py-1.5 font-medium transition ${mode === "login" ? "bg-white text-foreground shadow-sm dark:bg-white/15 dark:text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Sign in</button>
           <button onClick={() => { setMode("signup"); setPendingVerificationEmail(null); }} className={`flex-1 rounded-full py-1.5 font-medium transition ${mode === "signup" ? "bg-white text-foreground shadow-sm dark:bg-white/15 dark:text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Sign up</button>
         </div>
       )}
@@ -278,7 +278,7 @@ function AuthPage() {
           <Field label="Email" name="email" type="email" placeholder="you@lab.edu" defaultValue={forgotEmail} required />
           <Submit loading={loading}>Send reset code</Submit>
           <p className="text-center text-xs text-foreground/70 dark:text-muted-foreground">
-            <button type="button" onClick={() => setForgotStep("idle")} className="text-cyan-600 dark:text-cyan font-medium hover:underline">Back to login</button>
+            <button type="button" onClick={() => setForgotStep("idle")} className="text-cyan-600 dark:text-cyan font-medium hover:underline">Back to Sign in</button>
           </p>
         </form>
       ) : forgotStep === "sent" ? (
@@ -289,7 +289,7 @@ function AuthPage() {
           <Field label="Confirm password" name="confirmNewPassword" type={showPw ? "text" : "password"} required />
           <Submit loading={loading}>Reset password</Submit>
           <p className="text-center text-xs text-foreground/70 dark:text-muted-foreground">
-            <button type="button" onClick={() => { setForgotStep("idle"); setForgotEmail(""); }} className="text-cyan-600 dark:text-cyan font-medium hover:underline">Back to login</button>
+            <button type="button" onClick={() => { setForgotStep("idle"); setForgotEmail(""); }} className="text-cyan-600 dark:text-cyan font-medium hover:underline">Back to Sign in</button>
           </p>
         </form>
       ) : mode === "login" || isAdminMode ? (
@@ -330,7 +330,7 @@ function AuthPage() {
           <p className="mt-6 text-center text-xs text-foreground/70 dark:text-muted-foreground">
             {isAdminMode ? (
               <button onClick={() => setIsAdminMode(false)} className="text-cyan-600 dark:text-cyan font-medium hover:underline">
-                Standard Portal Login
+                Standard Portal Signin
               </button>
             ) : mode === "login" ? (
               <>
@@ -340,7 +340,7 @@ function AuthPage() {
             ) : (
               <>
                 <span>Already have an account? </span>
-                <button onClick={() => setMode("login")} className="text-cyan-600 dark:text-cyan font-medium hover:underline">Log in</button>
+                <button onClick={() => setMode("login")} className="text-cyan-600 dark:text-cyan font-medium hover:underline">Sign in</button>
               </>
             )}
           </p>
@@ -354,7 +354,7 @@ function AuthPage() {
                 }}
                 className="text-[11px] font-medium text-foreground/70 dark:text-muted-foreground/70 hover:text-foreground underline transition"
               >
-                Administrator Login
+                Administrator Sign in
               </button>
             </div>
           )}
