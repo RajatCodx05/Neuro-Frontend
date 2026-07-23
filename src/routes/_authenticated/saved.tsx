@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bookmark, FolderOpen, FolderPlus, Plus, Trash2, ArrowRight, Loader2, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Bookmark, FolderOpen, FolderPlus, Plus, Trash2, ArrowRight, Loader2, ArrowLeft } from "lucide-react";
 import { api, type SavedDataset, type Collection } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { AppShell } from "@/components/app/app-shell";
@@ -182,36 +182,36 @@ function SavedPage() {
             </div>
           )}
 
-          {/* Saved datasets to add */}
+          {/* Saved datasets to add — hide ones already in this collection */}
           <div className="space-y-3">
             <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Add from saved datasets</p>
-            {saved.length === 0 ? (
-              <div className="text-sm text-muted-foreground">No saved datasets yet.</div>
-            ) : saved.map((s) => {
-              const snap = s.dataset_snapshot as Snap;
-              const already = inCollection.has(s.id);
-              return (
-                <div key={s.id} className="glass flex items-start gap-4 rounded-2xl p-4">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan/20 to-neural/20 text-xs font-bold text-white">
-                    {(snap.modality ?? "DS").toString().slice(0, 4)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-display text-sm font-semibold">{snap.name ?? s.dataset_id}</p>
-                    {snap.description && <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{snap.description}</p>}
-                  </div>
-                  {already ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-cyan/30 px-3 py-1.5 text-xs text-cyan shrink-0">
-                      <CheckCircle2 className="h-3 w-3" /> Added
+            {(() => {
+              const available = saved.filter((s) => !inCollection.has(s.id));
+              if (saved.length === 0) {
+                return <div className="text-sm text-muted-foreground">No saved datasets yet.</div>;
+              }
+              if (available.length === 0) {
+                return <div className="text-sm text-muted-foreground">All saved datasets are already in this collection.</div>;
+              }
+              return available.map((s) => {
+                const snap = s.dataset_snapshot as Snap;
+                return (
+                  <div key={s.id} className="glass flex items-start gap-4 rounded-2xl p-4">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan/20 to-neural/20 text-xs font-bold text-white">
+                      {(snap.modality ?? "DS").toString().slice(0, 4)}
                     </span>
-                  ) : (
+                    <div className="min-w-0 flex-1">
+                      <p className="font-display text-sm font-semibold">{snap.name ?? s.dataset_id}</p>
+                      {snap.description && <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{snap.description}</p>}
+                    </div>
                     <button onClick={() => addToCollection(s.id)} disabled={adding === s.id}
                       className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-3 py-1.5 text-xs font-medium text-[oklch(0.15_0.03_258)] disabled:opacity-50 shrink-0">
                       {adding === s.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />} Add
                     </button>
-                  )}
-                </div>
-              );
-            })}
+                  </div>
+                );
+              });
+            })()}
           </div>
         </div>
       </AppShell>
@@ -225,7 +225,7 @@ function SavedPage() {
         <div className="flex items-end justify-between">
           <div>
             <h1 className="font-display text-3xl font-semibold">Saved &amp; Collections</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Your Saved datasets and folders.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Your Saved datasets and Collections.</p>
           </div>
         </div>
 

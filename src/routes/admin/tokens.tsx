@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { AdminPageHeader } from "@/components/app/admin-shell";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 export const Route = createFileRoute("/admin/tokens")({
   head: () => ({ meta: [{ title: "Admin · Token usage — NeuroSearch AI" }] }),
@@ -57,26 +57,28 @@ function TokensPage() {
           </div>
           <input value={userFilter} onChange={(e) => setUserFilter(e.target.value)} placeholder="Filter by user email…"
             className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm outline-none focus:border-cyan/50" />
-          <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)}
-            className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm outline-none focus:border-cyan/50">
-            <option value="">All agents</option>
-            <option value="fallback">fallback</option>
-            <option value="search_provider">search_provider</option>
-            <option value="link_verifier">link_verifier</option>
-          </select>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground shrink-0">Agent:</span>
+            <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)}
+              className="rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-foreground outline-none focus:border-cyan/50 cursor-pointer">
+              <option value="" className="bg-[oklch(0.18_0.02_258)]">All agents</option>
+              <option value="fallback" className="bg-[oklch(0.18_0.02_258)]">fallback</option>
+              <option value="parse_query" className="bg-[oklch(0.18_0.02_258)]">parse_query</option>
+            </select>
+          </div>
         </div>
 
         <div className="glass rounded-2xl p-5">
           <div className="text-sm font-semibold">Tokens by {dim}</div>
           <div className="mt-4 h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={bucketed}>
+              <LineChart data={bucketed}>
                 <CartesianGrid stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="label" stroke="rgba(255,255,255,0.4)" fontSize={11} />
                 <YAxis stroke="rgba(255,255,255,0.4)" fontSize={11} />
                 <Tooltip contentStyle={{ background: "rgba(20,25,40,0.95)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12 }} />
-                <Bar dataKey="tokens" fill="oklch(0.82 0.16 210)" radius={[4, 4, 0, 0]} />
-              </BarChart>
+                <Line type="monotone" dataKey="tokens" stroke="oklch(0.82 0.16 210)" strokeWidth={2} dot={{ r: 3, fill: "oklch(0.82 0.16 210)" }} />
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </div>

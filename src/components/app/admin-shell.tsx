@@ -2,7 +2,7 @@ import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import {
   Brain, LayoutDashboard, Users, Database, ShieldCheck, Sparkles, BarChart3,
-  Megaphone, Server, HardDrive, Activity, Coins, ScrollText, LifeBuoy,
+  Megaphone, Server, HardDrive, Coins, ScrollText, LifeBuoy,
   LogOut, User as UserIcon, PanelLeft, PanelLeftClose, ArrowLeft, Sun, Moon,
   ChevronsUpDown,
 } from "lucide-react";
@@ -31,17 +31,14 @@ const groups: NavGroup[] = [
       { icon: Users, label: "User management", to: "/admin/users" },
       { icon: Database, label: "Repository management", to: "/admin/repositories" },
       { icon: ShieldCheck, label: "Dataset moderation", to: "/admin/moderation" },
-      { icon: Sparkles, label: "AI assistant oversight", to: "/admin/assistant" },
     ],
   },
   {
     label: "Infrastructure & ops",
     items: [
-      { icon: Server, label: "Database (MongoDB)", to: "/admin/infrastructure", search: { tab: "mongo" } },
-      { icon: Activity, label: "Cache & queue (Redis)", to: "/admin/infrastructure", search: { tab: "redis" } },
+      { icon: Server, label: "Infrastructure", to: "/admin/infrastructure" },
       { icon: Sparkles, label: "Agent activity", to: "/admin/agents" },
       { icon: Coins, label: "Token usage", to: "/admin/tokens" },
-      { icon: HardDrive, label: "Storage", to: "/admin/infrastructure", search: { tab: "storage" } },
     ],
   },
   {
