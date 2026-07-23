@@ -149,15 +149,18 @@ function mapProfile(data: Record<string, unknown>): UserProfile {
     onboarding_complete: Boolean(data.isOnboarded),
   };
 }
-export function mapDataset(data: Record<string, unknown>): SearchResult {
+// ponytail: resultSource='cache' means record already in DB — relabel 'web_search' → 'Database'.
+export function mapDataset(data: Record<string, unknown>, resultSource?: string): SearchResult {
   const list = (value: unknown) => (Array.isArray(value) ? value.join(", ") : String(value ?? ""));
   const verified = data.last_verified_at
     ? new Date(String(data.last_verified_at)).toLocaleDateString()
     : ((data.trust_tier as string | null) ?? null);
+  const rawSource = String(data.source ?? "Dataset");
+  const repo = rawSource === "web_search" && resultSource === "cache" ? "Database" : rawSource;
   return {
     id: idOf(data),
     name: String(data.title ?? "Untitled dataset"),
-    repo: String(data.source ?? "Dataset"),
+    repo,
     modality: list(data.modality) || "DS",
     description: String(data.description ?? ""),
     subjects: typeof data.subject_count === "number" ? data.subject_count : null,
@@ -533,7 +536,8 @@ export const api = {
         results?: Record<string, unknown>[];
         queryId?: string;
       }>("/datasets/search", { method: "POST", body: JSON.stringify({ query }) });
-      return { ...data, results: (data.results ?? []).map(mapDataset) };
+      // ponytail: pass response-level source so mapDataset can relabel 'web_search' → 'Database' on cache hits.
+      return { ...data, results: (data.results ?? []).map((r) => mapDataset(r, data.source)) };
     },
     async getById(id: string): Promise<SearchResult> {
       const data = await request<Record<string, unknown>>(`/datasets/${id}`, {}, false);
