@@ -1,9 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bookmark, FolderOpen, Plus, Trash2, ArrowRight, Loader2, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Bookmark, FolderOpen, FolderPlus, Plus, Trash2, ArrowRight, Loader2, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { api, type SavedDataset, type Collection } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { AppShell } from "@/components/app/app-shell";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/saved")({
@@ -13,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/saved")({
 type Snap = { name?: string; repo?: string; modality?: string; description?: string };
 type ColItem = { id: string; savedDatasetId: { id: string; datasetId: string; datasetSnapshot: Snap } };
 
-const LIMIT = 30;
+const LIMIT = 50;
 
 function SavedPage() {
   const { user } = useAuth();
@@ -27,6 +33,9 @@ function SavedPage() {
   const [colItems, setColItems] = useState<ColItem[]>([]);
   const [colLoading, setColLoading] = useState(false);
   const [adding, setAdding] = useState<string | null>(null); // savedDataset id being added
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [addDialogDatasetId, setAddDialogDatasetId] = useState<string | null>(null);
+  const [addToColId, setAddToColId] = useState<string | null>(null);
 
   const load = async () => {
     if (!user) return;
@@ -93,6 +102,24 @@ function SavedPage() {
       toast.success("Added to collection");
     } catch (err) { toast.error(err instanceof Error ? err.message : "Already in collection"); }
     finally { setAdding(null); }
+  };
+
+  const addToCollectionFromDialog = async (collectionId: string) => {
+    if (!addDialogDatasetId) return;
+    setAddToColId(collectionId);
+    try {
+      await api.collections.addItem(collectionId, addDialogDatasetId);
+      setCollections((v) => v.map((c) => c.id === collectionId ? { ...c, itemCount: (c.itemCount ?? 0) + 1 } : c));
+      toast.success("Added to collection");
+      setAddDialogOpen(false);
+      setAddDialogDatasetId(null);
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Already in collection"); }
+    finally { setAddToColId(null); }
+  };
+
+  const openAddDialog = (savedDatasetId: string) => {
+    setAddDialogDatasetId(savedDatasetId);
+    setAddDialogOpen(true);
   };
 
   const removeFromCollection = async (savedDatasetId: string) => {
@@ -244,6 +271,10 @@ function SavedPage() {
                       className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs hover:bg-white/5">
                       View <ArrowRight className="h-3 w-3" />
                     </Link>
+                    <button onClick={() => openAddDialog(s.id)}
+                      className="inline-flex items-center gap-1 rounded-full border border-cyan/20 px-3 py-1.5 text-xs text-cyan hover:bg-cyan/5">
+                      <FolderPlus className="h-3 w-3" /> Add
+                    </button>
                     <button onClick={() => removeSaved(s.id)}
                       className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/5">
                       <Trash2 className="h-3 w-3" /> Remove
@@ -294,6 +325,43 @@ function SavedPage() {
           </div>
         )}
       </div>
+
+      {/* Add to Collection Dialog */}
+      <Dialog open={addDialogOpen} onOpenChange={(open) => { if (!open) { setAddDialogOpen(false); setAddDialogDatasetId(null); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add to Collection</DialogTitle>
+          </DialogHeader>
+          {collections.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <FolderOpen className="h-10 w-10 text-muted-foreground/50" />
+              <div>
+                <p className="text-sm font-medium text-amber-400">No Collections</p>
+                <p className="mt-1 text-xs text-muted-foreground">Create a Collection first to organize your saved datasets.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2 py-2">
+              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground px-1">Choose a collection</p>
+              {collections.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => addToCollectionFromDialog(c.id)}
+                  disabled={addToColId === c.id}
+                  className="flex w-full items-center gap-3 rounded-xl border border-white/10 px-4 py-3 text-left text-sm transition-colors hover:border-cyan/30 hover:bg-white/5 disabled:opacity-50"
+                >
+                  <FolderOpen className="h-4 w-4 shrink-0 text-cyan" />
+                  <span className="flex-1 font-medium">{c.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {c.itemCount != null ? `${c.itemCount} item${c.itemCount !== 1 ? "s" : ""}` : ""}
+                  </span>
+                  {addToColId === c.id && <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
