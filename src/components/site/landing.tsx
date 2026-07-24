@@ -22,7 +22,7 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import brainCardImg from "@/assets/brain-card.jpg";
-import { datasets, stats } from "@/lib/mock-data";
+import { datasets, repositories as mockRepos, stats } from "@/lib/mock-data";
 import { useQuery } from "@tanstack/react-query";
 
 const colorMap: Record<string, string> = {
@@ -121,9 +121,53 @@ export default function Landing() {
     queryFn: () => api.repositories.list(),
   });
 
+  // Merge dbRepos with mockRepos
+  const mergedRepos = [...mockRepos].map((mr) => {
+    const dbMatch = dbRepos.find(
+      (dr) => dr.name.toLowerCase().trim() === mr.name.toLowerCase().trim()
+    );
+    if (dbMatch) {
+      const tier = dbMatch.trust_tier.charAt(0).toUpperCase() + dbMatch.trust_tier.slice(1);
+      return {
+        ...mr,
+        id: dbMatch.id,
+        status: dbMatch.sync_status,
+        datasets: dbMatch.dataset_count,
+        lastSync: formatRelativeTime(dbMatch.last_sync_at),
+        tier: tier as any,
+        url: dbMatch.endpoint_config?.url || mr.url,
+      };
+    }
+    return mr;
+  });
+
+  // Append database repositories not already present in the mock data
+  dbRepos.forEach((dr) => {
+    const isAlreadyIncluded = mockRepos.some(
+      (mr) => mr.name.toLowerCase().trim() === dr.name.toLowerCase().trim()
+    );
+    if (!isAlreadyIncluded) {
+      const meta = getRepoMeta(dr.name);
+      const tier = dr.trust_tier.charAt(0).toUpperCase() + dr.trust_tier.slice(1);
+      mergedRepos.push({
+        id: dr.id,
+        name: dr.name,
+        short: meta.short,
+        datasets: dr.dataset_count,
+        tier: tier as any,
+        status: dr.sync_status as any,
+        lastSync: formatRelativeTime(dr.last_sync_at),
+        color: meta.color,
+        url: dr.endpoint_config?.url,
+      });
+    }
+  });
+
+  const finalRepos = mergedRepos.slice(0, 10);
+
   const dynamicStats = stats.map((s) => {
     if (s.label === "Repositories Connected") {
-      return { ...s, value: dbRepos.length || 10 };
+      return { ...s, value: finalRepos.length };
     }
     return s;
   });
@@ -396,48 +440,37 @@ export default function Landing() {
               subtitle="We continuously index and verify open-science repositories so you can search across all of them at once."
             />
             <div className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              {dbRepos.map((r, i) => {
-                const meta = getRepoMeta(r.name);
-                const tier = r.trust_tier.charAt(0).toUpperCase() + r.trust_tier.slice(1);
-                const relativeSync = formatRelativeTime(r.last_sync_at);
-                const url = r.endpoint_config?.url;
-                return (
-                  <motion.div
-                    key={r.id}
-                    initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: "-60px" }} transition={{ duration: 0.5, delay: (i % 5) * 0.05 }}
-                    whileHover={{ y: -4 }}
-                    className="group glass card-elevated relative overflow-hidden rounded-2xl p-5"
-                  >
-                    <div className={`absolute -right-10 -top-10 h-28 w-28 rounded-full bg-gradient-to-br ${meta.color} opacity-20 blur-2xl transition group-hover:opacity-40`} />
-                    <div className="flex items-center justify-between">
-                      <div className={`grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br ${meta.color} text-sm font-bold text-white ring-1 ring-white/20`}>
-                        {meta.short}
-                      </div>
-                      <StatusPill status={r.sync_status} />
+              {finalRepos.map((r, i) => (
+                <motion.div
+                  key={r.id}
+                  initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-60px" }} transition={{ duration: 0.5, delay: (i % 5) * 0.05 }}
+                  whileHover={{ y: -4 }}
+                  className="group glass card-elevated relative overflow-hidden rounded-2xl p-5"
+                >
+                  <div className={`absolute -right-10 -top-10 h-28 w-28 rounded-full bg-gradient-to-br ${r.color} opacity-20 blur-2xl transition group-hover:opacity-40`} />
+                  <div className="flex items-center justify-between">
+                    <div className={`grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br ${r.color} text-sm font-bold text-white ring-1 ring-white/20`}>
+                      {r.short}
                     </div>
-                    <div className="mt-4 font-display text-base font-semibold">{r.name}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">{r.dataset_count.toLocaleString()} datasets · {tier} tier</div>
-                    <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3 text-xs text-muted-foreground">
-                      <span>Synced {relativeSync}</span>
-                      {url ? (
-                        <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-cyan hover:text-foreground">
-                          Explore <ArrowRight className="h-3 w-3" />
-                        </a>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-muted-foreground/30 cursor-not-allowed" title="Link coming soon">
-                          Explore <ArrowRight className="h-3 w-3" />
-                        </span>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
-              {dbRepos.length === 0 && (
-                <div className="col-span-full p-8 text-center text-sm text-muted-foreground">
-                  No active repositories found.
-                </div>
-              )}
+                    <StatusPill status={r.status} />
+                  </div>
+                  <div className="mt-4 font-display text-base font-semibold">{r.name}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{r.datasets.toLocaleString()} datasets · {r.tier} tier</div>
+                  <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3 text-xs text-muted-foreground">
+                    <span>Synced {r.lastSync}</span>
+                    {r.url ? (
+                      <a href={r.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-cyan hover:text-foreground">
+                        Explore <ArrowRight className="h-3 w-3" />
+                      </a>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-muted-foreground/30 cursor-not-allowed" title="Link coming soon">
+                        Explore <ArrowRight className="h-3 w-3" />
+                      </span>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </div>
         </section>

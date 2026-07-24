@@ -393,7 +393,18 @@ const admin = {
     delete: (id: string) => request<null>(`/admin/users/${id}`, { method: "DELETE" }),
   },
   repositories: {
-    list: () => request<Record<string, unknown>[]>("/admin/repositories"),
+    list: async () => {
+      const values = await request<Record<string, unknown>[]>("/admin/repositories");
+      return values.map((v) => ({
+        id: idOf(v),
+        name: String(v.name),
+        trust_tier: String(v.trust_tier),
+        sync_status: String(v.sync_status),
+        dataset_count: Number(v.dataset_count ?? 0),
+        last_sync_at: v.last_sync_at ? String(v.last_sync_at) : null,
+        endpoint_config: (v.endpoint_config as Record<string, unknown>) ?? {},
+      }));
+    },
     create: (data: {
       name: string;
       trust_tier: string;
@@ -548,7 +559,18 @@ export type ApiRepository = {
 
 // ponytail: public endpoint — no token needed, used by landing page
 const repositories = {
-  list: () => request<ApiRepository[]>("/repositories", {}, false),
+  list: async () => {
+    const values = await request<Record<string, unknown>[]>("/repositories", {}, false);
+    return values.map((v) => ({
+      id: idOf(v),
+      name: String(v.name),
+      trust_tier: String(v.trust_tier) as "open" | "registered" | "restricted",
+      sync_status: String(v.sync_status) as "online" | "syncing" | "offline",
+      dataset_count: Number(v.dataset_count ?? 0),
+      last_sync_at: v.last_sync_at ? String(v.last_sync_at) : null,
+      endpoint_config: (v.endpoint_config as Record<string, unknown>) ?? {},
+    })) as ApiRepository[];
+  },
 };
 
 export const api = {
