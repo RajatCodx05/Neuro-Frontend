@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { AdminPageHeader } from "@/components/app/admin-shell";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/help-desk")({
@@ -12,15 +12,25 @@ export const Route = createFileRoute("/admin/help-desk")({
 });
 
 type Tab = "tickets" | "articles";
+type Ticket = { id: string; subject: string; message: string; status: string; created_at: string; email?: string; name?: string; source?: string };
+type TicketResp = { tickets: Ticket[]; total: number; page: number; limit: number };
+
+const PAGE_SIZE = 10;
 
 function HelpDeskPage() {
   const [tab, setTab] = useState<Tab>("tickets");
+  const [page, setPage] = useState(1);
   const qc = useQueryClient();
 
-  const { data: tickets = [] } = useQuery({
-    queryKey: ["support-tickets"],
-    queryFn: () => api.admin.helpDesk.tickets() as Promise<Array<{ id: string; subject: string; message: string; status: string; created_at: string }>>,
+  const { data: ticketResp } = useQuery({
+    queryKey: ["support-tickets", page],
+    queryFn: () => api.admin.helpDesk.tickets(page) as Promise<TicketResp>,
   });
+
+  const tickets = ticketResp?.tickets ?? [];
+  const totalTickets = ticketResp?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalTickets / PAGE_SIZE));
+
   const { data: articles = [] } = useQuery({
     queryKey: ["help-articles"],
     queryFn: () => api.admin.helpDesk.articles() as Promise<Array<{ id: string; title: string; slug: string; published: boolean; updated_at: string }>>,
@@ -29,7 +39,7 @@ function HelpDeskPage() {
   const setTicketStatus = async (id: string, status: "open" | "in_progress" | "resolved") => {
     const patchData = { status, ...(status === "resolved" ? { resolved_at: new Date().toISOString() } : {}) };
     await api.admin.helpDesk.updateTicket(id, patchData);
-    qc.invalidateQueries({ queryKey: ["support-tickets"] });
+    qc.invalidateQueries({ queryKey: ["support-tickets", page] });
   };
 
   const [title, setTitle] = useState("");
@@ -55,7 +65,7 @@ function HelpDeskPage() {
       <AdminPageHeader title="Help desk" description="User support tickets and help center articles" />
       <div className="px-6 py-6 md:px-8">
         <div className="mb-4 inline-flex rounded-full border border-white/10 bg-white/5 p-1 text-sm">
-          <button onClick={() => setTab("tickets")} className={`rounded-full px-4 py-1.5 ${tab === "tickets" ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}>
+          <button onClick={() => { setTab("tickets"); setPage(1); }} className={`rounded-full px-4 py-1.5 ${tab === "tickets" ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}>
             Support tickets <span className="ml-1 rounded-full bg-cyan/20 px-1.5 py-0.5 text-[10px] text-cyan">{tickets.filter((t) => t.status !== "resolved").length}</span>
           </button>
           <button onClick={() => setTab("articles")} className={`rounded-full px-4 py-1.5 ${tab === "articles" ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}>
@@ -65,6 +75,28 @@ function HelpDeskPage() {
 
         {tab === "tickets" && (
           <div className="glass overflow-hidden rounded-2xl">
+            {/* Pagination header — top right when tickets exceed page size */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-end gap-2 border-b border-white/5 px-4 py-3">
+                <span className="mr-1 text-xs text-muted-foreground">
+                  Page {page} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-white/10 hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-white/10 hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
             <table className="w-full text-sm">
               <thead className="text-xs uppercase tracking-widest text-muted-foreground">
                 <tr className="border-b border-white/5">
