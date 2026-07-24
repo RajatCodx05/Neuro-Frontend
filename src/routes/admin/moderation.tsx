@@ -39,11 +39,11 @@ function ModerationPage() {
     <>
       <AdminPageHeader title="Dataset moderation" description="Review community-discovered datasets and manage the catalog" />
       <div className="px-6 py-6 md:px-8">
-        <div className="mb-4 inline-flex rounded-full border border-white/10 bg-white/5 p-1 text-sm">
-          <button onClick={() => setTab("queue")} className={`rounded-full px-4 py-1.5 ${tab === "queue" ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}>
+        <div className="mb-4 inline-flex rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] p-1 text-sm">
+          <button onClick={() => setTab("queue")} className={`rounded-full px-4 py-1.5 ${tab === "queue" ? "bg-white/10 [.light_&]:bg-black/10 text-foreground font-medium" : "text-muted-foreground"}`}>
             Review queue <span className="ml-1 rounded-full bg-cyan/20 px-1.5 py-0.5 text-[10px] text-cyan">{queue.length}</span>
           </button>
-          <button onClick={() => setTab("published")} className={`rounded-full px-4 py-1.5 ${tab === "published" ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}>
+          <button onClick={() => setTab("published")} className={`rounded-full px-4 py-1.5 ${tab === "published" ? "bg-white/10 [.light_&]:bg-black/10 text-foreground font-medium" : "text-muted-foreground"}`}>
             Published catalog
           </button>
         </div>
@@ -64,11 +64,11 @@ function ModerationPage() {
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <button onClick={() => act(r.id, "approve")}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:bg-emerald-500/25">
+                        className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 [.light_&]:bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 [.light_&]:text-emerald-700 hover:bg-emerald-500/25">
                         <Check className="h-3.5 w-3.5" /> Approve
                       </button>
                       <button onClick={() => { const r2 = prompt("Rejection reason?") || undefined; if (r2 !== undefined) act(r.id, "reject", r2); }}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/15 px-3 py-1.5 text-xs font-medium text-rose-400 hover:bg-rose-500/25">
+                        className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/15 [.light_&]:bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-400 [.light_&]:text-rose-700 hover:bg-rose-500/25">
                         <X className="h-3.5 w-3.5" /> Reject
                       </button>
                     </div>
@@ -84,13 +84,13 @@ function ModerationPage() {
           <div className="glass overflow-hidden rounded-2xl">
             <table className="w-full text-sm">
               <thead className="text-xs uppercase tracking-widest text-muted-foreground">
-                <tr className="border-b border-white/5">
+                <tr className="border-b border-white/5 [.light_&]:border-black/5">
                   <th className="px-4 py-3 text-left">Dataset</th>
                   <th className="px-4 py-3 text-left">Verified</th>
                   <th className="px-4 py-3 text-left">Added</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-white/5 [.light_&]:divide-black/5">
                 {published.map((d) => {
                   const snap = (d.dataset_snapshot ?? {}) as Record<string, unknown>;
                   return (

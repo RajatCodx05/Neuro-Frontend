@@ -50,7 +50,7 @@ function UsersPage() {
         <div className="glass overflow-hidden rounded-2xl">
           <table className="w-full text-sm">
             <thead className="text-xs uppercase tracking-widest text-muted-foreground">
-              <tr className="border-b border-white/5">
+              <tr className="border-b border-white/5 [.light_&]:border-black/5">
                 <th className="px-4 py-3 text-left">User</th>
                 <th className="px-4 py-3 text-left">Role</th>
                 <th className="px-4 py-3 text-left">Institute</th>
@@ -58,9 +58,9 @@ function UsersPage() {
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-white/5 [.light_&]:divide-black/5">
               {filtered.map((u) => (
-                <tr key={u.id} className="hover:bg-white/[0.02]">
+                <tr key={u.id} className="hover:bg-white/[0.02] [.light_&]:hover:bg-black/[0.02]">
                   <td className="px-4 py-3">
                     <div className="font-medium">{u.full_name || "—"}</div>
                     <div className="text-xs text-muted-foreground">{u.email}</div>
@@ -85,7 +85,7 @@ function UsersPage() {
                         {u.suspended ? <Ban className="h-4 w-4 text-amber-400" /> : <CheckCircle2 className="h-4 w-4 text-emerald-400" />}
                       </span>
                       <button onClick={() => remove(u.id)} title="Delete"
-                        className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 hover:text-rose-400">
+                        className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5 hover:text-rose-400">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>

@@ -60,12 +60,12 @@ function RepositoriesPage() {
           <div className="text-xs uppercase tracking-widest text-muted-foreground">Add repository</div>
           <div className="mt-3 grid gap-3 md:grid-cols-[1fr,1fr,180px,auto]">
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name (e.g. OpenNeuro)"
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-cyan/50" />
+              className="rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50" />
             <input value={endpoint} onChange={(e) => setEndpoint(e.target.value)} placeholder="Endpoint URL (optional)"
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-cyan/50" />
+              className="rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50" />
             <select value={tier} onChange={(e) => setTier(e.target.value as never)}
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-cyan/50">
-              {TIERS.map((t) => <option key={t} value={t}>{t}</option>)}
+              className="rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50">
+              {TIERS.map((t) => <option key={t} value={t} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t}</option>)}
             </select>
             <button onClick={add}
               className="inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-sm font-medium text-[oklch(0.15_0.03_258)]">
@@ -77,7 +77,7 @@ function RepositoriesPage() {
         <div className="glass overflow-hidden rounded-2xl">
           <table className="w-full text-sm">
             <thead className="text-xs uppercase tracking-widest text-muted-foreground">
-              <tr className="border-b border-white/5">
+              <tr className="border-b border-white/5 [.light_&]:border-black/5">
                 <th className="px-4 py-3 text-left">Name</th>
                 <th className="px-4 py-3 text-left">Trust tier</th>
                 <th className="px-4 py-3 text-left">Status</th>
@@ -86,14 +86,14 @@ function RepositoriesPage() {
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-white/5 [.light_&]:divide-black/5">
               {repos.map((r) => (
                 <tr key={r.id}>
                   <td className="px-4 py-3 font-medium">{r.name}</td>
                   <td className="px-4 py-3 text-muted-foreground">{r.trust_tier}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center gap-1.5 text-xs ${
-                      r.sync_status === "online" ? "text-emerald-400" : r.sync_status === "syncing" ? "text-amber-400" : "text-rose-400"
+                      r.sync_status === "online" ? "text-emerald-500 [.light_&]:text-emerald-600" : r.sync_status === "syncing" ? "text-amber-500 [.light_&]:text-amber-600" : "text-rose-500 [.light_&]:text-rose-600"
                     }`}>
                       <span className="h-1.5 w-1.5 rounded-full bg-current" />
                       {r.sync_status}
@@ -104,11 +104,11 @@ function RepositoriesPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1.5">
                       <button onClick={() => resync(r.id)} title="Resync now"
-                        className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 hover:text-cyan">
+                        className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5 hover:text-cyan">
                         <RefreshCw className="h-4 w-4" />
                       </button>
                       <button onClick={() => remove(r.id)} title="Remove"
-                        className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 hover:text-rose-400">
+                        className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5 hover:text-rose-400">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>

@@ -32,7 +32,7 @@ function AdminDashboard() {
       <div className="space-y-8 px-6 py-6 md:px-8">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {stats.map((s) => (
-            <Link key={s.label} to={s.to} className="glass card-elevated group rounded-2xl p-5 transition hover:border-white/20">
+            <Link key={s.label} to={s.to} className="glass card-elevated group rounded-2xl p-5 transition hover:border-white/20 [.light_&]:hover:border-black/20">
               <div className="flex items-center justify-between">
                 <s.icon className="h-5 w-5 text-cyan" />
                 <ArrowUpRight className="h-4 w-4 text-muted-foreground transition group-hover:text-foreground" />
@@ -49,7 +49,7 @@ function AdminDashboard() {
             <Link to="/admin/repositories" className="text-xs text-cyan hover:underline">Manage →</Link>
           </div>
           <div className="glass rounded-2xl">
-            <div className="grid grid-cols-1 divide-y divide-white/5 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3">
+            <div className="grid grid-cols-1 divide-y divide-white/5 [.light_&]:divide-black/5 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3">
               {(data?.repositories ?? []).slice(0, 6).map((r) => (
                 <div key={r.id} className="flex items-center gap-3 p-4">
                   <span className={`h-2 w-2 rounded-full ${r.sync_status === "online" ? "bg-emerald-400" : r.sync_status === "syncing" ? "bg-amber-400" : "bg-rose-400"}`} />
@@ -69,7 +69,7 @@ function AdminDashboard() {
             <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">Recent admin activity</h2>
             <Link to="/admin/audit-log" className="text-xs text-cyan hover:underline"><ScrollText className="mr-1 inline h-3.5 w-3.5" />Audit log →</Link>
           </div>
-          <div className="glass divide-y divide-white/5 rounded-2xl">
+          <div className="glass divide-y divide-white/5 [.light_&]:divide-black/5 rounded-2xl">
             {(data?.recentAudit ?? []).map((row) => (
               <div key={row.id} className="flex items-center justify-between px-4 py-3 text-sm">
                 <div className="min-w-0 flex-1">
