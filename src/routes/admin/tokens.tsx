@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { AdminPageHeader } from "@/components/app/admin-shell";
@@ -16,6 +17,7 @@ function TokensPage() {
   const [dim, setDim] = useState<Dim>("day");
   const [userFilter, setUserFilter] = useState("");
   const [agentFilter, setAgentFilter] = useState<string>("");
+  const [page, setPage] = useState(1);
 
   const { data: events = [] } = useQuery<Array<{ id: string; userId: string; userEmail: string; agent: string; model: string; tokens: number; createdAt: string }>>({
     queryKey: ["admin-tokens"],
@@ -26,6 +28,18 @@ function TokensPage() {
     (!userFilter || e.userEmail.toLowerCase().includes(userFilter.toLowerCase())) &&
     (!agentFilter || e.agent === agentFilter)
   ), [events, userFilter, agentFilter]);
+
+  // Reset page when filters change
+  const prevFilterKey = useMemo(() => userFilter + agentFilter, [userFilter, agentFilter]);
+  if (page > 1) {
+    const filteredLen = filtered.length;
+    const maxPage = Math.max(1, Math.ceil(filteredLen / 10));
+    if (page > maxPage) setPage(1);
+  }
+
+  const TOKENS_PAGE_SIZE = 10;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / TOKENS_PAGE_SIZE));
+  const paged = filtered.slice((page - 1) * TOKENS_PAGE_SIZE, page * TOKENS_PAGE_SIZE);
 
   const bucketed = useMemo(() => {
     const map = new Map<string, number>();
@@ -94,6 +108,28 @@ function TokensPage() {
         </div>
 
         <div className="glass overflow-hidden rounded-2xl">
+          {/* Pagination header — top right */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-end gap-2 border-b border-white/5 [.light_&]:border-black/5 px-4 py-3">
+              <span className="mr-1 text-xs text-muted-foreground">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-white/10 hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-white/10 hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
           <table className="w-full text-sm">
             <thead className="text-xs uppercase tracking-widest text-muted-foreground">
               <tr className="border-b border-white/5">
@@ -105,7 +141,7 @@ function TokensPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {filtered.slice(0, 100).map((e) => (
+              {paged.map((e) => (
                 <tr key={e.id}>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(e.createdAt).toLocaleString()}</td>
                   <td className="px-4 py-3">{e.userEmail}</td>

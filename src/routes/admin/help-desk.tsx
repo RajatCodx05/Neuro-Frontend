@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { AdminPageHeader } from "@/components/app/admin-shell";
-import { Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Trash2, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/help-desk")({
@@ -42,6 +42,7 @@ function HelpDeskPage() {
     qc.invalidateQueries({ queryKey: ["support-tickets", page] });
   };
 
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [body, setBody] = useState("");
@@ -72,6 +73,63 @@ function HelpDeskPage() {
             Help articles
           </button>
         </div>
+
+        {/* Ticket detail modal */}
+        {selectedTicket && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/60 p-4"
+            onClick={() => setSelectedTicket(null)}
+          >
+            <div
+              className="glass relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl p-6 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Red close button — top right */}
+              <button
+                onClick={() => setSelectedTicket(null)}
+                className="absolute top-4 right-4 grid h-8 w-8 place-items-center rounded-full bg-rose-500/20 text-rose-400 transition hover:bg-rose-500/30 hover:text-rose-300"
+              >
+                <X className="h-5 w-5" />
+              </button>
+
+              {/* Subject */}
+              <h2 className="pr-10 text-lg font-semibold text-foreground">{selectedTicket.subject}</h2>
+
+              {/* User info */}
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                {selectedTicket.name && <span className="font-medium text-foreground">{selectedTicket.name}</span>}
+                {selectedTicket.email && <span>{selectedTicket.email}</span>}
+                <span className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2 py-0.5">
+                  <span className={`h-1.5 w-1.5 rounded-full ${
+                    selectedTicket.status === "open" ? "bg-amber-400" :
+                    selectedTicket.status === "in_progress" ? "bg-blue-400" : "bg-emerald-400"
+                  }`} />
+                  {selectedTicket.status.replace("_", " ")}
+                </span>
+                <span>Received {new Date(selectedTicket.created_at).toLocaleString()}</span>
+              </div>
+
+              {/* Full message */}
+              <div className="mt-5 whitespace-pre-wrap rounded-xl border border-white/10 [.light_&]:border-black/10 bg-white/[0.03] [.light_&]:bg-black/[0.02] p-4 text-sm text-foreground/90 leading-relaxed">
+                {selectedTicket.message}
+              </div>
+
+              {/* Status change */}
+              <div className="mt-4 flex items-center gap-3">
+                <span className="text-xs text-muted-foreground">Update status:</span>
+                <select value={selectedTicket.status} onChange={(e) => {
+                  setTicketStatus(selectedTicket.id, e.target.value as never);
+                  setSelectedTicket({ ...selectedTicket, status: e.target.value });
+                }}
+                  className="rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1.5 text-xs text-foreground outline-none cursor-pointer">
+                  <option value="open" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">open</option>
+                  <option value="in_progress" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">in progress</option>
+                  <option value="resolved" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">resolved</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
 
         {tab === "tickets" && (
           <div className="glass overflow-hidden rounded-2xl">
@@ -109,7 +167,8 @@ function HelpDeskPage() {
               </thead>
               <tbody className="divide-y divide-white/5 [.light_&]:divide-black/5">
                 {tickets.map((t) => (
-                  <tr key={t.id}>
+                  <tr key={t.id} onClick={() => setSelectedTicket(t)}
+                    className="cursor-pointer transition hover:bg-white/[0.03] [.light_&]:hover:bg-black/[0.02]">
                     <td className="px-4 py-3 font-medium">{t.subject}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">
                       {t.name ? <span className="font-medium text-foreground">{t.name}</span> : null}
@@ -118,12 +177,14 @@ function HelpDeskPage() {
                     </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground line-clamp-2 max-w-md">{t.message}</td>
                     <td className="px-4 py-3">
-                      <select value={t.status} onChange={(e) => setTicketStatus(t.id, e.target.value as never)}
-                        className="rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-2 py-1 text-xs text-foreground outline-none cursor-pointer">
-                        <option value="open" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">open</option>
-                        <option value="in_progress" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">in progress</option>
-                        <option value="resolved" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">resolved</option>
-                      </select>
+                      <span onClick={(e) => e.stopPropagation()}>
+                        <select value={t.status} onChange={(e) => setTicketStatus(t.id, e.target.value as never)}
+                          className="rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-2 py-1 text-xs text-foreground outline-none cursor-pointer">
+                          <option value="open" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">open</option>
+                          <option value="in_progress" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">in progress</option>
+                          <option value="resolved" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">resolved</option>
+                        </select>
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-right text-xs text-muted-foreground">{new Date(t.created_at).toLocaleString()}</td>
                   </tr>
