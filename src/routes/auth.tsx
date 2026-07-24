@@ -269,7 +269,7 @@ function AuthPage() {
       </p>
       {pendingVerificationEmail ? (
         <form key="verify-otp" onSubmit={handleVerifyOtp} className="mt-6 space-y-3">
-          <Field key="verify-otp-input" label="Verification code" name="otp" inputMode="numeric" maxLength={6} placeholder="123456" autoComplete="one-time-code" required />
+          <Field key="verify-otp-input" label="Verification code" name="otp" inputMode="numeric" maxLength={6} placeholder="Enter your 6-digit otp here...." autoComplete="one-time-code" required />
           <Submit loading={loading}>Verify email</Submit>
         </form>
       ) : forgotStep === "request" ? (
@@ -278,13 +278,13 @@ function AuthPage() {
           <Field key="forgot-request-email" label="Email" name="email" type="email" placeholder="you@lab.edu" defaultValue={forgotEmail} required />
           <Submit loading={loading}>Send reset code</Submit>
           <p className="text-center text-xs text-foreground/70 dark:text-muted-foreground">
-            <button type="button" onClick={() => setForgotStep("idle")} className="text-cyan-600 dark:text-cyan font-medium hover:underline">Back to Sign in</button>
+            <button type="button" onClick={() => setForgotStep("idle")} className="text-cyan-600 dark:text-cyan font-medium hover:underline">Back to Sign In</button>
           </p>
         </form>
       ) : forgotStep === "sent" ? (
         /* Forgot password — step 2: OTP + new password */
         <form key="forgot-sent" onSubmit={handleResetPassword} className="mt-6 space-y-3">
-          <Field key="forgot-sent-otp" label="Reset code" name="otp" inputMode="numeric" maxLength={6} placeholder="123456" autoComplete="one-time-code" required />
+          <Field key="forgot-sent-otp" label="Reset code" name="otp" inputMode="numeric" maxLength={6} placeholder="Enter your 6-digit otp here...." autoComplete="one-time-code" required />
           <PasswordField name="newPassword" show={showPw} onToggle={() => setShowPw((v) => !v)} />
           <Field key="forgot-sent-confirm" label="Confirm password" name="confirmNewPassword" type={showPw ? "text" : "password"} required />
           <Submit loading={loading}>Reset password</Submit>
