@@ -201,7 +201,7 @@ export default function Landing() {
                 className="inline-flex items-center gap-1.5 rounded-full glass border border-white/10 px-3.5 py-1.5 text-xs font-medium text-foreground hover:bg-white/10 transition-all shadow-md backdrop-blur-xl"
               >
                 <LogIn className="h-3.5 w-3.5 text-cyan" />
-                <span>Sign in</span>
+                <span>Sign In</span>
               </Link>
               <Link
                 to="/auth"
