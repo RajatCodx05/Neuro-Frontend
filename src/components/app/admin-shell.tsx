@@ -90,7 +90,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </Link>
           {!collapsed && (
             <button onClick={() => setCollapsed(true)} title="Collapse"
-              className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground">
+              className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5 hover:text-foreground">
               <PanelLeftClose className="h-4 w-4" />
             </button>
           )}
@@ -98,7 +98,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
         {collapsed && (
           <button onClick={() => setCollapsed(false)} title="Expand"
-            className="mx-auto mb-2 grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground">
+            className="mx-auto mb-2 grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5 hover:text-foreground">
             <PanelLeft className="h-4 w-4" />
           </button>
         )}
@@ -121,7 +121,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                       search={item.search as never}
                       title={collapsed ? item.label : undefined}
                       className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${
-                        active ? "bg-white/10 text-foreground" : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                        active ? "bg-white/10 [.light_&]:bg-black/10 text-foreground font-medium" : "text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5 hover:text-foreground"
                       } ${collapsed ? "justify-center" : ""}`}
                     >
                       <item.icon className={`h-4 w-4 shrink-0 ${active ? "text-cyan" : ""}`} />
@@ -136,22 +136,17 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
         <div className="space-y-1 px-3 pb-2">
           <button onClick={toggleTheme}
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-muted-foreground transition hover:bg-white/5 hover:text-foreground ${collapsed ? "justify-center" : ""}`}
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-muted-foreground transition hover:bg-white/5 [.light_&]:hover:bg-black/5 hover:text-foreground ${collapsed ? "justify-center" : ""}`}
             title={collapsed ? (theme === "dark" ? "Light mode" : "Dark mode") : undefined}>
             {theme === "dark" ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
             {!collapsed && <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>}
           </button>
-          <Link to="/" title={collapsed ? "Back to app" : undefined}
-            className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-muted-foreground transition hover:bg-white/5 hover:text-foreground ${collapsed ? "justify-center" : ""}`}>
-            <ArrowLeft className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>Back to app</span>}
-          </Link>
         </div>
 
-        <div className="border-t border-white/5 p-3">
+        <div className="border-t border-white/5 [.light_&]:border-black/5 p-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className={`flex w-full items-center gap-3 rounded-xl p-2 hover:bg-white/5 ${collapsed ? "justify-center" : ""}`}>
+              <button className={`flex w-full items-center gap-3 rounded-xl p-2 hover:bg-white/5 [.light_&]:hover:bg-black/5 ${collapsed ? "justify-center" : ""}`}>
                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-neural to-electric text-xs font-semibold text-white">
                   {initials}
                 </span>
@@ -170,7 +165,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <DropdownMenuLabel className="truncate">{profile?.full_name || user?.email}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild><Link to="/admin/settings"><UserIcon className="mr-2 h-4 w-4" />Profile & settings</Link></DropdownMenuItem>
-              <DropdownMenuItem asChild><Link to="/"><ArrowLeft className="mr-2 h-4 w-4" />Back to app</Link></DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut}><LogOut className="mr-2 h-4 w-4" />Sign out</DropdownMenuItem>
             </DropdownMenuContent>
@@ -217,7 +211,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                           onClick={() => setMobileOpen(false)}
                           className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${
                             active
-                              ? "bg-sidebar-accent text-foreground"
+                              ? "bg-sidebar-accent text-foreground font-medium"
                               : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
                           }`}
                         >
@@ -239,14 +233,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 {theme === "dark" ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
                 <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
               </button>
-              <Link
-                to="/"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-muted-foreground transition hover:bg-sidebar-accent hover:text-foreground"
-              >
-                <ArrowLeft className="h-4 w-4 shrink-0" />
-                <span>Back to app</span>
-              </Link>
             </div>
 
             <div className="mt-2 border-t border-sidebar-border pt-3">
@@ -288,7 +274,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 // Small helpers shared by admin pages
 export function AdminPageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/5 pl-14 pr-6 py-6 md:px-8">
+    <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/5 [.light_&]:border-black/5 pl-14 pr-6 py-6 md:px-8">
       <div>
         <h1 className="font-display text-2xl font-semibold tracking-tight">{title}</h1>
         {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}

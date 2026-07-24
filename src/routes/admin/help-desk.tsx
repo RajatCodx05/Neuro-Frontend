@@ -64,11 +64,11 @@ function HelpDeskPage() {
     <>
       <AdminPageHeader title="Help desk" description="User support tickets and help center articles" />
       <div className="px-6 py-6 md:px-8">
-        <div className="mb-4 inline-flex rounded-full border border-white/10 bg-white/5 p-1 text-sm">
-          <button onClick={() => { setTab("tickets"); setPage(1); }} className={`rounded-full px-4 py-1.5 ${tab === "tickets" ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}>
+        <div className="mb-4 inline-flex rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] p-1 text-sm">
+          <button onClick={() => { setTab("tickets"); setPage(1); }} className={`rounded-full px-4 py-1.5 ${tab === "tickets" ? "bg-white/10 [.light_&]:bg-black/10 text-foreground font-medium" : "text-muted-foreground"}`}>
             Support tickets <span className="ml-1 rounded-full bg-cyan/20 px-1.5 py-0.5 text-[10px] text-cyan">{tickets.filter((t) => t.status !== "resolved").length}</span>
           </button>
-          <button onClick={() => setTab("articles")} className={`rounded-full px-4 py-1.5 ${tab === "articles" ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}>
+          <button onClick={() => setTab("articles")} className={`rounded-full px-4 py-1.5 ${tab === "articles" ? "bg-white/10 [.light_&]:bg-black/10 text-foreground font-medium" : "text-muted-foreground"}`}>
             Help articles
           </button>
         </div>
@@ -77,21 +77,21 @@ function HelpDeskPage() {
           <div className="glass overflow-hidden rounded-2xl">
             {/* Pagination header — top right when tickets exceed page size */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-end gap-2 border-b border-white/5 px-4 py-3">
+              <div className="flex items-center justify-end gap-2 border-b border-white/5 [.light_&]:border-black/5 px-4 py-3">
                 <span className="mr-1 text-xs text-muted-foreground">
                   Page {page} of {totalPages}
                 </span>
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-white/10 hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+                  className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-white/10 [.light_&]:hover:bg-black/10 hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
-                  className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-white/10 hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+                  className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-white/10 [.light_&]:hover:bg-black/10 hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
@@ -99,24 +99,24 @@ function HelpDeskPage() {
             )}
             <table className="w-full text-sm">
               <thead className="text-xs uppercase tracking-widest text-muted-foreground">
-                <tr className="border-b border-white/5">
+                <tr className="border-b border-white/5 [.light_&]:border-black/5">
                   <th className="px-4 py-3 text-left">Subject</th>
                   <th className="px-4 py-3 text-left">Message</th>
                   <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3 text-right">Received</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-white/5 [.light_&]:divide-black/5">
                 {tickets.map((t) => (
                   <tr key={t.id}>
                     <td className="px-4 py-3 font-medium">{t.subject}</td>
                     <td className="px-4 py-3 text-sm text-muted-foreground line-clamp-2 max-w-md">{t.message}</td>
                     <td className="px-4 py-3">
                       <select value={t.status} onChange={(e) => setTicketStatus(t.id, e.target.value as never)}
-                        className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs outline-none">
-                        <option value="open">open</option>
-                        <option value="in_progress">in progress</option>
-                        <option value="resolved">resolved</option>
+                        className="rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-2 py-1 text-xs text-foreground outline-none cursor-pointer">
+                        <option value="open" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">open</option>
+                        <option value="in_progress" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">in progress</option>
+                        <option value="resolved" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">resolved</option>
                       </select>
                     </td>
                     <td className="px-4 py-3 text-right text-xs text-muted-foreground">{new Date(t.created_at).toLocaleString()}</td>
@@ -134,12 +134,12 @@ function HelpDeskPage() {
               <div className="text-xs uppercase tracking-widest text-muted-foreground">New article</div>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title"
-                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-cyan/50" />
+                  className="rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50" />
                 <input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="slug-in-url"
-                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-cyan/50" />
+                  className="rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50" />
               </div>
               <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Body (Markdown)" rows={5}
-                className="mt-3 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-cyan/50" />
+                className="mt-3 w-full rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50" />
               <div className="mt-3 flex items-center justify-between">
                 <label className="inline-flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)}
@@ -156,7 +156,7 @@ function HelpDeskPage() {
             <div className="glass overflow-hidden rounded-2xl">
               <table className="w-full text-sm">
                 <thead className="text-xs uppercase tracking-widest text-muted-foreground">
-                  <tr className="border-b border-white/5">
+                  <tr className="border-b border-white/5 [.light_&]:border-black/5">
                     <th className="px-4 py-3 text-left">Title</th>
                     <th className="px-4 py-3 text-left">Slug</th>
                     <th className="px-4 py-3 text-left">Published</th>
@@ -164,7 +164,7 @@ function HelpDeskPage() {
                     <th className="px-4 py-3 text-right"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-white/5 [.light_&]:divide-black/5">
                   {articles.map((a) => (
                     <tr key={a.id}>
                       <td className="px-4 py-3 font-medium">{a.title}</td>

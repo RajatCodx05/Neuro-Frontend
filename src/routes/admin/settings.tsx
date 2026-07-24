@@ -55,21 +55,21 @@ function SettingsPage() {
         <div className="glass rounded-2xl p-6">
           <div className="text-xs uppercase tracking-widest text-muted-foreground">Account Details</div>
           <div className="mt-4 space-y-4">
-            <div className="flex items-center gap-3 rounded-xl bg-white/5 px-4 py-3">
+            <div className="flex items-center gap-3 rounded-xl bg-white/5 [.light_&]:bg-black/[0.04] px-4 py-3">
               <User className="h-4 w-4 text-cyan shrink-0" />
               <div>
                 <div className="text-xs text-muted-foreground">Name</div>
                 <div className="text-sm font-medium">{currentAdmin?.name || "—"}</div>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-xl bg-white/5 px-4 py-3">
+            <div className="flex items-center gap-3 rounded-xl bg-white/5 [.light_&]:bg-black/[0.04] px-4 py-3">
               <Mail className="h-4 w-4 text-cyan shrink-0" />
               <div>
                 <div className="text-xs text-muted-foreground">Email</div>
                 <div className="text-sm font-medium">{currentAdmin?.email || user?.email || "—"}</div>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-xl bg-white/5 px-4 py-3">
+            <div className="flex items-center gap-3 rounded-xl bg-white/5 [.light_&]:bg-black/[0.04] px-4 py-3">
               <Calendar className="h-4 w-4 text-cyan shrink-0" />
               <div>
                 <div className="text-xs text-muted-foreground">Joined</div>
@@ -87,7 +87,7 @@ function SettingsPage() {
               <div className="text-xs text-muted-foreground">End your admin session and return to the home page.</div>
             </div>
             <button onClick={handleSignOut}
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-4 py-2 text-sm text-muted-foreground hover:bg-white/5 hover:text-foreground">
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-black/15 px-4 py-2 text-sm text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5 hover:text-foreground">
               <LogOut className="h-3.5 w-3.5" /> Sign out
             </button>
           </div>

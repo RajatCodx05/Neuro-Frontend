@@ -344,20 +344,6 @@ function AuthPage() {
               </>
             )}
           </p>
-          {!isAdminMode && (
-            <div className="mt-4 text-center">
-              <button
-                onClick={() => {
-                  setIsAdminMode(true);
-                  setMode("login");
-                  setPendingVerificationEmail(null);
-                }}
-                className="text-[11px] font-medium text-foreground/70 dark:text-muted-foreground/70 hover:text-foreground underline transition"
-              >
-                Administrator Sign in
-              </button>
-            </div>
-          )}
         </>
       )}
     </div></div></div>;

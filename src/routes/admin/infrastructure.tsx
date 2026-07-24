@@ -80,7 +80,7 @@ function InfraPage() {
                     <span>{fmtBytes(storage.data.totalUsedBytes)} used</span>
                     <span>{fmtBytes(storage.data.totalRemainingBytes)} free</span>
                   </div>
-                  <div className="h-3 w-full overflow-hidden rounded-full bg-white/5">
+                  <div className="h-3 w-full overflow-hidden rounded-full bg-white/5 [.light_&]:bg-black/5">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500"
                       style={{ width: `${Math.min(storage.data.totalUsagePercent, 100)}%` }}
@@ -109,7 +109,7 @@ function InfraPage() {
                           <span className="text-muted-foreground">Storage usage</span>
                           <span>{pct(storage.data.mongoUsagePercent)}</span>
                         </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-white/5">
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-white/5 [.light_&]:bg-black/5">
                           <div
                             className={`h-full rounded-full transition-all duration-500 ${
                               storage.data.mongoUsagePercent > 80 ? "bg-red-500" :
@@ -121,23 +121,23 @@ function InfraPage() {
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-3 text-xs">
-                        <div className="rounded-lg bg-white/5 p-3">
+                        <div className="rounded-lg bg-white/5 [.light_&]:bg-black/[0.04] p-3">
                           <div className="text-muted-foreground">Data size</div>
                           <div className="mt-0.5 font-medium text-foreground">{fmtBytes(storage.data.mongoUsedBytes)}</div>
                         </div>
-                        <div className="rounded-lg bg-white/5 p-3">
+                        <div className="rounded-lg bg-white/5 [.light_&]:bg-black/[0.04] p-3">
                           <div className="text-muted-foreground">Storage size</div>
                           <div className="mt-0.5 font-medium text-foreground">{fmtBytes(storage.data.mongoStorageBytes)}</div>
                         </div>
-                        <div className="rounded-lg bg-white/5 p-3">
+                        <div className="rounded-lg bg-white/5 [.light_&]:bg-black/[0.04] p-3">
                           <div className="text-muted-foreground">Documents</div>
                           <div className="mt-0.5 font-medium text-foreground">{storage.data.mongoDocuments?.toLocaleString() ?? "—"}</div>
                         </div>
-                        <div className="rounded-lg bg-white/5 p-3">
+                        <div className="rounded-lg bg-white/5 [.light_&]:bg-black/[0.04] p-3">
                           <div className="text-muted-foreground">Collections</div>
                           <div className="mt-0.5 font-medium text-foreground">{storage.data.mongoCollections ?? "—"}</div>
                         </div>
-                        <div className="rounded-lg bg-white/5 p-3 col-span-2">
+                        <div className="rounded-lg bg-white/5 [.light_&]:bg-black/[0.04] p-3 col-span-2">
                           <div className="text-muted-foreground">Free tier limit</div>
                           <div className="mt-0.5 font-medium text-foreground">{fmtBytes(storage.data.mongoLimitBytes)}</div>
                         </div>
@@ -164,7 +164,7 @@ function InfraPage() {
                           <span className="text-muted-foreground">Memory usage</span>
                           <span>{pct(storage.data.redisUsagePercent)}</span>
                         </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-white/5">
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-white/5 [.light_&]:bg-black/5">
                           <div
                             className={`h-full rounded-full transition-all duration-500 ${
                               storage.data.redisUsagePercent > 80 ? "bg-red-500" :
@@ -176,15 +176,15 @@ function InfraPage() {
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-3 text-xs">
-                        <div className="rounded-lg bg-white/5 p-3">
+                        <div className="rounded-lg bg-white/5 [.light_&]:bg-black/[0.04] p-3">
                           <div className="text-muted-foreground">Memory used</div>
                           <div className="mt-0.5 font-medium text-foreground">{fmtBytes(storage.data.redisUsedBytes)}</div>
                         </div>
-                        <div className="rounded-lg bg-white/5 p-3">
+                        <div className="rounded-lg bg-white/5 [.light_&]:bg-black/[0.04] p-3">
                           <div className="text-muted-foreground">Max memory</div>
                           <div className="mt-0.5 font-medium text-foreground">{fmtBytes(storage.data.redisMaxBytes)}</div>
                         </div>
-                        <div className="rounded-lg bg-white/5 p-3 col-span-2">
+                        <div className="rounded-lg bg-white/5 [.light_&]:bg-black/[0.04] p-3 col-span-2">
                           <div className="text-muted-foreground">Remaining</div>
                           <div className="mt-0.5 font-medium text-foreground">{fmtBytes(storage.data.redisMaxBytes - storage.data.redisUsedBytes)}</div>
                         </div>

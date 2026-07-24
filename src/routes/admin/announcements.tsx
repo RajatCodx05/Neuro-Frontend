@@ -75,9 +75,9 @@ function AnnouncementsPage() {
         <div className="glass rounded-2xl p-5">
           <div className="text-xs uppercase tracking-widest text-muted-foreground">Compose</div>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title"
-            className="mt-3 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-cyan/50" />
+            className="mt-3 w-full rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50" />
           <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Body" rows={4}
-            className="mt-3 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-cyan/50" />
+            className="mt-3 w-full rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50" />
           <div className="mt-3 flex justify-end">
             <button onClick={publish}
               className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-sm font-medium text-[oklch(0.15_0.03_258)]">
@@ -93,12 +93,12 @@ function AnnouncementsPage() {
                 <div className="space-y-3">
                   <div className="text-xs uppercase tracking-widest text-cyan font-medium">Edit Announcement</div>
                   <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Title"
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-cyan/50" />
+                    className="w-full rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50" />
                   <textarea value={editBody} onChange={(e) => setEditBody(e.target.value)} placeholder="Body" rows={3}
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-cyan/50" />
+                    className="w-full rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50" />
                   <div className="flex justify-end gap-2">
                     <button onClick={cancelEdit}
-                      className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/5">
+                      className="inline-flex items-center gap-1 rounded-full border border-white/10 [.light_&]:border-black/15 px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5">
                       <X className="h-3.5 w-3.5" /> Cancel
                     </button>
                     <button onClick={() => saveEdit(a.id)}
@@ -113,8 +113,8 @@ function AnnouncementsPage() {
                     <div className="flex items-center gap-2">
                       <div className="font-display text-base font-semibold">{a.title}</div>
                       {a.active
-                        ? <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-emerald-400">Active</span>
-                        : <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Draft</span>}
+                        ? <span className="rounded-full bg-emerald-500/15 [.light_&]:bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-emerald-400 [.light_&]:text-emerald-700">Active</span>
+                        : <span className="rounded-full bg-white/5 [.light_&]:bg-black/5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Draft</span>}
                     </div>
                     <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">{a.body}</p>
                     <div className="mt-2 text-xs text-muted-foreground">{new Date(a.created_at).toLocaleString()}</div>
