@@ -505,7 +505,22 @@ const admin = {
     },
   },
   helpDesk: {
-    tickets: (page = 1) => request<{ tickets: Array<Record<string, unknown>>; total: number; page: number; limit: number }>(`/admin/tickets?page=${page}&limit=10`),
+    tickets: async (page = 1) => {
+      const resp = await request<{ tickets: Array<Record<string, unknown>>; total: number; page: number; limit: number }>(`/admin/tickets?page=${page}&limit=10`);
+      return {
+        ...resp,
+        tickets: resp.tickets.map((t) => ({
+          id: idOf(t),
+          subject: String(t.subject ?? ""),
+          message: String(t.message ?? ""),
+          status: String(t.status ?? "open"),
+          created_at: asDate(t),
+          email: t.email ? String(t.email) : undefined,
+          name: t.name ? String(t.name) : undefined,
+          source: t.source ? String(t.source) : undefined,
+        })),
+      };
+    },
     articles: () => request<Array<Record<string, unknown>>>("/admin/articles"),
     updateTicket: (id: string, data: Record<string, unknown>) => request<null>(`/admin/tickets/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     submitTicket: (data: { subject: string; message: string; email?: string; name?: string }) => request<null>("/admin/tickets/ingest", { method: "POST", body: JSON.stringify(data) }),

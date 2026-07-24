@@ -101,6 +101,7 @@ function HelpDeskPage() {
               <thead className="text-xs uppercase tracking-widest text-muted-foreground">
                 <tr className="border-b border-white/5 [.light_&]:border-black/5">
                   <th className="px-4 py-3 text-left">Subject</th>
+                  <th className="px-4 py-3 text-left">User</th>
                   <th className="px-4 py-3 text-left">Message</th>
                   <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3 text-right">Received</th>
@@ -110,6 +111,11 @@ function HelpDeskPage() {
                 {tickets.map((t) => (
                   <tr key={t.id}>
                     <td className="px-4 py-3 font-medium">{t.subject}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
+                      {t.name ? <span className="font-medium text-foreground">{t.name}</span> : null}
+                      {t.email ? <span className={t.name ? "block opacity-70" : ""}>{t.email}</span> : null}
+                      {!t.name && !t.email ? <span className="italic opacity-50">—</span> : null}
+                    </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground line-clamp-2 max-w-md">{t.message}</td>
                     <td className="px-4 py-3">
                       <select value={t.status} onChange={(e) => setTicketStatus(t.id, e.target.value as never)}
@@ -122,7 +128,7 @@ function HelpDeskPage() {
                     <td className="px-4 py-3 text-right text-xs text-muted-foreground">{new Date(t.created_at).toLocaleString()}</td>
                   </tr>
                 ))}
-                {tickets.length === 0 && <tr><td colSpan={4} className="p-8 text-center text-sm text-muted-foreground">No tickets yet.</td></tr>}
+                {tickets.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-sm text-muted-foreground">No tickets yet.</td></tr>}
               </tbody>
             </table>
           </div>
