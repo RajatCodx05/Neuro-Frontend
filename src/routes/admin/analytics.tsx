@@ -40,11 +40,21 @@ function AnalyticsPage() {
           <div className="mt-4 h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data?.series ?? []}>
-                <CartesianGrid stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="day" stroke="rgba(255,255,255,0.4)" fontSize={11} />
-                <YAxis stroke="rgba(255,255,255,0.4)" fontSize={11} />
-                <Tooltip contentStyle={{ background: "rgba(20,25,40,0.95)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12 }} />
-                <Line type="monotone" dataKey="count" stroke="oklch(0.82 0.16 210)" strokeWidth={2} dot={false} />
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" opacity={0.5} />
+                <XAxis dataKey="day" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} />
+                <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "var(--popover)",
+                    borderColor: "var(--border)",
+                    color: "var(--popover-foreground)",
+                    borderRadius: 12,
+                    boxShadow: "0 10px 30px -10px rgba(0,0,0,0.2)"
+                  }}
+                  itemStyle={{ color: "var(--foreground)" }}
+                  labelStyle={{ color: "var(--muted-foreground)" }}
+                />
+                <Line type="monotone" dataKey="count" stroke="var(--cyan)" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -55,11 +65,21 @@ function AnalyticsPage() {
           <div className="mt-4 h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={(data?.series ?? []).slice(-30)}>
-                <CartesianGrid stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="day" stroke="rgba(255,255,255,0.4)" fontSize={11} />
-                <YAxis stroke="rgba(255,255,255,0.4)" fontSize={11} />
-                <Tooltip contentStyle={{ background: "rgba(20,25,40,0.95)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12 }} />
-                <Bar dataKey="count" fill="oklch(0.7 0.18 300)" radius={[4, 4, 0, 0]} />
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" opacity={0.5} />
+                <XAxis dataKey="day" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} />
+                <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "var(--popover)",
+                    borderColor: "var(--border)",
+                    color: "var(--popover-foreground)",
+                    borderRadius: 12,
+                    boxShadow: "0 10px 30px -10px rgba(0,0,0,0.2)"
+                  }}
+                  itemStyle={{ color: "var(--foreground)" }}
+                  labelStyle={{ color: "var(--muted-foreground)" }}
+                />
+                <Bar dataKey="count" fill="var(--electric)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

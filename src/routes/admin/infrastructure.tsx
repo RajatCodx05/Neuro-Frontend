@@ -231,7 +231,15 @@ function InfraPage() {
                           ))}
                         </Pie>
                         <Tooltip
-                          contentStyle={{ background: 'rgba(20,25,40,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12 }}
+                          contentStyle={{
+                            backgroundColor: "var(--popover)",
+                            borderColor: "var(--border)",
+                            color: "var(--popover-foreground)",
+                            borderRadius: 12,
+                            boxShadow: "0 10px 30px -10px rgba(0,0,0,0.2)"
+                          }}
+                          itemStyle={{ color: "var(--foreground)" }}
+                          labelStyle={{ color: "var(--muted-foreground)" }}
                           formatter={(v: number) => fmtBytes(v)}
                         />
                       </PieChart>
