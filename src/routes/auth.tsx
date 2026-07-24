@@ -35,7 +35,7 @@ const COUNTRY_CODES = [
 ];
 
 const loginSchema = z.object({ email: z.string().trim().email("Enter a valid email").max(255), password: z.string().min(6, "Password must be at least 6 characters").max(72) });
-const signupSchema = z.object({ fullName: z.string().trim().min(1, "Full name is required").max(100), email: z.string().trim().email("Enter a valid email").max(255), countryCode: z.string().min(1, "Select a country code"), phone: z.string().trim().min(5, "Phone is required").max(20), password: z.string().min(6, "Password must be at least 6 characters").max(72), confirmPassword: z.string() }).refine((d) => d.password === d.confirmPassword, { message: "Passwords do not match", path: ["confirmPassword"] });
+const signupSchema = z.object({ fullName: z.string().trim().min(1, "Full name is required").max(100), email: z.string().trim().email("Enter a valid email").max(255), countryCode: z.string().min(1, "Select a country code"), phone: z.string().trim().min(5, "Phone is required").max(20), password: z.string().min(8, "Password must be at least 8 characters").max(72), confirmPassword: z.string() }).refine((d) => d.password === d.confirmPassword, { message: "Passwords do not match", path: ["confirmPassword"] });
 
 type GoogleCredentialResponse = { credential: string };
 type GoogleIdentity = {
@@ -72,6 +72,7 @@ function AuthPage() {
   // ponytail: reuse existing mode state — forgotStep adds reset flow without a new route
   const [forgotStep, setForgotStep] = useState<"idle" | "request" | "sent">("idle");
   const [forgotEmail, setForgotEmail] = useState("");
+  const [password, setPassword] = useState("");
   const redirectTo = (path?: string) => {
     const target = path && path.startsWith("/") && !path.startsWith("/search") ? path : "/";
     navigate({ to: target, replace: true });
@@ -237,8 +238,8 @@ function AuthPage() {
         </div>
       ) : (
         <div className="flex rounded-full border border-black/10 bg-black/5 p-1 text-sm dark:border-white/10 dark:bg-white/5">
-          <button onClick={() => { setMode("login"); setPendingVerificationEmail(null); }} className={`flex-1 rounded-full py-1.5 font-medium transition ${mode === "login" ? "bg-white text-foreground shadow-sm dark:bg-white/15 dark:text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Sign in</button>
-          <button onClick={() => { setMode("signup"); setPendingVerificationEmail(null); }} className={`flex-1 rounded-full py-1.5 font-medium transition ${mode === "signup" ? "bg-white text-foreground shadow-sm dark:bg-white/15 dark:text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Sign up</button>
+          <button onClick={() => { setMode("login"); setPendingVerificationEmail(null); setPassword(""); }} className={`flex-1 rounded-full py-1.5 font-medium transition ${mode === "login" ? "bg-white text-foreground shadow-sm dark:bg-white/15 dark:text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Sign in</button>
+          <button onClick={() => { setMode("signup"); setPendingVerificationEmail(null); setPassword(""); }} className={`flex-1 rounded-full py-1.5 font-medium transition ${mode === "signup" ? "bg-white text-foreground shadow-sm dark:bg-white/15 dark:text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Sign up</button>
         </div>
       )}
       <h1 className="mt-6 font-display text-2xl font-semibold text-foreground">
@@ -310,7 +311,8 @@ function AuthPage() {
           <Field key="signup-fullname" label="Full name" name="fullName" placeholder="Ada Lovelace" required />
           <Field key="signup-email" label="Email" name="email" type="email" placeholder="you@lab.edu" required />
           <SignupPhoneField />
-          <PasswordField name="password" show={showPw} onToggle={() => setShowPw((v) => !v)} />
+          <PasswordField name="password" value={password} onChange={(e) => setPassword(e.target.value)} show={showPw} onToggle={() => setShowPw((v) => !v)} />
+          <PasswordRequirements password={password} />
           <Field key="signup-confirm" label="Confirm password" name="confirmPassword" type={showPw ? "text" : "password"} required />
           <Submit loading={loading}>Create account</Submit>
         </form>
@@ -344,7 +346,7 @@ function AuthPage() {
               </>
             )}
           </p>
-          {!isAdminMode && (
+          {/* {!isAdminMode && (
             <div className="mt-4 text-center">
               <button
                 onClick={() => {
@@ -357,14 +359,39 @@ function AuthPage() {
                 Administrator Sign in
               </button>
             </div>
-          )}
+          )} */}
         </>
       )}
     </div></div></div>;
 }
 function Submit({ loading, children }: { loading: boolean; children: React.ReactNode }) { return <button type="submit" disabled={loading} className="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] py-2.5 text-sm font-medium text-[oklch(0.15_0.03_258)] disabled:opacity-50 shadow-sm hover:shadow-md transition">{loading && <Loader2 className="h-4 w-4 animate-spin" />}{children}</button>; }
 function Field({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) { return <label className="block"><span className="text-xs font-medium text-foreground/80 dark:text-muted-foreground">{label}</span><input {...props} className="mt-1 w-full rounded-xl border border-black/15 bg-black/[0.03] px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/70 focus:border-cyan focus:ring-1 focus:ring-cyan dark:border-white/10 dark:bg-white/5 dark:placeholder:text-muted-foreground/60" /></label>; }
-function PasswordField({ name, show, onToggle }: { name: string; show: boolean; onToggle: () => void }) { return <label className="block"><span className="text-xs font-medium text-foreground/80 dark:text-muted-foreground">Password</span><div className="relative mt-1"><input name={name} type={show ? "text" : "password"} required minLength={6} className="w-full rounded-xl border border-black/15 bg-black/[0.03] px-3 py-2 pr-10 text-sm text-foreground outline-none focus:border-cyan focus:ring-1 focus:ring-cyan dark:border-white/10 dark:bg-white/5" /><button type="button" onClick={onToggle} className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-lg text-foreground/60 hover:bg-black/5 dark:text-muted-foreground dark:hover:bg-white/5">{show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}</button></div></label>; }
+function PasswordField({ name, value, onChange, show, onToggle }: { name: string; value?: string; onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void; show: boolean; onToggle: () => void }) { return <label className="block"><span className="text-xs font-medium text-foreground/80 dark:text-muted-foreground">Password</span><div className="relative mt-1"><input name={name} value={value} onChange={onChange} type={show ? "text" : "password"} required minLength={name === "newPassword" ? 6 : 8} className="w-full rounded-xl border border-black/15 bg-black/[0.03] px-3 py-2 pr-10 text-sm text-foreground outline-none focus:border-cyan focus:ring-1 focus:ring-cyan dark:border-white/10 dark:bg-white/5" /><button type="button" onClick={onToggle} className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-lg text-foreground/60 hover:bg-black/5 dark:text-muted-foreground dark:hover:bg-white/5">{show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}</button></div></label>; }
+function PasswordRequirements({ password }: { password: string }) {
+  const rules = [
+    { label: "At least 8 characters", met: password.length >= 8 },
+    { label: "One uppercase letter", met: /[A-Z]/.test(password) },
+    { label: "One special character", met: /[\W_]/.test(password) },
+    { label: "One number", met: /[0-9]/.test(password) },
+  ];
+  if (!password) return null; // hide until user starts typing
+  return (
+    <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
+      {rules.map((r) => (
+        <div key={r.label} className={`flex items-center gap-1.5 text-[11px] font-medium transition-colors duration-200 ${r.met ? "text-emerald-400" : "text-rose-400"}`}>
+          <span className={`grid h-3.5 w-3.5 shrink-0 place-items-center rounded-full border transition-colors duration-200 ${r.met ? "border-emerald-400 bg-emerald-400/20" : "border-rose-400 bg-rose-400/20"}`}>
+            {r.met ? (
+              <svg viewBox="0 0 12 12" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="2,6 5,9 10,3" /></svg>
+            ) : (
+              <span className="block h-0.5 w-2 rounded-full bg-current" />
+            )}
+          </span>
+          {r.label}
+        </div>
+      ))}
+    </div>
+  );
+}
 function SignupPhoneField() {
   return (
     <div className="block">
