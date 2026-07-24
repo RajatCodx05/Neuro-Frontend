@@ -536,14 +536,30 @@ const admin = {
   },
 };
 
+export type ApiRepository = {
+  id: string;
+  name: string;
+  trust_tier: "open" | "registered" | "restricted";
+  sync_status: "online" | "syncing" | "offline";
+  dataset_count: number;
+  last_sync_at: string | null;
+  endpoint_config: { url?: string };
+};
+
+// ponytail: public endpoint — no token needed, used by landing page
+const repositories = {
+  list: () => request<ApiRepository[]>("/repositories", {}, false),
+};
+
 export const api = {
   auth,
   profiles,
   savedDatasets,
-  collections,
+  collections,      
   searchHistory,
   socialLinks,
   admin,
+  repositories,
   account: { delete: () => request<null>("/users/me", { method: "DELETE" }) },
   datasets: {
     async search(query: string) {
@@ -563,3 +579,4 @@ export const api = {
   streamUrl: (queryId: string) => `${BASE_URL}/stream/${encodeURIComponent(queryId)}`,
   BASE_URL,
 };
+

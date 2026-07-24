@@ -22,7 +22,65 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import brainCardImg from "@/assets/brain-card.jpg";
-import { datasets, repositories, stats } from "@/lib/mock-data";
+import { datasets, stats } from "@/lib/mock-data";
+import { useQuery } from "@tanstack/react-query";
+
+const colorMap: Record<string, string> = {
+  "openneuro": "from-cyan-400 to-blue-500",
+  "dandi archive": "from-blue-400 to-indigo-500",
+  "nitrc": "from-teal-400 to-cyan-500",
+  "nemar": "from-sky-400 to-cyan-500",
+  "allen brain atlas": "from-purple-400 to-blue-500",
+  "human connectome": "from-indigo-400 to-cyan-500",
+  "adni": "from-blue-500 to-purple-500",
+  "ebrains": "from-cyan-400 to-teal-500",
+  "uk biobank": "from-blue-400 to-cyan-400",
+  "neuromorpho": "from-teal-400 to-blue-500",
+};
+
+const shortMap: Record<string, string> = {
+  "openneuro": "ON",
+  "dandi archive": "DA",
+  "nitrc": "NI",
+  "nemar": "NE",
+  "allen brain atlas": "AB",
+  "human connectome": "HC",
+  "adni": "AD",
+  "ebrains": "EB",
+  "uk biobank": "UK",
+  "neuromorpho": "NM",
+};
+
+function getRepoMeta(name: string) {
+  const normalized = name.toLowerCase().trim();
+  const color = colorMap[normalized] || "from-cyan-400 to-teal-500";
+  let short = shortMap[normalized];
+  if (!short) {
+    const parts = name.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      short = (parts[0][0] + parts[1][0]).toUpperCase();
+    } else if (parts.length === 1) {
+      short = parts[0].slice(0, 2).toUpperCase();
+    } else {
+      short = "RP";
+    }
+  }
+  return { color, short };
+}
+
+function formatRelativeTime(dateString: string | null) {
+  if (!dateString) return "never";
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  if (diffMins < 1) return "just now";
+  if (diffMins < 60) return `${diffMins} min ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} hr${diffHours > 1 ? "s" : ""} ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+}
 
 function Counter({ value, suffix = "" }: { value: number; suffix?: string }) {
   const ref = useRef<HTMLSpanElement | null>(null);
@@ -57,6 +115,18 @@ export default function Landing() {
   const [announcements, setAnnouncements] = useState<Array<{ id: string; title: string; body: string; created_at: string }>>([]);
 
   const notificationsEnabled = profile?.notifications_enabled ?? true;
+
+  const { data: dbRepos = [] } = useQuery({
+    queryKey: ["repositories-public"],
+    queryFn: () => api.repositories.list(),
+  });
+
+  const dynamicStats = stats.map((s) => {
+    if (s.label === "Repositories Connected") {
+      return { ...s, value: dbRepos.length || 10 };
+    }
+    return s;
+  });
 
   useEffect(() => {
     const loadAnnouncements = () => {
@@ -227,7 +297,7 @@ export default function Landing() {
             >
               <div className="inline-flex items-center gap-2 rounded-full glass px-3 py-1 text-xs text-foreground/80">
                 <span className="h-1.5 w-1.5 rounded-full bg-cyan animate-pulse" />
-                10 repositories indexed · 5,827+ verified datasets
+                {dbRepos.length || 10} repositories indexed · 5,827+ verified datasets
                 <ArrowUpRight className="h-3 w-3" />
               </div>
               <h1 className="mt-6 font-display text-5xl font-semibold leading-[1.02] tracking-tight sm:text-6xl md:text-7xl">
@@ -300,7 +370,7 @@ export default function Landing() {
         <section className="relative border-b border-border bg-[oklch(0.15_0.028_255)] [.light_&]:bg-muted py-10">
           <div className="mx-auto max-w-7xl px-6">
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-              {stats.map((s) => (
+              {dynamicStats.map((s) => (
                 <motion.div
                   key={s.label}
                   initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }}
@@ -326,38 +396,48 @@ export default function Landing() {
               subtitle="We continuously index and verify open-science repositories so you can search across all of them at once."
             />
             <div className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              {repositories.map((r, i) => (
-                <motion.div
-                  key={r.id}
-                  initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-60px" }} transition={{ duration: 0.5, delay: (i % 5) * 0.05 }}
-                  whileHover={{ y: -4 }}
-                  className="group glass card-elevated relative overflow-hidden rounded-2xl p-5"
-                >
-                  <div className={`absolute -right-10 -top-10 h-28 w-28 rounded-full bg-gradient-to-br ${r.color} opacity-20 blur-2xl transition group-hover:opacity-40`} />
-                  <div className="flex items-center justify-between">
-                    <div className={`grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br ${r.color} text-sm font-bold text-white ring-1 ring-white/20`}>
-                      {r.short}
+              {dbRepos.map((r, i) => {
+                const meta = getRepoMeta(r.name);
+                const tier = r.trust_tier.charAt(0).toUpperCase() + r.trust_tier.slice(1);
+                const relativeSync = formatRelativeTime(r.last_sync_at);
+                const url = r.endpoint_config?.url;
+                return (
+                  <motion.div
+                    key={r.id}
+                    initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-60px" }} transition={{ duration: 0.5, delay: (i % 5) * 0.05 }}
+                    whileHover={{ y: -4 }}
+                    className="group glass card-elevated relative overflow-hidden rounded-2xl p-5"
+                  >
+                    <div className={`absolute -right-10 -top-10 h-28 w-28 rounded-full bg-gradient-to-br ${meta.color} opacity-20 blur-2xl transition group-hover:opacity-40`} />
+                    <div className="flex items-center justify-between">
+                      <div className={`grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br ${meta.color} text-sm font-bold text-white ring-1 ring-white/20`}>
+                        {meta.short}
+                      </div>
+                      <StatusPill status={r.sync_status} />
                     </div>
-                    <StatusPill status={r.status} />
-                  </div>
-                  <div className="mt-4 font-display text-base font-semibold">{r.name}</div>
-                  <div className="mt-1 text-xs text-muted-foreground">{r.datasets.toLocaleString()} datasets · {r.tier} tier</div>
-                  <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3 text-xs text-muted-foreground">
-                    <span>Synced {r.lastSync}</span>
-                    {/* ponytail: use external <a> links with target_blank if URL exists, fallback to disabled text */}
-                    {r.url ? (
-                      <a href={r.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-cyan hover:text-foreground">
-                        Explore <ArrowRight className="h-3 w-3" />
-                      </a>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-muted-foreground/30 cursor-not-allowed" title="Link coming soon">
-                        Explore <ArrowRight className="h-3 w-3" />
-                      </span>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
+                    <div className="mt-4 font-display text-base font-semibold">{r.name}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{r.dataset_count.toLocaleString()} datasets · {tier} tier</div>
+                    <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3 text-xs text-muted-foreground">
+                      <span>Synced {relativeSync}</span>
+                      {url ? (
+                        <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-cyan hover:text-foreground">
+                          Explore <ArrowRight className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-muted-foreground/30 cursor-not-allowed" title="Link coming soon">
+                          Explore <ArrowRight className="h-3 w-3" />
+                        </span>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+              {dbRepos.length === 0 && (
+                <div className="col-span-full p-8 text-center text-sm text-muted-foreground">
+                  No active repositories found.
+                </div>
+              )}
             </div>
           </div>
         </section>

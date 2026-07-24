@@ -26,6 +26,10 @@ function RepositoriesPage() {
 
   const add = async () => {
     if (!name.trim()) return;
+    if (repos.length >= 10) {
+      toast.error("Maximum 10 repositories allowed.");
+      return;
+    }
     try {
       await api.admin.repositories.create({
         name: name.trim(), trust_tier: tier, endpoint_config: endpoint ? { url: endpoint.trim() } : {},
@@ -52,23 +56,28 @@ function RepositoriesPage() {
     } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
   };
 
+  const isMaxReached = repos.length >= 10;
+
   return (
     <>
       <AdminPageHeader title="Repository management" description="Data sources indexed by the platform" />
       <div className="space-y-6 px-6 py-6 md:px-8">
         <div className="glass rounded-2xl p-5">
-          <div className="text-xs uppercase tracking-widest text-muted-foreground">Add repository</div>
+          <div className="flex items-center justify-between text-xs uppercase tracking-widest text-muted-foreground">
+            <span>Add repository</span>
+            <span className="font-mono text-cyan font-semibold">{repos.length} / 10</span>
+          </div>
           <div className="mt-3 grid gap-3 md:grid-cols-[1fr,1fr,180px,auto]">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name (e.g. OpenNeuro)"
-              className="rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50" />
-            <input value={endpoint} onChange={(e) => setEndpoint(e.target.value)} placeholder="Endpoint URL (optional)"
-              className="rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50" />
-            <select value={tier} onChange={(e) => setTier(e.target.value as never)}
-              className="rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50">
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={isMaxReached ? "Limit reached (10 max)" : "Name (e.g. OpenNeuro)"} disabled={isMaxReached}
+              className="rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50 disabled:opacity-50" />
+            <input value={endpoint} onChange={(e) => setEndpoint(e.target.value)} placeholder={isMaxReached ? "Limit reached" : "Endpoint URL (optional)"} disabled={isMaxReached}
+              className="rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50 disabled:opacity-50" />
+            <select value={tier} onChange={(e) => setTier(e.target.value as never)} disabled={isMaxReached}
+              className="rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50 disabled:opacity-50">
               {TIERS.map((t) => <option key={t} value={t} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t}</option>)}
             </select>
-            <button onClick={add}
-              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-sm font-medium text-[oklch(0.15_0.03_258)]">
+            <button onClick={add} disabled={isMaxReached}
+              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-sm font-medium text-[oklch(0.15_0.03_258)] disabled:opacity-50 disabled:cursor-not-allowed">
               <Plus className="h-4 w-4" /> Add
             </button>
           </div>
