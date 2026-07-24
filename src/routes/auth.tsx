@@ -346,7 +346,7 @@ function AuthPage() {
               </>
             )}
           </p>
-          {!isAdminMode && (
+          {/* {!isAdminMode && (
             <div className="mt-4 text-center">
               <button
                 onClick={() => {
@@ -359,7 +359,7 @@ function AuthPage() {
                 Administrator Sign in
               </button>
             </div>
-          )}
+          )} */}
         </>
       )}
     </div></div></div>;

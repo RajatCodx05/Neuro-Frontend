@@ -1,6 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Bookmark, FolderOpen, History, Settings, Sun, Mail, HelpCircle, Search, Shield } from "lucide-react";
+import { useState } from "react";
+import { Bookmark, FolderOpen, History, Settings, Sun, Mail, HelpCircle, Search, Shield, Send, X, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
+import { api } from "@/lib/api-client";
+import { useAuth } from "@/lib/auth-context";
+import { toast } from "sonner";
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
@@ -80,6 +84,34 @@ const steps = [
 ];
 
 function HelpPage() {
+  const { user, profile } = useAuth();
+  const [showForm, setShowForm] = useState(false);
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subject.trim() || !message.trim()) return;
+    setSending(true);
+    try {
+      await api.admin.helpDesk.submitTicket({
+        subject: subject.trim(),
+        message: message.trim(),
+        email: user?.email,
+        name: profile?.full_name || undefined,
+      });
+      toast.success("Support ticket submitted — we'll respond within 1–2 business days.");
+      setSubject("");
+      setMessage("");
+      setShowForm(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to submit ticket.");
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
     <AppShell>
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
@@ -203,13 +235,53 @@ function HelpPage() {
                 </p>
               </div>
             </div>
-            <a
-              href="mailto:rohit.paliwal@lifelancer.com"
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-5 py-2.5 text-sm font-medium text-[oklch(0.15_0.03_258)] transition hover:opacity-90"
-            >
-              <Mail className="h-4 w-4" />
-              rohit.paliwal@lifelancer.com
-            </a>
+
+            {!showForm ? (
+              <button
+                onClick={() => setShowForm(true)}
+                className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-5 py-2.5 text-sm font-medium text-[oklch(0.15_0.03_258)] transition hover:opacity-90"
+              >
+                <Mail className="h-4 w-4" />
+                Submit a support ticket
+              </button>
+            ) : (
+              <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold uppercase tracking-widest text-cyan">New support ticket</div>
+                  <button type="button" onClick={() => { setShowForm(false); setSubject(""); setMessage(""); }} className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground hover:bg-white/10 hover:text-foreground transition">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <input
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="Subject"
+                  required
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/70 focus:border-cyan/50"
+                />
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Describe your issue or question..."
+                  rows={4}
+                  required
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/70 focus:border-cyan/50 resize-none"
+                />
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[11px] text-muted-foreground">
+                    {user?.email ? <>Ticket will be sent from <strong>{user.email}</strong></> : 'Sign in to submit a ticket'}
+                  </span>
+                  <button
+                    type="submit"
+                    disabled={sending || !subject.trim() || !message.trim()}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-xs font-medium text-[oklch(0.15_0.03_258)] transition hover:opacity-90 disabled:opacity-40"
+                  >
+                    {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                    {sending ? 'Sending...' : 'Send'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </section>
       </div>
