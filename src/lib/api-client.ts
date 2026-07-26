@@ -1,6 +1,8 @@
 export const BASE_URL = (() => {
   if (import.meta.env.DEV) return "/api/v1";
-  return import.meta.env.VITE_API_BASE_URL || "https://neuro-server.vercel.app/api/v1";
+  // Fall back to same-origin when VITE_API_BASE_URL is unset — never silently
+  // point a staging deploy at the production API.
+  return import.meta.env.VITE_API_BASE_URL || "/api/v1";
 })().replace(/\/$/, "");
 
 export type AuthUser = { id: string; email: string; isAdmin: boolean };
@@ -53,20 +55,25 @@ export type SearchResult = {
 
 type Envelope<T> = { success: boolean; message: string; data: T };
 let accessToken: string | null = null;
-const ACCESS_TOKEN_KEY = "neuro_access_token";
 
+/**
+ * Store the access token in memory only (never sessionStorage / localStorage).
+ * The refresh token is held in an httpOnly cookie which is not accessible to JS,
+ * so XSS cannot exfiltrate it.  On page reload the cookie is used by
+ * refreshAccessToken() to mint a new short-lived access token.
+ *
+ * §10.2: Short-lived access tokens + httpOnly refresh cookie is the intended
+ * architecture — persisting the access token to sessionStorage defeated the
+ * purpose of using httpOnly cookies for the long-lived credential.
+ */
 function setAccessToken(token: string | null) {
   accessToken = token;
   if (typeof window !== "undefined") {
-    if (token) window.sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
-    else window.sessionStorage.removeItem(ACCESS_TOKEN_KEY);
     window.dispatchEvent(new Event("neuro-auth-changed"));
   }
 }
 
 function getAccessToken() {
-  if (!accessToken && typeof window !== "undefined")
-    accessToken = window.sessionStorage.getItem(ACCESS_TOKEN_KEY);
   return accessToken;
 }
 
@@ -92,13 +99,18 @@ async function refreshAccessToken() {
   setAccessToken(payload.data.accessToken);
 }
 
+/** HTTP methods that are safe to retry on a transient 401 (idempotent). */
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
 async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   const token = getAccessToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
   let response = await fetch(`${BASE_URL}${path}`, { ...init, headers, credentials: "include" });
-  if (response.status === 401 && retry && path !== "/auth/refresh") {
+  // Only retry idempotent methods (GET/HEAD/OPTIONS) on 401 — retrying
+  // DELETE, PATCH, POST could cause duplicate mutations (double-delete, double-save).
+  if (response.status === 401 && retry && path !== "/auth/refresh" && SAFE_METHODS.has((init.method || 'GET').toUpperCase())) {
     try {
       await refreshAccessToken();
     } catch {
@@ -438,10 +450,24 @@ const admin = {
     },
   },
   announcements: {
+    /** Minimum expected shape for an announcement item. */
+    _validItem: (item: unknown): item is { id: string; title: string; body: string; active: boolean; created_at: string } => {
+      if (typeof item !== 'object' || item === null) return false;
+      const o = item as Record<string, unknown>;
+      return typeof o.id === 'string' &&
+        typeof o.title === 'string' &&
+        typeof o.body === 'string' &&
+        (o.active === undefined || typeof o.active === 'boolean') &&
+        (o.created_at === undefined || typeof o.created_at === 'string');
+    },
     list: () => {
       try {
         const raw = localStorage.getItem("neuro_announcements");
-        return Promise.resolve(raw ? JSON.parse(raw) : []);
+        if (!raw) return Promise.resolve([]);
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return Promise.resolve([]);
+        // Filter out any items that don't match the expected shape (integrity check)
+        return Promise.resolve(parsed.filter(admin.announcements._validItem));
       } catch {
         return Promise.resolve([]);
       }
