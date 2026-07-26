@@ -18,6 +18,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as DatasetIdRouteImport } from './routes/dataset.$id'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as AdminTokensRouteImport } from './routes/admin/tokens'
+import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminRepositoriesRouteImport } from './routes/admin/repositories'
 import { Route as AdminModerationRouteImport } from './routes/admin/moderation'
 import { Route as AdminInfrastructureRouteImport } from './routes/admin/infrastructure'
@@ -26,7 +27,6 @@ import { Route as AdminAuditLogRouteImport } from './routes/admin/audit-log'
 import { Route as AdminAssistantRouteImport } from './routes/admin/assistant'
 import { Route as AdminAnnouncementsRouteImport } from './routes/admin/announcements'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin/analytics'
-import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminAgentsRouteImport } from './routes/admin/agents'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSavedRouteImport } from './routes/_authenticated/saved'
@@ -78,6 +78,11 @@ const AdminTokensRoute = AdminTokensRouteImport.update({
   path: '/tokens',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminRepositoriesRoute = AdminRepositoriesRouteImport.update({
   id: '/repositories',
   path: '/repositories',
@@ -118,12 +123,6 @@ const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const AdminSettingsRoute = AdminSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-
 const AdminAgentsRoute = AdminAgentsRouteImport.update({
   id: '/agents',
   path: '/agents',
@@ -174,8 +173,8 @@ export interface FileRoutesByFullPath {
   '/admin/infrastructure': typeof AdminInfrastructureRoute
   '/admin/moderation': typeof AdminModerationRoute
   '/admin/repositories': typeof AdminRepositoriesRoute
-  '/admin/tokens': typeof AdminTokensRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/tokens': typeof AdminTokensRoute
   '/admin/users': typeof AdminUsersRoute
   '/dataset/$id': typeof DatasetIdRoute
   '/admin/': typeof AdminIndexRoute
@@ -198,8 +197,8 @@ export interface FileRoutesByTo {
   '/admin/infrastructure': typeof AdminInfrastructureRoute
   '/admin/moderation': typeof AdminModerationRoute
   '/admin/repositories': typeof AdminRepositoriesRoute
-  '/admin/tokens': typeof AdminTokensRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/tokens': typeof AdminTokensRoute
   '/admin/users': typeof AdminUsersRoute
   '/dataset/$id': typeof DatasetIdRoute
   '/admin': typeof AdminIndexRoute
@@ -225,8 +224,8 @@ export interface FileRoutesById {
   '/admin/infrastructure': typeof AdminInfrastructureRoute
   '/admin/moderation': typeof AdminModerationRoute
   '/admin/repositories': typeof AdminRepositoriesRoute
-  '/admin/tokens': typeof AdminTokensRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/tokens': typeof AdminTokensRoute
   '/admin/users': typeof AdminUsersRoute
   '/dataset/$id': typeof DatasetIdRoute
   '/admin/': typeof AdminIndexRoute
@@ -252,13 +251,13 @@ export interface FileRouteTypes {
     | '/admin/infrastructure'
     | '/admin/moderation'
     | '/admin/repositories'
-    | '/admin/tokens'  | '/admin/settings'
-  | '/admin/users'
-  | '/dataset/$id'
-  | '/admin/'
+    | '/admin/settings'
+    | '/admin/tokens'
+    | '/admin/users'
+    | '/dataset/$id'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/admin/settings'
     | '/'
     | '/auth'
     | '/search'
@@ -276,8 +275,8 @@ export interface FileRouteTypes {
     | '/admin/infrastructure'
     | '/admin/moderation'
     | '/admin/repositories'
-    | '/admin/tokens'
     | '/admin/settings'
+    | '/admin/tokens'
     | '/admin/users'
     | '/dataset/$id'
     | '/admin'
@@ -301,13 +300,14 @@ export interface FileRouteTypes {
     | '/admin/help-desk'
     | '/admin/infrastructure'
     | '/admin/moderation'
-    | '/admin/repositories'    | '/admin/tokens'
+    | '/admin/repositories'
     | '/admin/settings'
+    | '/admin/tokens'
     | '/admin/users'
     | '/dataset/$id'
     | '/admin/'
-  fileRoutesById: FileRoutesById}
-
+  fileRoutesById: FileRoutesById
+}
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
@@ -382,6 +382,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminTokensRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/repositories': {
       id: '/admin/repositories'
       path: '/repositories'
@@ -436,13 +443,6 @@ declare module '@tanstack/react-router' {
       path: '/analytics'
       fullPath: '/admin/analytics'
       preLoaderRoute: typeof AdminAnalyticsRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/settings': {
-      id: '/admin/settings'
-      path: '/settings'
-      fullPath: '/admin/settings'
-      preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/agents': {
@@ -510,7 +510,6 @@ const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
 interface AdminRouteRouteChildren {
-  AdminSettingsRoute: typeof AdminSettingsRoute
   AdminAgentsRoute: typeof AdminAgentsRoute
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminAnnouncementsRoute: typeof AdminAnnouncementsRoute
@@ -520,13 +519,13 @@ interface AdminRouteRouteChildren {
   AdminInfrastructureRoute: typeof AdminInfrastructureRoute
   AdminModerationRoute: typeof AdminModerationRoute
   AdminRepositoriesRoute: typeof AdminRepositoriesRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
   AdminTokensRoute: typeof AdminTokensRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
-  AdminSettingsRoute: AdminSettingsRoute,
   AdminAgentsRoute: AdminAgentsRoute,
   AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminAnnouncementsRoute: AdminAnnouncementsRoute,
@@ -536,6 +535,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminInfrastructureRoute: AdminInfrastructureRoute,
   AdminModerationRoute: AdminModerationRoute,
   AdminRepositoriesRoute: AdminRepositoriesRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
   AdminTokensRoute: AdminTokensRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,

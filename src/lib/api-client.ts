@@ -1,7 +1,9 @@
 export const BASE_URL = (() => {
   if (import.meta.env.DEV) return "/api/v1";
-  // Fall back to same-origin when VITE_API_BASE_URL is unset — never silently
-  // point a staging deploy at the production API.
+  // ponytail: warn if VITE_API_BASE_URL is missing in prod to prevent silent 404 failures
+  if (!import.meta.env.VITE_API_BASE_URL) {
+    console.warn("[Warning] VITE_API_BASE_URL is missing in production! API requests will fall back to same-origin, which may fail.");
+  }
   return import.meta.env.VITE_API_BASE_URL || "/api/v1";
 })().replace(/\/$/, "");
 
