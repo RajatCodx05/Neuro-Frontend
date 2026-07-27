@@ -17,13 +17,13 @@ export const Route = createFileRoute("/admin/audit-log")({
 });
 
 type AuditRow = {
-  id: string;
+  _id: string;
   action: string;
-  target_type: string;
-  target_id: string;
+  targetType: string;
+  targetId: string;
   adminId: { _id: string; name: string; email: string } | string;
   metadata: Record<string, unknown>;
-  created_at: string;
+  createdAt: string;
 };
 
 type AdminUser = {
@@ -84,7 +84,7 @@ function AuditLogPage() {
     if (!s) return rows;
     return rows.filter((r) => {
       const id = typeof r.adminId === "object" ? `${r.adminId.name} ${r.adminId.email}` : String(r.adminId);
-      return [r.action, r.target_type, r.target_id, id].some((x) => x?.toLowerCase().includes(s));
+      return [r.action, r.targetType, r.targetId, id].some((x) => x?.toLowerCase().includes(s));
     });
   }, [q, rows]);
 
@@ -164,9 +164,9 @@ function AuditLogPage() {
             </thead>
             <tbody className="divide-y divide-white/5">
               {filtered.map((r) => (
-                <tr key={r.id} className="hover:bg-white/[0.02]">
+                <tr key={r._id} className="hover:bg-white/[0.02]">
                   <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
-                    {new Date(r.created_at).toLocaleDateString()} {new Date(r.created_at).toLocaleTimeString()}
+                    {new Date(r.createdAt).toLocaleDateString()} {new Date(r.createdAt).toLocaleTimeString()}
                   </td>
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center gap-1.5">
@@ -177,7 +177,7 @@ function AuditLogPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-cyan">{r.action}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.target_type ?? "—"} <span className="font-mono text-xs">{r.target_id ?? ""}</span></td>
+                  <td className="px-4 py-3 text-muted-foreground">{r.targetType ?? "—"} <span className="font-mono text-xs">{r.targetId ?? ""}</span></td>
                   <td className="px-4 py-3 font-mono text-[11px] text-muted-foreground">{JSON.stringify(r.metadata)}</td>
                 </tr>
               ))}

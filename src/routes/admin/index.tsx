@@ -16,7 +16,7 @@ function AdminDashboard() {
     queryFn: () => api.admin.dashboard() as Promise<{
       totalUsers: number;
       repositories: Array<{ id: string; name: string; sync_status: string; dataset_count: number; last_sync_at: string }>;
-      recentAudit: Array<{ id: string; action: string; target_type: string; target_id: string; created_at: string }>;
+      recentAudit: Array<{ _id: string; action: string; targetType: string; targetId: string; createdAt: string }>;
     }>,
   });
 
@@ -158,13 +158,12 @@ function AdminDashboard() {
             </div>
           </div>
           <div className="glass divide-y divide-white/5 [.light_&]:divide-black/5 rounded-2xl">
-            {paginatedActivities.map((row) => (
-              <div key={row.id} className="flex items-center justify-between px-4 py-3 text-sm">
+            {paginatedActivities.map((row) => (                <div key={row._id} className="flex items-center justify-between px-4 py-3 text-sm">
                 <div className="min-w-0 flex-1">
                   <span className="font-mono text-xs text-cyan">{row.action}</span>
-                  <span className="ml-2 text-muted-foreground">{row.target_type ?? ""} {row.target_id ?? ""}</span>
+                  <span className="ml-2 text-muted-foreground">{row.targetType ?? ""} {row.targetId ?? ""}</span>
                 </div>
-                <div className="shrink-0 text-xs text-muted-foreground">{new Date(row.created_at).toLocaleString()}</div>
+                <div className="shrink-0 text-xs text-muted-foreground">{new Date(row.createdAt).toLocaleString()}</div>
               </div>
             ))}
             {(!activities.length) && <div className="p-6 text-sm text-muted-foreground">No admin actions recorded yet.</div>}

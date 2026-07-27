@@ -576,6 +576,8 @@ const admin = {
     recent: (_limit: number) => Promise.resolve([]) as Promise<Array<Record<string, unknown>>>,
   },
   getAdmins: () => request<Record<string, unknown>[]>("/admin/admins"),
+  updateProfile: (data: { name: string }) =>
+    request<Record<string, unknown>>("/admin/profile", { method: "PATCH", body: JSON.stringify(data) }),
   auditLog: {
     list: (limit = 100) => request<Record<string, unknown>[]>(`/admin/audit-log?limit=${limit}`),
   },
