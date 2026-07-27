@@ -25,6 +25,10 @@ function SettingsPage() {
   const [socials, setSocials] = useState<SocialLink[]>([]);
   const [addPlatform, setAddPlatform] = useState<string>("linkedin");
   const [addUrl, setAddUrl] = useState("");
+  const [confirmText, setConfirmText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -90,14 +94,32 @@ function SettingsPage() {
   };
 
   const deleteAccount = async () => {
-    if (!user) return;
+    if (!user || confirmText !== "DELETE") return;
+    setIsDeleting(true);
     try {
-      await api.account.delete();
-      toast.success("Account deleted");
+      await api.account.delete({ confirmation: confirmText });
+      toast.success("Account scheduled for deletion (30-day grace period). Active sessions revoked.");
+      setDeleteDialogOpen(false);
+      setConfirmText("");
       await signOut();
       navigate({ to: "/", replace: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete account");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const cancelDeletion = async () => {
+    setIsCancelling(true);
+    try {
+      await api.account.cancelDeletion();
+      await refreshProfile();
+      toast.success("Account deletion request cancelled. Your account is active.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to cancel deletion");
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -112,6 +134,29 @@ function SettingsPage() {
           <h1 className="font-display text-3xl font-semibold">Settings</h1>
           <p className="mt-1 text-sm text-muted-foreground">Manage your profile, notifications, and account.</p>
         </div>
+
+        {profile.is_deleted && (
+          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <div className="text-sm font-semibold flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-400" /> Account Scheduled for Deletion
+              </div>
+              <div className="mt-1 text-xs text-amber-200/80">
+                Your account is currently in a 30-day grace period and scheduled for permanent deletion on{" "}
+                <span className="font-semibold text-amber-300">
+                  {profile.scheduled_deletion_at ? new Date(profile.scheduled_deletion_at).toLocaleDateString() : "30 days"}
+                </span>.
+              </div>
+            </div>
+            <button
+              onClick={cancelDeletion}
+              disabled={isCancelling}
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-4 py-2 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:opacity-50 transition-colors"
+            >
+              {isCancelling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Restore Account & Cancel Deletion
+            </button>
+          </div>
+        )}
 
         {/* Profile */}
         <form onSubmit={saveProfile} className="glass card-elevated rounded-2xl p-6">
@@ -232,34 +277,53 @@ function SettingsPage() {
         </div>
 
         {/* Danger zone */}
-        <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-6">
-          <div className="flex items-center gap-2 text-destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <div className="text-xs uppercase tracking-widest">Danger zone</div>
-          </div>
+        <div className="glass card-elevated rounded-2xl p-6">
+          <div className="text-xs uppercase tracking-widest text-muted-foreground">Account Removal</div>
           <div className="mt-3 flex items-center justify-between gap-4">
             <div>
-              <div className="text-sm font-medium">Delete account</div>
-              <div className="text-xs text-muted-foreground">Permanently remove your account, saved datasets, collections, and history.</div>
+              <div className="text-sm font-medium text-foreground/90">Delete account</div>
+              <div className="text-xs text-muted-foreground">
+                Request account deletion with a 30-day grace period. You can restore your account anytime during grace period.
+              </div>
             </div>
-            <AlertDialog>
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
               <AlertDialogTrigger asChild>
-                <button className="inline-flex items-center gap-1.5 rounded-full bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground">
+                <button className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 [.light_&]:border-black/15 bg-transparent px-3 py-1.5 text-xs text-muted-foreground hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive transition-colors">
                   <Trash2 className="h-3.5 w-3.5" /> Delete account
                 </button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete your account?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This cannot be undone. All your saved datasets, collections, history, and profile data will be removed.
+                  <AlertDialogDescription className="space-y-2 text-sm text-muted-foreground">
+                    <span>
+                      Your account will be deactivated immediately and scheduled for permanent deletion after a 30-day grace period.
+                    </span>
+                    <span className="block">
+                      During the 30-day grace period, all active sessions are revoked, but you can cancel deletion and restore your account at any time simply by logging back in.
+                    </span>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={deleteAccount} className="bg-destructive text-destructive-foreground">
-                    Yes, delete my account
-                  </AlertDialogAction>
+                <div className="mt-2 space-y-2">
+                  <label className="block text-xs text-muted-foreground">
+                    To confirm, please type <span className="font-semibold text-foreground select-all">DELETE</span> below:
+                  </label>
+                  <input
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                    placeholder="DELETE"
+                    className="w-full rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50 placeholder:text-muted-foreground/40 font-mono"
+                  />
+                </div>
+                <AlertDialogFooter className="mt-4">
+                  <AlertDialogCancel onClick={() => setConfirmText("")}>Cancel</AlertDialogCancel>
+                  <button
+                    disabled={confirmText !== "DELETE" || isDeleting}
+                    onClick={deleteAccount}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground disabled:opacity-40 disabled:cursor-not-allowed hover:bg-destructive/90 transition-opacity"
+                  >
+                    {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete account"}
+                  </button>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>

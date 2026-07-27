@@ -26,6 +26,9 @@ export type UserProfile = {
   notifications_enabled: boolean;
   notification_preferences: NotificationPreferences;
   onboarding_complete: boolean;
+  is_deleted?: boolean;
+  deletion_requested_at?: string | null;
+  scheduled_deletion_at?: string | null;
 };
 export type SavedDataset = {
   id: string;
@@ -161,6 +164,9 @@ function mapProfile(data: Record<string, unknown>): UserProfile {
       account_activity: prefs.account_activity ?? defaultVal,
     },
     onboarding_complete: Boolean(data.isOnboarded),
+    is_deleted: Boolean(data.isDeleted),
+    deletion_requested_at: data.deletionRequestedAt ? String(data.deletionRequestedAt) : null,
+    scheduled_deletion_at: data.scheduledDeletionAt ? String(data.scheduledDeletionAt) : null,
   };
 }
 // ponytail: resultSource='cache' means record already in DB — relabel 'web_search' → 'Database'.
@@ -610,7 +616,15 @@ export const api = {
   socialLinks,
   admin,
   repositories,
-  account: { delete: () => request<null>("/users/me", { method: "DELETE" }) },
+  account: {
+    delete: (payload: { confirmation: string; password?: string }) =>
+      request<{ isDeleted: boolean; scheduledDeletionAt: string }>("/users/me", {
+        method: "DELETE",
+        body: JSON.stringify(payload),
+      }),
+    cancelDeletion: () =>
+      request<{ isDeleted: boolean }>("/users/cancel-deletion", { method: "POST" }),
+  },
   datasets: {
     async search(query: string) {
       const data = await request<{
