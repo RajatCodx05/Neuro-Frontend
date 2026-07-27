@@ -115,15 +115,22 @@ function SearchResults() {
       toast.error("Dataset already saved");
       return;
     }
+    // Optimistic: mark saved immediately
+    setSavedIds((prev) => {
+      const next = new Set(prev);
+      next.add(d.id);
+      return next;
+    });
     try {
       await api.savedDatasets.upsert({ dataset_id: d.id, dataset_snapshot: d });
-      setSavedIds((prev) => {
-        const next = new Set(prev);
-        next.add(d.id);
-        return next;
-      });
       toast.success("Saved");
     } catch (err) {
+      // Rollback on failure
+      setSavedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(d.id);
+        return next;
+      });
       toast.error(err instanceof Error ? err.message : "Save failed");
     }
   };

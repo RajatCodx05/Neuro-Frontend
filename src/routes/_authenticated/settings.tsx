@@ -67,10 +67,20 @@ function SettingsPage() {
       account_activity: profile.notifications_enabled,
     };
     const updated = { ...currentPrefs, [key]: enabled };
+    // Optimistic: update local state immediately (the switch already toggled)
+    // but we need the profile to reflect the change for other references
+    // Snapshot the current preferences for rollback
+    const prevPrefs = profile.notification_preferences;
+    // We update profile directly so the switch state stays consistent
+    Object.assign(profile.notification_preferences || {}, { [key]: enabled });
     try {
       await api.profiles.update({ notification_preferences: updated });
       await refreshProfile();
     } catch (err) {
+      // Rollback on failure
+      if (profile.notification_preferences && prevPrefs) {
+        Object.assign(profile.notification_preferences, prevPrefs);
+      }
       toast.error(err instanceof Error ? err.message : "Failed to update preference");
     }
   };
@@ -89,8 +99,17 @@ function SettingsPage() {
   };
 
   const removeSocial = async (id: string) => {
-    await api.socialLinks.delete(id);
+    // Snapshot for rollback
+    const prevSocials = socials;
+    // Optimistic: remove from UI immediately
     setSocials((v) => v.filter((s) => s.id !== id));
+    try {
+      await api.socialLinks.delete(id);
+    } catch (err) {
+      // Rollback on failure
+      setSocials(prevSocials);
+      toast.error(err instanceof Error ? err.message : "Failed to remove link");
+    }
   };
 
   const deleteAccount = async () => {

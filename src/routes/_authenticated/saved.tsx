@@ -48,35 +48,63 @@ function SavedPage() {
   useEffect(() => { void load(); }, [user]);
 
   const removeSaved = async (id: string) => {
+    // Snapshot current state for rollback
+    const prevSaved = saved;
+    const prevColItems = colItems;
+    // Optimistic: remove from UI immediately
+    setSaved((v) => v.filter((s) => s.id !== id));
+    setColItems((v) => v.filter((ci) => {
+      const sdId = String((ci.savedDatasetId as Record<string, unknown>)?._id ?? ci.savedDatasetId);
+      return sdId !== id;
+    }));
     try {
       await api.savedDatasets.delete(id);
-      setSaved((v) => v.filter((s) => s.id !== id));
-      // also remove from open collection view if present
-      setColItems((v) => v.filter((ci) => {
-        const sdId = String((ci.savedDatasetId as Record<string, unknown>)?._id ?? ci.savedDatasetId);
-        return sdId !== id;
-      }));
       toast.success("Removed from saved");
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed to remove"); }
+    } catch (err) {
+      // Rollback on failure
+      setSaved(prevSaved);
+      setColItems(prevColItems);
+      toast.error(err instanceof Error ? err.message : "Failed to remove");
+    }
   };
 
   const addCollection = async () => {
     if (!newName.trim() || !user) return;
+    const name = newName.trim();
+    const optimisticCol: Collection = {
+      id: `optimistic_${Date.now()}`,
+      name,
+      created_at: new Date().toISOString(),
+    };
+    // Optimistic: show immediately with loader-friendly id
+    setCollections((v) => [optimisticCol, ...v]);
+    setNewName("");
     try {
-      const data = await api.collections.create(newName.trim());
-      setCollections((v) => [data, ...v]);
-      setNewName("");
+      const data = await api.collections.create(name);
+      // Replace optimistic entry with real data
+      setCollections((v) => v.map((c) => c.id === optimisticCol.id ? data : c));
       toast.success("Collection created");
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed to create collection"); }
+    } catch (err) {
+      // Rollback on failure
+      setCollections((v) => v.filter((c) => c.id !== optimisticCol.id));
+      toast.error(err instanceof Error ? err.message : "Failed to create collection");
+    }
   };
 
   const removeCollection = async (id: string) => {
+    // Snapshot for rollback
+    const prevCollections = collections;
+    // Optimistic: remove immediately
+    setCollections((v) => v.filter((c) => c.id !== id));
+    if (openCol?.id === id) setOpenCol(null);
     try {
       await api.collections.delete(id);
-      setCollections((v) => v.filter((c) => c.id !== id));
-      if (openCol?.id === id) setOpenCol(null);
       toast.success("Collection deleted");
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed to delete"); }
+    } catch (err) {
+      // Rollback on failure
+      setCollections(prevCollections);
+      toast.error(err instanceof Error ? err.message : "Failed to delete");
+    }
   };
 
   const openCollection = async (col: Collection) => {
@@ -91,30 +119,44 @@ function SavedPage() {
 
   const addToCollection = async (savedDatasetId: string) => {
     if (!openCol) return;
+    // Snapshot itemCount for rollback
+    const prevCollections = collections;
     setAdding(savedDatasetId);
+    // Optimistic: bump itemCount and show success feel
+    setCollections((v) => v.map((c) => c.id === openCol.id ? { ...c, itemCount: (c.itemCount ?? 0) + 1 } : c));
     try {
       await api.collections.addItem(openCol.id, savedDatasetId);
-      // reload items
+      // reload items to get server-authoritative list
       const items = await api.collections.getItems(openCol.id);
       setColItems(items as ColItem[]);
-      // bump itemCount on collection list
-      setCollections((v) => v.map((c) => c.id === openCol.id ? { ...c, itemCount: (c.itemCount ?? 0) + 1 } : c));
       toast.success("Added to collection");
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Already in collection"); }
-    finally { setAdding(null); }
+    } catch (err) {
+      // Rollback on failure
+      setCollections(prevCollections);
+      toast.error(err instanceof Error ? err.message : "Already in collection");
+    } finally { setAdding(null); }
   };
 
   const addToCollectionFromDialog = async (collectionId: string) => {
     if (!addDialogDatasetId) return;
+    // Snapshot for rollback
+    const prevCollections = collections;
     setAddToColId(collectionId);
+    // Optimistic: bump itemCount, close dialog
+    setCollections((v) => v.map((c) => c.id === collectionId ? { ...c, itemCount: (c.itemCount ?? 0) + 1 } : c));
+    setAddDialogOpen(false);
+    const addedId = addDialogDatasetId;
+    setAddDialogDatasetId(null);
     try {
-      await api.collections.addItem(collectionId, addDialogDatasetId);
-      setCollections((v) => v.map((c) => c.id === collectionId ? { ...c, itemCount: (c.itemCount ?? 0) + 1 } : c));
+      await api.collections.addItem(collectionId, addedId);
       toast.success("Added to collection");
-      setAddDialogOpen(false);
-      setAddDialogDatasetId(null);
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Already in collection"); }
-    finally { setAddToColId(null); }
+    } catch (err) {
+      // Rollback on failure
+      setCollections(prevCollections);
+      setAddDialogOpen(true);  // re-open dialog so user can retry
+      setAddDialogDatasetId(addedId);
+      toast.error(err instanceof Error ? err.message : "Already in collection");
+    } finally { setAddToColId(null); }
   };
 
   const openAddDialog = (savedDatasetId: string) => {
@@ -124,12 +166,21 @@ function SavedPage() {
 
   const removeFromCollection = async (savedDatasetId: string) => {
     if (!openCol) return;
+    // Snapshot both states for rollback
+    const prevColItems = colItems;
+    const prevCollections = collections;
+    // Optimistic: remove from UI immediately
+    setColItems((v) => v.filter((ci) => ci.savedDatasetId.id !== savedDatasetId));
+    setCollections((v) => v.map((c) => c.id === openCol.id ? { ...c, itemCount: Math.max(0, (c.itemCount ?? 1) - 1) } : c));
     try {
       await api.collections.removeItem(openCol.id, savedDatasetId);
-      setColItems((v) => v.filter((ci) => ci.savedDatasetId.id !== savedDatasetId));
-      setCollections((v) => v.map((c) => c.id === openCol.id ? { ...c, itemCount: Math.max(0, (c.itemCount ?? 1) - 1) } : c));
       toast.success("Removed from collection");
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed to remove"); }
+    } catch (err) {
+      // Rollback on failure
+      setColItems(prevColItems);
+      setCollections(prevCollections);
+      toast.error(err instanceof Error ? err.message : "Failed to remove");
+    }
   };
 
   // which saved datasets are already in the open collection

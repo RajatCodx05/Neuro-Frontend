@@ -39,15 +39,35 @@ function HistoryPage() {
 
   const clearAll = async () => {
     if (!user) return;
-    await api.searchHistory.clearAll();
+    // Snapshot for rollback
+    const prevItems = items;
+    const prevPage = page;
+    // Optimistic: clear immediately
     setItems([]);
     setPage(0);
-    toast.success("History cleared");
+    try {
+      await api.searchHistory.clearAll();
+      toast.success("History cleared");
+    } catch (err) {
+      // Rollback on failure
+      setItems(prevItems);
+      setPage(prevPage);
+      toast.error(err instanceof Error ? err.message : "Failed to clear history");
+    }
   };
 
   const remove = async (id: string) => {
-    await api.searchHistory.deleteOne(id);
+    // Snapshot for rollback
+    const prevItems = items;
+    // Optimistic: remove from UI immediately
     setItems((v) => v.filter((i) => i.id !== id));
+    try {
+      await api.searchHistory.deleteOne(id);
+    } catch (err) {
+      // Rollback on failure
+      setItems(prevItems);
+      toast.error(err instanceof Error ? err.message : "Failed to delete");
+    }
   };
 
   return (

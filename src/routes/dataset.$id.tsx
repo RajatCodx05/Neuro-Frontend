@@ -42,11 +42,14 @@ function DatasetPage() {
       toast.error("Dataset already saved");
       return;
     }
+    // Optimistic: show saved state immediately
+    setIsSaved(true);
     try {
       await api.savedDatasets.upsert({ dataset_id: d.id, dataset_snapshot: JSON.parse(JSON.stringify(d)) });
-      setIsSaved(true);
       toast.success("Saved to your library");
     } catch (err) {
+      // Rollback on failure
+      setIsSaved(false);
       toast.error(err instanceof Error ? err.message : "Save failed");
     }
   };

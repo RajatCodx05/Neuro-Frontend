@@ -194,12 +194,20 @@ export default function Landing() {
       navigate({ to: "/auth", search: { redirect: "/", mode: "login" } });
       return;
     }
+    // Optimistic: update local profile immediately
+    if (profile) {
+      profile.notifications_enabled = enabled;
+    }
     setTogglingNotifs(true);
     try {
       await api.profiles.update({ notifications_enabled: enabled });
       await refreshProfile();
       toast.success(enabled ? "Admin notifications enabled" : "Admin notifications muted");
     } catch {
+      // Rollback on failure
+      if (profile) {
+        profile.notifications_enabled = !enabled;
+      }
       toast.error("Failed to update notification settings");
     } finally {
       setTogglingNotifs(false);

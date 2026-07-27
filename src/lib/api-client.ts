@@ -60,6 +60,10 @@ export type SearchResult = {
 
 type Envelope<T> = { success: boolean; message: string; data: T };
 let accessToken: string | null = null;
+// Avoid repeating /auth/me while a session is established in this browser tab.
+// The backend still authorizes every protected API request.
+let currentUser: AuthUser | null = null;
+let currentUserRequest: Promise<AuthUser> | null = null;
 
 /**
  * Store the access token in memory only (never sessionStorage / localStorage).
@@ -119,6 +123,7 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
     try {
       await refreshAccessToken();
     } catch {
+      currentUser = null;
       setAccessToken(null);
     }
     if (accessToken) return request<T>(path, init, false);
@@ -204,8 +209,9 @@ const auth = {
       { method: "POST", body: JSON.stringify({ email, password }) },
       false,
     );
+    currentUser = mapUser(data.user);
     setAccessToken(data.accessToken);
-    return mapUser(data.user);
+    return currentUser;
   },
   async signup(data: { email: string; password: string; full_name: string; phone: string }) {
     const phone = splitPhone(data.phone);
@@ -230,8 +236,9 @@ const auth = {
       { method: "POST", body: JSON.stringify({ email, otp }) },
       false,
     );
+    currentUser = mapUser(data.user);
     setAccessToken(data.accessToken);
-    return mapUser(data.user);
+    return currentUser;
   },
   async google(idToken: string) {
     const data = await request<{
@@ -239,17 +246,27 @@ const auth = {
       user: Record<string, unknown>;
       isOnboarded: boolean;
     }>("/auth/google", { method: "POST", body: JSON.stringify({ idToken }) }, false);
+    currentUser = mapUser(data.user);
     setAccessToken(data.accessToken);
-    return { user: mapUser(data.user), isOnboarded: data.isOnboarded };
+    return { user: currentUser, isOnboarded: data.isOnboarded };
   },
   resendOtp: (email: string) =>
     request<null>("/auth/resend-otp", { method: "POST", body: JSON.stringify({ email }) }, false),
   async me() {
-    if (!getAccessToken()) await refreshAccessToken();
-    return mapUser(await request<Record<string, unknown>>("/auth/me"));
+    if (currentUser) return currentUser;
+    if (!currentUserRequest) {
+      currentUserRequest = (async () => {
+        if (!getAccessToken()) await refreshAccessToken();
+        const user = mapUser(await request<Record<string, unknown>>("/auth/me"));
+        currentUser = user;
+        return user;
+      })().finally(() => { currentUserRequest = null; });
+    }
+    return currentUserRequest;
   },
   async logout() {
     await request<null>("/auth/logout", { method: "POST" }, false);
+    currentUser = null;
     setAccessToken(null);
   },
   async forgotPassword(email: string) {
