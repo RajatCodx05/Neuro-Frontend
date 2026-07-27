@@ -1,5 +1,11 @@
 {
   "buildCommand": "npm run build",
   "framework": null,
-  "outputDirectory": ".output/public"
+  "outputDirectory": ".output/public",
+  "rewrites": [
+    {
+      "source": "/api/v1/:path*",
+      "destination": "https://neuro-server.vercel.app/api/v1/:path*"
+    }
+  ]
 }

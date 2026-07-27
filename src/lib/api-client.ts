@@ -1,10 +1,10 @@
 export const BASE_URL = (() => {
-  if (import.meta.env.DEV) return "/api/v1";
-  // ponytail: warn if VITE_API_BASE_URL is missing in prod to prevent silent 404 failures
-  if (!import.meta.env.VITE_API_BASE_URL) {
-    console.warn("[Warning] VITE_API_BASE_URL is missing in production! API requests will fall back to same-origin, which may fail.");
+  if (typeof window === "undefined") {
+    // ponytail: SSR requires an absolute URL on the server-side to prevent relative fetch errors
+    return "https://neuro-server.vercel.app/api/v1";
   }
-  return import.meta.env.VITE_API_BASE_URL || "/api/v1";
+  // Browser always uses the relative path to route through Vercel rewrites (first-party cookies)
+  return "/api/v1";
 })().replace(/\/$/, "");
 
 export type AuthUser = { id: string; email: string; isAdmin: boolean };
