@@ -51,7 +51,7 @@ function SearchResults() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const [q, setQ] = useState(search.q || "Start Searching Datasets (eg: resting-state fMRI children ADHD)");
+  const [q, setQ] = useState(search.q || "");
   const [open, setOpen] = useState<string[]>(["Dataset Type", "Disease"]);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [streaming, setStreaming] = useState(false);
@@ -145,7 +145,8 @@ function SearchResults() {
             <Sparkles className="ml-3 h-4 w-4 text-cyan" />
             <input value={q} onChange={(e) => setQ(e.target.value)}
               onFocus={() => { if (!user) navigate({ to: "/auth", search: { redirect: "/search", mode: "login" } }); }}
-              className="min-w-0 flex-1 bg-transparent px-2 py-3 text-sm outline-none sm:text-base" />
+              placeholder="Start Searching Datasets (eg: resting-state fMRI children ADHD)"
+              className="min-w-0 flex-1 bg-transparent px-2 py-3 text-sm outline-none placeholder:text-muted-foreground/60 focus:placeholder:opacity-40 sm:text-base" />
             <button
               type="button"
               onClick={() => setShowFilters((v) => !v)}
