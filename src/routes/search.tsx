@@ -33,7 +33,7 @@ const filterGroups: FilterGroup[] = [
   { id: "modality", title: "Modality", opts: ["MRI", "fMRI", "PET", "EEG", "MEG", "iEEG"] },
   { id: "disease", title: "Disease / Condition", opts: ["ADHD", "Parkinson's", "Alzheimer's", "Autism", "Stroke", "Epilepsy"] },
   { id: "species", title: "Species", opts: ["Human", "Mouse", "Rat", "Monkey"] },
-  { id: "ageGroup", title: "Age Group", opts: ["Children", "Adult", "Elderly"] },
+  { id: "ageGroup", title: "Age Group", opts: ["Pediatric", "Adult", "Older Adult"] },
   { id: "task", title: "Experimental Task", opts: ["Resting-state", "Motor", "Memory", "Language", "Visual", "Auditory"] },
   { id: "format", title: "Data Format", opts: ["BIDS", "NIfTI", "DICOM", "MNE"] },
   { id: "repository", title: "Repository", opts: ["OpenNeuro", "DANDI", "ADNI", "EBRAINS", "UK Biobank", "NEMAR"] },
