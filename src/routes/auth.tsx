@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { z } from "zod";
 import { Brain, Eye, EyeOff, Loader2 } from "lucide-react";
 import { api } from "@/lib/api-client";
@@ -70,9 +70,54 @@ function AuthPage() {
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
   const [isAdminMode, setIsAdminMode] = useState(search.redirect?.startsWith("/admin") || false);
   // ponytail: reuse existing mode state — forgotStep adds reset flow without a new route
+  const [otpSentAt, setOtpSentAt] = useState<number | null>(null);
+  const [otpExpiresAt, setOtpExpiresAt] = useState<number | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState(0);
+  const [resendCount, setResendCount] = useState(0);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [forgotStep, setForgotStep] = useState<"idle" | "request" | "sent">("idle");
   const [forgotEmail, setForgotEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // Initialize OTP timer when verification screen appears
+  useEffect(() => {
+    if (pendingVerificationEmail) {
+      const expiryMs = isAdminMode ? 5 * 60 * 1000 : 10 * 60 * 1000;
+      const expiresAt = Date.now() + expiryMs;
+      setOtpSentAt(Date.now());
+      setOtpExpiresAt(expiresAt);
+      setTimeRemaining(Math.floor(expiryMs / 1000));
+      setResendCount(0);
+      setResendCooldown(0);
+    } else {
+      setOtpSentAt(null);
+      setOtpExpiresAt(null);
+      setTimeRemaining(0);
+      setResendCount(0);
+      setResendCooldown(0);
+    }
+  }, [pendingVerificationEmail, isAdminMode]);
+
+  // Countdown timer for OTP expiry
+  useEffect(() => {
+    if (!otpExpiresAt) return;
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, Math.floor((otpExpiresAt - Date.now()) / 1000));
+      setTimeRemaining(remaining);
+      if (remaining <= 0) clearInterval(interval);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [otpExpiresAt]);
+
+  // Countdown for resend cooldown
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const interval = setInterval(() => {
+      setResendCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [resendCooldown]);
+
   const redirectTo = (path?: string) => {
     const target = path && path.startsWith("/") && !path.startsWith("/search") ? path : "/";
     navigate({ to: target, replace: true });
@@ -116,7 +161,7 @@ function AuthPage() {
     catch (err) { toast.error(err instanceof Error ? err.message : "Signup failed"); } finally { setLoading(false); }
   };
   const handleVerifyOtp = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); if (!pendingVerificationEmail) return; const otp = String(new FormData(e.currentTarget).get("otp") ?? "").trim();
+    e.preventDefault(); if (!pendingVerificationEmail) return; const otp = String(new FormData(e.currentTarget).get("otp") ?? "").replace(/\s+/g, '');
     if (!/^\d{6}$/.test(otp)) { toast.error("Enter the 6-digit verification code"); return; } setLoading(true);
     try {
       if (isAdminMode) {
@@ -130,6 +175,26 @@ function AuthPage() {
       }
     }
     catch (err) { toast.error(err instanceof Error ? err.message : "Verification failed"); } finally { setLoading(false); }
+  };
+
+  const handleResendOtp = async () => {
+    if (!pendingVerificationEmail || resendCount >= 3 || resendCooldown > 0) return;
+    try {
+      if (isAdminMode) {
+        await api.admin.auth.resendLoginOtp(pendingVerificationEmail);
+      } else {
+        await api.auth.resendOtp(pendingVerificationEmail);
+      }
+      const expiryMs = isAdminMode ? 5 * 60 * 1000 : 10 * 60 * 1000;
+      setOtpSentAt(Date.now());
+      setOtpExpiresAt(Date.now() + expiryMs);
+      setTimeRemaining(Math.floor(expiryMs / 1000));
+      setResendCount((prev) => prev + 1);
+      setResendCooldown(30);
+      toast.success("New verification code sent to your email");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to resend");
+    }
   };
 
   const handleForgotRequest = async (e: FormEvent<HTMLFormElement>) => {
@@ -150,7 +215,7 @@ function AuthPage() {
   const handleResetPassword = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    const otp = String(form.get("otp") ?? "").trim();
+    const otp = String(form.get("otp") ?? "").replace(/\s+/g, '');
     const newPassword = String(form.get("newPassword") ?? "");
     const confirm = String(form.get("confirmNewPassword") ?? "");
     if (!/^\d{6}$/.test(otp)) { toast.error("Enter the 6-digit reset code"); return; }
@@ -271,7 +336,22 @@ function AuthPage() {
       {pendingVerificationEmail ? (
         <form key="verify-otp" onSubmit={handleVerifyOtp} className="mt-6 space-y-3">
           <Field key="verify-otp-input" label="Verification code" name="otp" inputMode="numeric" maxLength={6} placeholder="Enter your 6-digit otp here...." autoComplete="one-time-code" required />
-          <Submit loading={loading}>Verify email</Submit>
+          <Submit loading={loading}>{isAdminMode ? "Verify & sign in" : "Verify email"}</Submit>
+          <div className="flex items-center justify-between text-xs text-foreground/70 dark:text-muted-foreground">
+            {timeRemaining > 0 ? (
+              <span>Code expires in {Math.floor(timeRemaining / 60)}:{String(timeRemaining % 60).padStart(2, '0')}</span>
+            ) : (
+              <span className="text-rose-400 font-medium">Code expired</span>
+            )}
+            {resendCount < 3 ? (
+              <button type="button" onClick={handleResendOtp} disabled={resendCooldown > 0 || loading}
+                className="text-cyan-600 dark:text-cyan font-medium hover:underline disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed">
+                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : `Resend code (${3 - resendCount} left)`}
+              </button>
+            ) : (
+              <span className="text-rose-400">Resend limit reached</span>
+            )}
+          </div>
         </form>
       ) : forgotStep === "request" ? (
         /* Forgot password — step 1: request reset code */

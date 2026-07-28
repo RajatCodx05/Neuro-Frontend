@@ -401,6 +401,8 @@ const admin = {
       setAccessToken(data.accessToken);
       return data;
     },
+    resendLoginOtp: (email: string) =>
+      request<null>("/admin/resend-login-otp", { method: "POST", body: JSON.stringify({ email }) }, false),
   },
   async dashboard() {
     return request<Record<string, unknown>>("/admin/dashboard");
