@@ -407,6 +407,8 @@ function SearchResults() {
                         <CheckCircle2 className="h-3 w-3" /> Verified {d.verified}
                       </span>
                     )}
+                    {/* {d.repo && <span className="rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-2 py-0.5 text-foreground">{d.repo}</span>} */}
+                    {/* {d.verified && <span className="inline-flex items-center gap-1 text-cyan"><CheckCircle2 className="h-3 w-3" /> Verified {d.verified}</span>} */}
                     {d.license && <><span>·</span><span>{d.license}</span></>}
                     {(d.access || d.access_tier) && <><span>·</span><span>{d.access || d.access_tier}</span></>}
                   </div>
