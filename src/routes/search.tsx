@@ -1,36 +1,50 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, SlidersHorizontal, CheckCircle2, Download, Bookmark, ArrowRight, ChevronDown, Loader2, Check, ExternalLink } from "lucide-react";
+import { Sparkles, SlidersHorizontal, CheckCircle2, Bookmark, ArrowRight, ChevronDown, Loader2, Check, ExternalLink, RotateCcw } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/search")({
-  validateSearch: (s: Record<string, unknown>): { q: string; filters?: string } => ({
+  validateSearch: (s: Record<string, unknown>) => ({
     q: typeof s.q === "string" ? s.q : "",
     filters: typeof s.filters === "string" ? s.filters : undefined,
+    modality: typeof s.modality === "string" ? s.modality : undefined,
+    disease: typeof s.disease === "string" ? s.disease : undefined,
+    species: typeof s.species === "string" ? s.species : undefined,
+    ageGroup: typeof s.ageGroup === "string" ? s.ageGroup : undefined,
+    task: typeof s.task === "string" ? s.task : undefined,
+    format: typeof s.format === "string" ? s.format : undefined,
+    repository: typeof s.repository === "string" ? s.repository : undefined,
+    availability: typeof s.availability === "string" ? s.availability : undefined,
   }),
   component: SearchResults,
 });
 
-const filterGroups: { title: string; opts: string[] }[] = [
-  { title: "Dataset Type", opts: ["MRI", "fMRI", "PET", "EEG", "MEG", "iEEG"] },
-  { title: "Species", opts: ["Human", "Mouse", "Rat", "Monkey"] },
-  { title: "Age", opts: ["Children", "Adult", "Elderly"] },
-  { title: "Disease", opts: ["ADHD", "Parkinson's", "Alzheimer's", "Autism", "Stroke", "Epilepsy"] },
-  { title: "Repository", opts: ["OpenNeuro", "DANDI", "ADNI", "EBRAINS", "UK Biobank", "NEMAR"] },
-  { title: "License", opts: ["CC0", "CC-BY-4.0", "ADNI DUA", "EBRAINS"] },
-  { title: "Access Tier", opts: ["Open", "Registered", "Restricted"] },
-  { title: "Verified", opts: ["Verified", "Pending"] },
+type FilterGroup = {
+  id: string;
+  title: string;
+  opts: string[];
+};
+
+const filterGroups: FilterGroup[] = [
+  { id: "modality", title: "Modality", opts: ["MRI", "fMRI", "PET", "EEG", "MEG", "iEEG"] },
+  { id: "disease", title: "Disease / Condition", opts: ["ADHD", "Parkinson's", "Alzheimer's", "Autism", "Stroke", "Epilepsy"] },
+  { id: "species", title: "Species", opts: ["Human", "Mouse", "Rat", "Monkey"] },
+  { id: "ageGroup", title: "Age Group", opts: ["Children", "Adult", "Elderly"] },
+  { id: "task", title: "Experimental Task", opts: ["Resting-state", "Motor", "Memory", "Language", "Visual", "Auditory"] },
+  { id: "format", title: "Data Format", opts: ["BIDS", "NIfTI", "DICOM", "MNE"] },
+  { id: "repository", title: "Repository", opts: ["OpenNeuro", "DANDI", "ADNI", "EBRAINS", "UK Biobank", "NEMAR"] },
+  { id: "availability", title: "Availability", opts: ["Open", "Registered", "Restricted"] },
 ];
 
-// Shape of a result pushed over SSE from the Node/Redis agent pipeline.
 type SearchResult = {
   id: string;
   name?: string;
   repo?: string;
+  source?: string;
   modality?: string;
   description?: string;
   subjects?: number | null;
@@ -41,6 +55,7 @@ type SearchResult = {
   disease?: string | null;
   license?: string | null;
   access?: string | null;
+  access_tier?: string | null;
   verified?: string | null;
   doi?: string | null;
   url?: string | null;
@@ -51,14 +66,34 @@ function SearchResults() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const search = Route.useSearch();
+
   const [q, setQ] = useState(search.q || "");
-  const [open, setOpen] = useState<string[]>(["Dataset Type", "Disease"]);
+  const [open, setOpen] = useState<string[]>(["modality", "disease", "task"]);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
-  const [showFilters, setShowFilters] = useState(Boolean(search.filters === "true"));
+  const [showFilters, setShowFilters] = useState(Boolean(search.filters === "true" || Object.keys(search).some((k) => k !== "q" && k !== "filters")));
 
-  // Load saved datasets to prevent duplicates and show save state
+  const parseFilter = (v?: string): string[] => (v ? v.split(",").filter(Boolean) : []);
+  const activeFilters: Record<string, string[]> = {
+    modality: parseFilter(search.modality),
+    disease: parseFilter(search.disease),
+    species: parseFilter(search.species),
+    ageGroup: parseFilter(search.ageGroup),
+    task: parseFilter(search.task),
+    format: parseFilter(search.format),
+    repository: parseFilter(search.repository),
+    availability: parseFilter(search.availability),
+  };
+
+  const hasActiveFilters = Object.values(activeFilters).some((arr) => arr.length > 0);
+
+  // Sync text input when URL search query changes externally
+  useEffect(() => {
+    setQ(search.q || "");
+  }, [search.q]);
+
+  // Load saved datasets
   useEffect(() => {
     if (!user) {
       setSavedIds(new Set());
@@ -71,19 +106,43 @@ function SearchResults() {
       .catch(() => {});
   }, [user]);
 
+  const toggleGroup = (id: string) => setOpen((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
-  const toggle = (t: string) => setOpen((s) => s.includes(t) ? s.filter((x) => x !== t) : [...s, t]);
+  const toggleFilterOption = (groupId: string, opt: string) => {
+    const current = activeFilters[groupId] || [];
+    const updated = current.includes(opt) ? current.filter((x) => x !== opt) : [...current, opt];
 
+    const nextSearch = {
+      ...search,
+      [groupId]: updated.length ? updated.join(",") : undefined,
+    };
+    navigate({ to: "/search", search: nextSearch as never });
+  };
+
+  const resetFilters = () => {
+    navigate({
+      to: "/search",
+      search: { q: search.q, filters: showFilters ? "true" : undefined } as never,
+    });
+  };
+
+  // Search execution hook (runs when text or filters change)
   useEffect(() => {
-    if (!search.q?.trim() || !user) return;
+    const activeTextQuery = search.q?.trim() || "";
+    if (!activeTextQuery && !hasActiveFilters) {
+      setResults([]);
+      setStreaming(false);
+      return;
+    }
+    if (!user) return;
+
     let cancelled = false;
-    // ponytail: 300 ms debounce — prevents duplicate requests on rapid query changes.
     const timer = setTimeout(() => {
       setResults([]);
       setStreaming(true);
       void (async () => {
         try {
-          const response = await api.datasets.search(search.q.trim());
+          const response = await api.datasets.search(activeTextQuery, activeFilters);
           if (cancelled) return;
           setResults(response.results ?? []);
         } catch (err) {
@@ -93,17 +152,38 @@ function SearchResults() {
         }
       })();
     }, 300);
-    return () => { cancelled = true; clearTimeout(timer); };
-  }, [search.q, user]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [
+    search.q,
+    search.modality,
+    search.disease,
+    search.species,
+    search.ageGroup,
+    search.task,
+    search.format,
+    search.repository,
+    search.availability,
+    user,
+  ]);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!q.trim()) return;
+    if (!q.trim() && !hasActiveFilters) return;
     if (!user) {
       navigate({ to: "/auth", search: { redirect: `/search?q=${encodeURIComponent(q.trim())}`, mode: "login" } });
       return;
     }
-    navigate({ to: "/search", search: { q: q.trim(), filters: showFilters ? "true" : undefined } as never });
+    navigate({
+      to: "/search",
+      search: {
+        ...search,
+        q: q.trim(),
+        filters: showFilters ? "true" : undefined,
+      } as never,
+    });
   };
 
   const saveDataset = async (d: SearchResult) => {
@@ -115,7 +195,6 @@ function SearchResults() {
       toast.error("Dataset already saved");
       return;
     }
-    // Optimistic: mark saved immediately
     setSavedIds((prev) => {
       const next = new Set(prev);
       next.add(d.id);
@@ -125,7 +204,6 @@ function SearchResults() {
       await api.savedDatasets.upsert({ dataset_id: d.id, dataset_snapshot: d });
       toast.success("Saved");
     } catch (err) {
-      // Rollback on failure
       setSavedIds((prev) => {
         const next = new Set(prev);
         next.delete(d.id);
@@ -135,6 +213,41 @@ function SearchResults() {
     }
   };
 
+  // Client-side real-time result filter matching
+  const filteredResults = results.filter((d) => {
+    if (!hasActiveFilters) return true;
+    for (const [groupId, selected] of Object.entries(activeFilters)) {
+      if (!selected || selected.length === 0) continue;
+      const lowerSelected = selected.map((s) => s.toLowerCase());
+
+      if (groupId === "modality") {
+        const m = String(d.modality || "").toLowerCase();
+        if (!lowerSelected.some((val) => m.includes(val))) return false;
+      } else if (groupId === "disease") {
+        const dis = String(d.disease || "").toLowerCase();
+        const desc = String(d.description || "").toLowerCase();
+        if (!lowerSelected.some((val) => dis.includes(val) || desc.includes(val))) return false;
+      } else if (groupId === "species") {
+        const sp = String(d.species || "").toLowerCase();
+        if (!lowerSelected.some((val) => sp.includes(val))) return false;
+      } else if (groupId === "ageGroup") {
+        const ag = String(d.ageGroup || "").toLowerCase();
+        if (!lowerSelected.some((val) => ag.includes(val))) return false;
+      } else if (groupId === "task" || groupId === "format") {
+        const desc = String(d.description || "").toLowerCase();
+        const name = String(d.name || "").toLowerCase();
+        if (!lowerSelected.some((val) => desc.includes(val) || name.includes(val))) return false;
+      } else if (groupId === "repository") {
+        const repo = String(d.repo || d.source || "").toLowerCase();
+        if (!lowerSelected.some((val) => repo.includes(val))) return false;
+      } else if (groupId === "availability") {
+        const acc = String(d.access || d.access_tier || "").toLowerCase();
+        if (!lowerSelected.some((val) => acc.includes(val))) return false;
+      }
+    }
+    return true;
+  });
+
   return (
     <AppShell>
       <div className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6">
@@ -143,13 +256,28 @@ function SearchResults() {
           <div className="absolute -inset-0.5 rounded-3xl bg-gradient-to-r from-cyan/40 to-neural/40 opacity-40 blur-xl" />
           <div className="relative glass-strong flex items-center gap-2 rounded-3xl p-2">
             <Sparkles className="ml-3 h-4 w-4 text-cyan" />
-            <input value={q} onChange={(e) => setQ(e.target.value)}
-              onFocus={() => { if (!user) navigate({ to: "/auth", search: { redirect: "/search", mode: "login" } }); }}
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onFocus={() => {
+                if (!user) navigate({ to: "/auth", search: { redirect: "/search", mode: "login" } });
+              }}
               placeholder="Start Searching Datasets (eg: resting-state fMRI children ADHD)"
-              className="min-w-0 flex-1 bg-transparent px-2 py-3 text-sm outline-none placeholder:text-muted-foreground/60 focus:placeholder:opacity-40 sm:text-base" />
+              className="min-w-0 flex-1 bg-transparent px-2 py-3 text-sm outline-none placeholder:text-muted-foreground/60 focus:placeholder:opacity-40 sm:text-base"
+            />
             <button
               type="button"
-              onClick={() => setShowFilters((v) => !v)}
+              onClick={() => {
+                const nextShow = !showFilters;
+                setShowFilters(nextShow);
+                navigate({
+                  to: "/search",
+                  search: {
+                    ...search,
+                    filters: nextShow ? "true" : undefined,
+                  } as never,
+                });
+              }}
               className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
                 showFilters
                   ? "border-cyan/50 bg-cyan/10 text-cyan"
@@ -157,50 +285,94 @@ function SearchResults() {
               }`}
             >
               <SlidersHorizontal className="h-3 w-3" /> Filters
+              {hasActiveFilters && (
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-cyan text-[10px] font-bold text-slate-950">
+                  {Object.values(activeFilters).reduce((acc, curr) => acc + curr.length, 0)}
+                </span>
+              )}
             </button>
-            <button type="submit" className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-sm font-medium text-[oklch(0.15_0.03_258)]">
+            <button
+              type="submit"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-sm font-medium text-[oklch(0.15_0.03_258)]"
+            >
               Search
             </button>
           </div>
         </form>
 
-        <div className="mt-3 text-xs text-muted-foreground">
-          {streaming ? (
-            <span className="inline-flex items-center gap-1.5">
-              <Loader2 className="h-3 w-3 animate-spin" /> Searching live pipeline…
-            </span>
-          ) : results.length > 0 ? (
-            <><span className="text-foreground font-medium">{results.length} datasets</span> found</>
-          ) : search.q ? (
-            "No results yet — try a different query"
-          ) : null}
+        <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+          <div>
+            {streaming ? (
+              <span className="inline-flex items-center gap-1.5">
+                <Loader2 className="h-3 w-3 animate-spin" /> Searching live pipeline…
+              </span>
+            ) : filteredResults.length > 0 ? (
+              <>
+                <span className="font-medium text-foreground">{filteredResults.length} datasets</span> found
+              </>
+            ) : search.q || hasActiveFilters ? (
+              "No results found for current query and active filters"
+            ) : null}
+          </div>
+
+          {hasActiveFilters && (
+            <button onClick={resetFilters} className="inline-flex items-center gap-1 text-xs text-cyan hover:underline">
+              <RotateCcw className="h-3 w-3" /> Clear all filters
+            </button>
+          )}
         </div>
 
         <div className={`mt-8 grid grid-cols-1 gap-6 ${showFilters ? "lg:grid-cols-[260px_1fr]" : ""}`}>
-          {/* Filters */}
+          {/* Filters Sidebar */}
           {showFilters && (
             <aside className="glass rounded-2xl p-4 lg:sticky lg:top-24 lg:self-start">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between pb-2 border-b border-white/5 [.light_&]:border-black/10">
                 <div className="font-display text-sm font-semibold">Filters</div>
-                <button className="text-[11px] text-muted-foreground hover:text-foreground">Reset</button>
+                {hasActiveFilters && (
+                  <button onClick={resetFilters} className="text-[11px] text-cyan hover:underline inline-flex items-center gap-1">
+                    <RotateCcw className="h-3 w-3" /> Reset
+                  </button>
+                )}
               </div>
               <div className="mt-3 space-y-1">
                 {filterGroups.map((g) => {
-                  const isOpen = open.includes(g.title);
+                  const isOpen = open.includes(g.id);
+                  const selectedOpts = activeFilters[g.id] || [];
                   return (
-                    <div key={g.title} className="rounded-xl">
-                      <button onClick={() => toggle(g.title)} className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-xs font-medium uppercase tracking-widest text-muted-foreground hover:bg-white/5">
-                        {g.title}
-                        <ChevronDown className={`h-3 w-3 transition ${isOpen ? "rotate-180" : ""}`} />
+                    <div key={g.id} className="rounded-xl">
+                      <button
+                        onClick={() => toggleGroup(g.id)}
+                        className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-xs font-medium uppercase tracking-widest text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5"
+                      >
+                        <span className="flex items-center gap-2">
+                          {g.title}
+                          {selectedOpts.length > 0 && (
+                            <span className="h-1.5 w-1.5 rounded-full bg-cyan" />
+                          )}
+                        </span>
+                        <ChevronDown className={`h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
                       </button>
                       {isOpen && (
-                        <div className="space-y-1 px-2 pb-2">
-                          {g.opts.map((o) => (
-                            <label key={o} className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-sm hover:bg-white/5">
-                              <input type="checkbox" className="h-3.5 w-3.5 accent-cyan" />
-                              <span className="text-foreground/90">{o}</span>
-                            </label>
-                          ))}
+                        <div className="space-y-1 px-2 pb-2 pt-1">
+                          {g.opts.map((o) => {
+                            const isChecked = selectedOpts.includes(o);
+                            return (
+                              <label
+                                key={o}
+                                className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-sm hover:bg-white/5 [.light_&]:hover:bg-black/5"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => toggleFilterOption(g.id, o)}
+                                  className="h-3.5 w-3.5 rounded border-white/20 accent-cyan cursor-pointer"
+                                />
+                                <span className={isChecked ? "font-medium text-cyan" : "text-foreground/90"}>
+                                  {o}
+                                </span>
+                              </label>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -210,16 +382,18 @@ function SearchResults() {
             </aside>
           )}
 
-          {/* Results */}
+          {/* Results List */}
           <div className="space-y-4">
-            {streaming && results.length === 0 && (
+            {streaming && filteredResults.length === 0 && (
               <div className="flex justify-center py-16 text-muted-foreground">
                 <Loader2 className="h-6 w-6 animate-spin" />
               </div>
             )}
-            {results.map((d, i) => (
-              <motion.article key={`${d.id}-${i}`}
-                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            {filteredResults.map((d, i) => (
+              <motion.article
+                key={`${d.id}-${i}`}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: Math.min(i, 5) * 0.06 }}
                 className="glass card-elevated group flex flex-col gap-4 rounded-2xl p-5 sm:flex-row"
               >
@@ -228,10 +402,13 @@ function SearchResults() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-widest text-muted-foreground">
-                    {/* {d.repo && <span className="rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-2 py-0.5 text-foreground">{d.repo}</span>} */}
-                    {d.verified && <span className="inline-flex items-center gap-1 text-cyan"><CheckCircle2 className="h-3 w-3" /> Verified {d.verified}</span>}
+                    {d.verified && (
+                      <span className="inline-flex items-center gap-1 text-cyan">
+                        <CheckCircle2 className="h-3 w-3" /> Verified {d.verified}
+                      </span>
+                    )}
                     {d.license && <><span>·</span><span>{d.license}</span></>}
-                    {d.access && <><span>·</span><span>{d.access}</span></>}
+                    {(d.access || d.access_tier) && <><span>·</span><span>{d.access || d.access_tier}</span></>}
                   </div>
                   <Link to="/dataset/$id" params={{ id: d.id }} className="mt-1 block font-display text-lg font-semibold hover:text-cyan">
                     {d.name ?? d.id}
@@ -248,7 +425,12 @@ function SearchResults() {
                 </div>
                 <div className="flex flex-row gap-2 sm:flex-col">
                   {d.url ? (
-                    <a href={d.url} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-3 py-1.5 text-xs font-medium text-[oklch(0.15_0.03_258)]">
+                    <a
+                      href={d.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-3 py-1.5 text-xs font-medium text-[oklch(0.15_0.03_258)]"
+                    >
                       <ExternalLink className="h-3.5 w-3.5" /> Access the Data
                     </a>
                   ) : (
