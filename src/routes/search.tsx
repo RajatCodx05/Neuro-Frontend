@@ -304,7 +304,7 @@ function SearchResults() {
           <div>
             {streaming ? (
               <span className="inline-flex items-center gap-1.5">
-                <Loader2 className="h-3 w-3 animate-spin" /> Searching live pipeline…
+                <Loader2 className="h-3 w-3 animate-spin" /> Cooking Datasets for You...
               </span>
             ) : filteredResults.length > 0 ? (
               <>
@@ -440,7 +440,7 @@ function SearchResults() {
                       <ExternalLink className="h-3.5 w-3.5" /> Access the Data
                     </button>
                   )}
-                  <Link to="/dataset/$id" params={{ id: d.id }} className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs hover:bg-white/5">
+                  <Link to="/dataset/$id" params={{ id: d.id }} className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1.5 text-xs hover:bg-white/10 [.light_&]:hover:bg-black/[0.08]">
                     Expand <ArrowRight className="h-3 w-3" />
                   </Link>
                   {savedIds.has(d.id) ? (
@@ -448,7 +448,7 @@ function SearchResults() {
                       <Check className="h-3.5 w-3.5" /> Saved
                     </button>
                   ) : (
-                    <button onClick={() => saveDataset(d)} className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs hover:bg-white/5">
+                    <button onClick={() => saveDataset(d)} className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1.5 text-xs hover:bg-white/10 [.light_&]:hover:bg-black/[0.08]">
                       <Bookmark className="h-3.5 w-3.5" /> Save
                     </button>
                   )}
