@@ -39,9 +39,7 @@ const schema = z.object({
   countryCode: z.string().min(1, "Select a country code"),
   phone: z.string().trim().min(5, "Phone number is required").max(20),
   role: z.enum(["student", "researcher", "scientist", "working_professional"]),
-  institute: z.string().trim().max(150).optional().or(z.literal("")),
-}).refine((d) => d.role !== "student" || (d.institute && d.institute.length > 0), {
-  message: "Institute is required for students", path: ["institute"],
+  institute: z.string().trim().min(1, "Organization/Institute Name is required").max(150),
 });
 
 function OnboardingPage() {
@@ -119,10 +117,10 @@ function OnboardingPage() {
               </select>
             </label>
             <Field
-              label={role === "student" ? "Institute name (required)" : "Institute name (optional)"}
+              label="Organization/Institute Name"
               name="institute"
               defaultValue={profile?.institute ?? ""}
-              required={role === "student"}
+              required
             />
             <button type="submit" disabled={loading}
               className="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] py-2.5 text-sm font-medium text-[oklch(0.15_0.03_258)] disabled:opacity-50">

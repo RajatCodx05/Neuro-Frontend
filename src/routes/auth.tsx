@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent, type ClipboardEvent } from "react";
 import { z } from "zod";
 import { Brain, Eye, EyeOff, Loader2 } from "lucide-react";
 import { api } from "@/lib/api-client";
@@ -160,7 +160,15 @@ function AuthPage() {
     try { await api.auth.signup({ email: parsed.data.email, password: parsed.data.password, full_name: parsed.data.fullName, phone: `${parsed.data.countryCode}${parsed.data.phone}` }); setPendingVerificationEmail(parsed.data.email); toast.success("Verification code sent to your email"); }
     catch (err) { toast.error(err instanceof Error ? err.message : "Signup failed"); } finally { setLoading(false); }
   };
-  const handleVerifyOtp = async (e: FormEvent<HTMLFormElement>) => {
+    const handleOtpPaste = (e: ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\s+/g, '').replace(/\D/g, '').slice(0, 6);
+    const input = e.currentTarget;
+    input.value = pasted;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
+const handleVerifyOtp = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault(); if (!pendingVerificationEmail) return; const otp = String(new FormData(e.currentTarget).get("otp") ?? "").replace(/\s+/g, '');
     if (!/^\d{6}$/.test(otp)) { toast.error("Enter the 6-digit verification code"); return; } setLoading(true);
     try {
@@ -335,7 +343,7 @@ function AuthPage() {
       </p>
       {pendingVerificationEmail ? (
         <form key="verify-otp" onSubmit={handleVerifyOtp} className="mt-6 space-y-3">
-          <Field key="verify-otp-input" label="Verification code" name="otp" inputMode="numeric" maxLength={6} placeholder="Enter your 6-digit otp here...." autoComplete="one-time-code" required />
+          <Field key="verify-otp-input" label="Verification code" name="otp" inputMode="numeric" maxLength={6} placeholder="Enter your 6-digit otp here...." autoComplete="one-time-code" required onPaste={handleOtpPaste} />
           <Submit loading={loading}>{isAdminMode ? "Verify & sign in" : "Verify email"}</Submit>
           <div className="flex items-center justify-between text-xs text-foreground/70 dark:text-muted-foreground">
             {timeRemaining > 0 ? (
@@ -365,7 +373,7 @@ function AuthPage() {
       ) : forgotStep === "sent" ? (
         /* Forgot password — step 2: OTP + new password */
         <form key="forgot-sent" onSubmit={handleResetPassword} className="mt-6 space-y-3">
-          <Field key="forgot-sent-otp" label="Reset code" name="otp" inputMode="numeric" maxLength={6} placeholder="Enter your 6-digit otp here...." autoComplete="one-time-code" required />
+          <Field key="forgot-sent-otp" label="Reset code" name="otp" inputMode="numeric" maxLength={6} placeholder="Enter your 6-digit otp here...." autoComplete="one-time-code" required onPaste={handleOtpPaste} />
           <PasswordField name="newPassword" show={showPw} onToggle={() => setShowPw((v) => !v)} />
           <Field key="forgot-sent-confirm" label="Confirm password" name="confirmNewPassword" type={showPw ? "text" : "password"} required />
           <Submit loading={loading}>Reset password</Submit>
