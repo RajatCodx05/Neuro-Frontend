@@ -363,7 +363,7 @@ export default function Landing() {
 
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link
-                  to="/search"
+                  to="/"
                   search={{ q: "" }}
                   className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-5 py-3 text-sm font-medium text-[oklch(0.15_0.03_258)] glow-cyan transition hover:shadow-2xl"
                 >
