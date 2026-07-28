@@ -647,12 +647,12 @@ export const api = {
       request<{ isDeleted: boolean }>("/users/cancel-deletion", { method: "POST" }),
   },
   datasets: {
-    async search(query: string) {
+    async search(query: string, filters?: Record<string, string[]>) {
       const data = await request<{
         source: string;
         results?: Record<string, unknown>[];
         queryId?: string;
-      }>("/datasets/search", { method: "POST", body: JSON.stringify({ query }) });
+      }>("/datasets/search", { method: "POST", body: JSON.stringify({ query, filters }) });
       // ponytail: pass response-level source so mapDataset can relabel 'web_search' → 'Database' on cache hits.
       return { ...data, results: (data.results ?? []).map((r) => mapDataset(r, data.source)) };
     },
