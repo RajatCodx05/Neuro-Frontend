@@ -174,7 +174,7 @@ export default function Landing() {
 
   useEffect(() => {
     const loadAnnouncements = () => {
-      api.admin.announcements.list()
+      api.announcements.list()
         .then((items) => setAnnouncements((items as any[]).filter((a) => a.active)))
         .catch(() => setAnnouncements([]));
     };

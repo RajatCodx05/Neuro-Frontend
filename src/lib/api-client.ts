@@ -479,96 +479,30 @@ const admin = {
     },
   },
   announcements: {
-    /** Minimum expected shape for an announcement item. */
-    _validItem: (item: unknown): item is { id: string; title: string; body: string; active: boolean; created_at: string } => {
-      if (typeof item !== 'object' || item === null) return false;
-      const o = item as Record<string, unknown>;
-      return typeof o.id === 'string' &&
-        typeof o.title === 'string' &&
-        typeof o.body === 'string' &&
-        (o.active === undefined || typeof o.active === 'boolean') &&
-        (o.created_at === undefined || typeof o.created_at === 'string');
-    },
-    list: () => {
+    list: async () => {
       try {
-        const raw = localStorage.getItem("neuro_announcements");
-        if (!raw) return Promise.resolve([]);
-        const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed)) return Promise.resolve([]);
-        // Filter out any items that don't match the expected shape (integrity check)
-        return Promise.resolve(parsed.filter(admin.announcements._validItem));
+        return await request<Array<{ id: string; title: string; body: string; active: boolean; created_at: string }>>("/admin/announcements", {}, true);
       } catch {
-        return Promise.resolve([]);
+        return [];
       }
     },
-    create: (data: { title: string; body: string; active?: boolean }) => {
-      try {
-        const raw = localStorage.getItem("neuro_announcements");
-        const items = raw ? JSON.parse(raw) : [];
-        const newItem = {
-          id: `announcement_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-          title: data.title,
-          body: data.body,
-          active: data.active ?? true,
-          created_at: new Date().toISOString(),
-        };
-        items.unshift(newItem);
-        localStorage.setItem("neuro_announcements", JSON.stringify(items));
-        window.dispatchEvent(new Event("neuro_announcements_updated"));
-        return Promise.resolve(newItem);
-      } catch {
-        return Promise.resolve(null);
-      }
-    },
-    update: (id: string, data: { title: string; body: string; active?: boolean }) => {
-      try {
-        const raw = localStorage.getItem("neuro_announcements");
-        const items: Array<{ id: string; title: string; body: string; active: boolean; created_at: string }> = raw ? JSON.parse(raw) : [];
-        const idx = items.findIndex((a) => a.id === id);
-        if (idx !== -1) {
-          items[idx] = {
-            ...items[idx],
-            title: data.title,
-            body: data.body,
-            active: data.active !== undefined ? data.active : items[idx].active,
-          };
-          localStorage.setItem("neuro_announcements", JSON.stringify(items));
-          window.dispatchEvent(new Event("neuro_announcements_updated"));
-          return Promise.resolve(items[idx]);
-        }
-        return Promise.resolve(null);
-      } catch {
-        return Promise.resolve(null);
-      }
-    },
-    toggle: (id: string, active: boolean) => {
-      try {
-        const raw = localStorage.getItem("neuro_announcements");
-        const items: Array<{ id: string; title: string; body: string; active: boolean; created_at: string }> = raw ? JSON.parse(raw) : [];
-        const idx = items.findIndex((a) => a.id === id);
-        if (idx !== -1) {
-          items[idx].active = active;
-          localStorage.setItem("neuro_announcements", JSON.stringify(items));
-          window.dispatchEvent(new Event("neuro_announcements_updated"));
-          return Promise.resolve(items[idx]);
-        }
-        return Promise.resolve(null);
-      } catch {
-        return Promise.resolve(null);
-      }
-    },
-    delete: (id: string) => {
-      try {
-        const raw = localStorage.getItem("neuro_announcements");
-        let items: Array<{ id: string; title: string; body: string; active: boolean; created_at: string }> = raw ? JSON.parse(raw) : [];
-        items = items.filter((a) => a.id !== id);
-        localStorage.setItem("neuro_announcements", JSON.stringify(items));
-        window.dispatchEvent(new Event("neuro_announcements_updated"));
-        return Promise.resolve(null);
-      } catch {
-        return Promise.resolve(null);
-      }
-    },
+    create: (data: { title: string; body: string; active?: boolean }) =>
+      request<{ id: string; title: string; body: string; active: boolean; created_at: string }>("/admin/announcements", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: { title: string; body: string; active?: boolean }) =>
+      request<{ id: string; title: string; body: string; active: boolean; created_at: string }>(`/admin/announcements/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+    toggle: (id: string, active: boolean) =>
+      request<{ id: string; title: string; body: string; active: boolean; created_at: string }>(`/admin/announcements/${id}/toggle`, {
+        method: "PATCH",
+        body: JSON.stringify({ active }),
+      }),
+    delete: (id: string) =>
+      request<null>(`/admin/announcements/${id}`, { method: "DELETE" }),
   },
   helpDesk: {
     tickets: async (page = 1) => {
@@ -639,6 +573,15 @@ export const api = {
   socialLinks,
   admin,
   repositories,
+  announcements: {
+    list: async () => {
+      try {
+        return await request<Array<{ id: string; title: string; body: string; active: boolean; created_at: string }>>("/announcements", {}, false);
+      } catch {
+        return [];
+      }
+    },
+  },
   account: {
     delete: (payload: { confirmation: string; password?: string }) =>
       request<{ isDeleted: boolean; scheduledDeletionAt: string }>("/users/me", {
