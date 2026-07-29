@@ -73,6 +73,24 @@ function SearchResults() {
   const [streaming, setStreaming] = useState(false);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(Boolean(search.filters === "true" || Object.keys(search).some((k) => k !== "q" && k !== "filters")));
+  const [msgIndex, setMsgIndex] = useState(0);
+  const loadingMessages = [
+    "Cooking Datasets for You",
+    "Scanning Neural Pathways",
+    "Indexing Brain Waves",
+  ];
+
+  // Rotate loading messages every 1 second while streaming
+  useEffect(() => {
+    if (!streaming) {
+      setMsgIndex(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setMsgIndex((prev) => (prev + 1) % loadingMessages.length);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [streaming]);
 
   const parseFilter = (v?: string): string[] => (v ? v.split(",").filter(Boolean) : []);
   const activeFilters: Record<string, string[]> = {
@@ -304,7 +322,8 @@ function SearchResults() {
           <div>
             {streaming ? (
               <span className="inline-flex items-center gap-1.5">
-                <Loader2 className="h-3 w-3 animate-spin" /> Cooking Datasets for You...
+                <Loader2 className="h-3 w-3 animate-spin" /> {loadingMessages[msgIndex]}
+                <AnimatedDots />
               </span>
             ) : filteredResults.length > 0 ? (
               <>
@@ -385,8 +404,12 @@ function SearchResults() {
           {/* Results List */}
           <div className="space-y-4">
             {streaming && filteredResults.length === 0 && (
-              <div className="flex justify-center py-16 text-muted-foreground">
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                 <Loader2 className="h-6 w-6 animate-spin" />
+                <span className="mt-4 text-sm">
+                  {loadingMessages[msgIndex]}
+                  <AnimatedDots />
+                </span>
               </div>
             )}
             {filteredResults.map((d, i) => (
@@ -402,11 +425,11 @@ function SearchResults() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-widest text-muted-foreground">
-                    {d.verified && (
+                    {/* {d.verified && (
                       <span className="inline-flex items-center gap-1 text-cyan">
                         <CheckCircle2 className="h-3 w-3" /> Verified {d.verified}
                       </span>
-                    )}
+                    )} */}
                     {/* {d.repo && <span className="rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-2 py-0.5 text-foreground">{d.repo}</span>} */}
                     {/* {d.verified && <span className="inline-flex items-center gap-1 text-cyan"><CheckCircle2 className="h-3 w-3" /> Verified {d.verified}</span>} */}
                     {d.license && <><span>·</span><span>{d.license}</span></>}
@@ -459,6 +482,20 @@ function SearchResults() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+function AnimatedDots() {
+  return (
+    <span className="inline-flex items-center gap-[1.5px]">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="inline-block h-[3px] w-[3px] rounded-full bg-current animate-bounce"
+          style={{ animationDelay: `${i * 0.2}s`, animationDuration: "0.6s" }}
+        />
+      ))}
+    </span>
   );
 }
 
