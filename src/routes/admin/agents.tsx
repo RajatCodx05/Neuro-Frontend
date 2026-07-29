@@ -70,7 +70,7 @@ function AgentsPage() {
                   <td className="px-4 py-3 text-right text-muted-foreground">{e.durationMs}ms</td>
                   <td className="px-4 py-3 text-right text-muted-foreground">{e.resultCount}</td>
                   <td className={`px-4 py-3 ${e.status === "success" ? "text-emerald-500 [.light_&]:text-emerald-600" : "text-rose-500 [.light_&]:text-rose-600"}`}>{e.status}</td>
-                  <td className="px-4 py-3 text-right text-xs text-muted-foreground">{new Date(e.createdAt).toLocaleTimeString()}</td>
+                  <td className="px-4 py-3 text-right text-xs text-muted-foreground whitespace-nowrap">{new Date(e.createdAt).toLocaleString()}</td>
                 </tr>
               ))}
               {paged.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">No agent activity yet.</td></tr>}
