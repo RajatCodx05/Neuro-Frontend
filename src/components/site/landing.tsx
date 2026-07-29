@@ -349,7 +349,7 @@ export default function Landing() {
             >
               <div className="inline-flex items-center gap-2 rounded-full glass px-3 py-1 text-xs text-foreground/80">
                 <span className="h-1.5 w-1.5 rounded-full bg-cyan animate-pulse" />
-                {dbRepos.length || 10} repositories indexed · 5,827+ verified datasets
+                {dbRepos.length || 10} repositories indexed · 1,827+ verified datasets
                 <ArrowUpRight className="h-3 w-3" />
               </div>
               <h1 className="mt-6 font-display text-5xl font-semibold leading-[1.02] tracking-tight sm:text-6xl md:text-7xl">

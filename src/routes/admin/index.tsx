@@ -62,6 +62,8 @@ function AdminDashboard() {
 
     if (validDaysCount > 0) {
       growthPct = (totalPercentageChange / validDaysCount) * 100;
+      // Clamp growth/downfall to max ±100%
+      growthPct = Math.max(-100, Math.min(100, growthPct));
     }
   }
   const growthValue = growthPct >= 0 
