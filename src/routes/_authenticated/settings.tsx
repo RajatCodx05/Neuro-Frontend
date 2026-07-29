@@ -184,7 +184,7 @@ function SettingsPage() {
             <Field label="Full name" name="full_name" defaultValue={profile.full_name ?? ""} required />
             <Field label="Email" name="email" defaultValue={profile.email ?? user?.email ?? ""} readOnly disabled />
             <Field label="Phone" name="phone" type="tel" defaultValue={profile.phone ?? ""} />
-            <Field label="Institute" name="institute" defaultValue={profile.institute ?? ""} />
+            <Field label="Organization/Institute Name" name="institute" defaultValue={profile.institute ?? ""} />
             <label className="block">
               <span className="text-xs text-muted-foreground">Role</span>
               <select name="role" defaultValue={profile.role ?? ""}

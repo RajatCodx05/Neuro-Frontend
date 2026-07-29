@@ -304,7 +304,9 @@ const profiles = {
         body: JSON.stringify({ enabled: data.notifications_enabled }),
       });
     } else {
-      const phone = data.phone === undefined ? {} : splitPhone(data.phone ?? "");
+      // ponytail: regular profile update (Full name, Phone, Institute, Role)
+      // Only include phone if it is truthy to avoid sending empty phone string validations to Joi.
+      const phone = !data.phone ? {} : splitPhone(data.phone);
       await request("/users/me", {
         method: "PUT",
         body: JSON.stringify({
