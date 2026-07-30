@@ -1,15 +1,99 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, CheckCircle2, Download, Bookmark, Share2, ExternalLink, Loader2, Check } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Bookmark,
+  Share2,
+  ExternalLink,
+  Loader2,
+  Check,
+  Copy,
+  FileText,
+  Database,
+  Layers,
+  ShieldCheck,
+} from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
 import { api, type SearchResult } from "@/lib/api-client";
 import { toast } from "sonner";
 
-
 export const Route = createFileRoute("/dataset/$id")({
   component: DatasetPage,
 });
+
+/**
+ * Clean up raw web scraped markdown text / text blobs into clean, systematic sections
+ */
+function cleanDescriptionText(raw: string): string {
+  if (!raw) return "";
+  let text = raw;
+
+  // 1. Remove common web scraping footer junk & navigation UI elements
+  text = text.replace(/##\s*PERMALINK[\s\S]*$/i, "");
+  text = text.replace(/##\s*RESOURCES[\s\S]*$/i, "");
+  text = text.replace(/###\s*###\s*###\s*Download[\s\S]*$/i, "");
+  text = text.replace(/BranchesTags\s+Open\s+more\s+actions\s+menu[\s\S]*$/i, "");
+  text = text.replace(/##\s*Repository\s+files\s+navigation[\s\S]*$/i, "");
+  text = text.replace(/\|\|\s*---\s*---\s*\|\|/g, "");
+  text = text.replace(/##\s*Add\s+to\s+Collections/gi, "");
+  text = text.replace(/\.nbib/gi, "");
+  text = text.replace(/\[\.\.\.\]/g, " ");
+
+  // 2. Insert newline breaks before markdown headers embedded inline
+  text = text.replace(/([^\n])\s*(#{1,4}\s+|[0-9]+\.[0-9]+\.\s+)/g, "$1\n\n$2");
+
+  // 3. Clean up multiple empty lines
+  text = text.replace(/\n{3,}/g, "\n\n").trim();
+
+  return text;
+}
+
+type SectionBlock =
+  | { type: "heading"; text: string }
+  | { type: "paragraph"; text: string }
+  | { type: "list"; items: string[] };
+
+function parseDescriptionBlocks(raw: string): SectionBlock[] {
+  const cleaned = cleanDescriptionText(raw);
+  if (!cleaned) return [];
+
+  const rawBlocks = cleaned.split(/\n\n+/);
+  const blocks: SectionBlock[] = [];
+
+  for (const block of rawBlocks) {
+    const trimmed = block.trim();
+    if (!trimmed) continue;
+
+    // Check if block is a heading (e.g. ### 3.2. Neuroimaging or ## Overview)
+    const headingMatch = trimmed.match(/^(#{1,4}\s*|[0-9]+\.[0-9]+\.\s*)(.+)$/);
+    if (headingMatch && trimmed.length < 120 && !trimmed.includes("\n")) {
+      const headingText = headingMatch[2].replace(/^#+\s*/, "").trim();
+      if (headingText) {
+        blocks.push({ type: "heading", text: headingText });
+        continue;
+      }
+    }
+
+    // Check if block contains list items like "1, item 1 2, item 2 3, item 3"
+    if (/\b1,\s+.*\b2,\s+/.test(trimmed)) {
+      const items = trimmed
+        .split(/(?=\b\d+,\s+)/)
+        .map((s) => s.replace(/^\d+,\s*/, "").trim())
+        .filter(Boolean);
+      if (items.length > 1) {
+        blocks.push({ type: "list", items });
+        continue;
+      }
+    }
+
+    // Standard paragraph
+    blocks.push({ type: "paragraph", text: trimmed });
+  }
+
+  return blocks;
+}
 
 function DatasetPage() {
   const { id } = Route.useParams();
@@ -26,29 +110,48 @@ function DatasetPage() {
       .then((res) => {
         setD(res);
         if (user) {
-          api.savedDatasets.list().then((list) => {
-            setIsSaved(list.some((item) => item.dataset_id === res.id));
-          }).catch(() => {});
+          api.savedDatasets
+            .list()
+            .then((list) => {
+              setIsSaved(list.some((item) => item.dataset_id === res.id));
+            })
+            .catch(() => {});
         }
       })
-      .catch((err) => { toast.error(err instanceof Error ? err.message : "Failed to load dataset"); })
+      .catch(async (err) => {
+        // Fallback check in user saved datasets snapshot
+        try {
+          const list = await api.savedDatasets.list();
+          const found = list.find((item) => item.dataset_id === id || item.id === id);
+          if (found && found.dataset_snapshot) {
+            setD(found.dataset_snapshot as SearchResult);
+            setIsSaved(true);
+          } else {
+            toast.error(err instanceof Error ? err.message : "Failed to load dataset");
+          }
+        } catch {
+          toast.error(err instanceof Error ? err.message : "Failed to load dataset");
+        }
+      })
       .finally(() => setLoading(false));
   }, [id, user]);
 
   const save = async () => {
-    if (!user) { navigate({ to: "/auth", search: { redirect: `/dataset/${id}`, mode: "login" } }); return; }
+    if (!user) {
+      navigate({ to: "/auth", search: { redirect: `/dataset/${id}`, mode: "login" } });
+      return;
+    }
     if (!d) return;
     if (isSaved) {
       toast.error("Dataset already saved");
       return;
     }
-    // Optimistic: show saved state immediately
+    // Optimistic update
     setIsSaved(true);
     try {
       await api.savedDatasets.upsert({ dataset_id: d.id, dataset_snapshot: JSON.parse(JSON.stringify(d)) });
       toast.success("Saved to your library");
     } catch (err) {
-      // Rollback on failure
       setIsSaved(false);
       toast.error(err instanceof Error ? err.message : "Save failed");
     }
@@ -74,63 +177,103 @@ function DatasetPage() {
     return (
       <AppShell>
         <div className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6">
-            <button onClick={() => window.history.back()} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-3 w-3" /> Back to results
-            </button>
+          <button
+            onClick={() => window.history.back()}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-3 w-3" /> Back to results
+          </button>
           <div className="mt-10 text-center text-muted-foreground">Dataset not found.</div>
         </div>
       </AppShell>
     );
   }
 
+  const descriptionBlocks = parseDescriptionBlocks(d.description);
+  const firstParagraph = descriptionBlocks.find((b) => b.type === "paragraph")?.text || d.description;
+  const heroSummary =
+    firstParagraph.length > 280 ? firstParagraph.slice(0, 277) + "..." : firstParagraph;
+
   return (
     <AppShell>
       <div className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6">
-        <button onClick={() => window.history.back()} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+        <button
+          onClick={() => window.history.back()}
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="h-3 w-3" /> Back to results
         </button>
 
-        {/* Hero */}
+        {/* Hero Banner */}
         <div className="relative mt-6 overflow-hidden rounded-3xl glass-strong card-elevated">
           <div className="relative h-48 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-[oklch(0.28_0.1_240)] via-[oklch(0.24_0.09_285)] to-[oklch(0.22_0.06_200)]" />
             <svg viewBox="0 0 800 200" className="absolute inset-0 h-full w-full opacity-60">
               <defs>
-                <linearGradient id="wave" x1="0" x2="1"><stop offset="0" stopColor="oklch(0.86 0.15 200)" /><stop offset="1" stopColor="oklch(0.68 0.22 285)" /></linearGradient>
+                <linearGradient id="wave" x1="0" x2="1">
+                  <stop offset="0" stopColor="oklch(0.86 0.15 200)" />
+                  <stop offset="1" stopColor="oklch(0.68 0.22 285)" />
+                </linearGradient>
               </defs>
               {Array.from({ length: 20 }).map((_, k) => (
-                <path key={k} d={`M0 ${100 + Math.sin(k) * 40} Q200 ${20 + k * 4} 400 ${100 - k * 3} T800 ${80 + k * 5}`} stroke="url(#wave)" strokeWidth="1" fill="none" opacity={0.4 - k * 0.015} />
+                <path
+                  key={k}
+                  d={`M0 ${100 + Math.sin(k) * 40} Q200 ${20 + k * 4} 400 ${100 - k * 3} T800 ${80 + k * 5}`}
+                  stroke="url(#wave)"
+                  strokeWidth="1"
+                  fill="none"
+                  opacity={0.4 - k * 0.015}
+                />
               ))}
             </svg>
           </div>
           <div className="p-6 sm:p-8">
             <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-widest text-muted-foreground">
-              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-foreground">{d.repo}</span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-foreground font-medium">
+                {d.repo}
+              </span>
               <span>· {d.id}</span>
               {d.verified && (
-                <span className="inline-flex items-center gap-1 text-cyan"><CheckCircle2 className="h-3 w-3" /> Verified {d.verified}</span>
+                <span className="inline-flex items-center gap-1 text-cyan font-medium">
+                  <CheckCircle2 className="h-3 w-3" /> Verified {d.verified}
+                </span>
               )}
             </div>
-            <h1 className="mt-2 font-display text-3xl font-semibold sm:text-4xl">{d.name}</h1>
-            <p className="mt-3 max-w-3xl text-muted-foreground">{d.description}</p>
-            <div className="mt-6 flex flex-wrap gap-2">
-              {/* <button className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-sm font-medium text-[oklch(0.15_0.03_258)]">
-                <Download className="h-3.5 w-3.5" /> Download{d.size ? ` ${d.size}` : ""}
-              </button> */}
+            <h1 className="mt-2 font-display text-2xl font-semibold sm:text-3xl leading-snug">
+              {d.name}
+            </h1>
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+              {heroSummary}
+            </p>
+            <div className="mt-6 flex flex-wrap gap-2.5">
               {isSaved ? (
-                <button disabled className="inline-flex items-center gap-1.5 rounded-full border border-green-500/30 px-4 py-2 text-sm text-green-500 bg-green-500/5 cursor-default">
+                <button
+                  disabled
+                  className="inline-flex items-center gap-1.5 rounded-full border border-green-500/30 px-4 py-2 text-xs font-medium text-green-400 bg-green-500/10 cursor-default"
+                >
                   <Check className="h-3.5 w-3.5" /> Saved
                 </button>
               ) : (
-                <button onClick={save} className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-sm hover:bg-white/10">
+                <button
+                  onClick={save}
+                  className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium hover:bg-white/10 transition-colors"
+                >
                   <Bookmark className="h-3.5 w-3.5" /> Save
                 </button>
               )}
-              <button onClick={share} className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-sm hover:bg-white/10">
+              <button
+                onClick={share}
+                className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium hover:bg-white/10 transition-colors"
+              >
                 <Share2 className="h-3.5 w-3.5" /> Share
               </button>
               {d.url && (
-                <a href={d.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-sm hover:bg-white/10">
+                <a
+                  href={d.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium hover:bg-white/10 transition-colors text-cyan"
+                >
                   <ExternalLink className="h-3.5 w-3.5" /> Access the Data
                 </a>
               )}
@@ -138,58 +281,149 @@ function DatasetPage() {
           </div>
         </div>
 
+        {/* Main Details Grid */}
         <div className="mt-8 grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
-            {/* <Section title="Metadata">
-              <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
+            {/* Structured Overview & Description Section */}
+            <Section title="Overview & Description">
+              {descriptionBlocks.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">
+                  No detailed description available for this dataset.
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {descriptionBlocks.map((block, idx) => {
+                    if (block.type === "heading") {
+                      return (
+                        <h3
+                          key={idx}
+                          className="mt-6 mb-2 text-sm font-semibold text-foreground border-b border-white/10 pb-1.5 flex items-center gap-2"
+                        >
+                          <FileText className="h-4 w-4 text-cyan" />
+                          {block.text}
+                        </h3>
+                      );
+                    }
+                    if (block.type === "list") {
+                      return (
+                        <ul key={idx} className="my-3 space-y-2 pl-2">
+                          {block.items.map((item, itemIdx) => (
+                            <li
+                              key={itemIdx}
+                              className="text-sm leading-relaxed text-muted-foreground flex items-start gap-2.5"
+                            >
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-cyan shrink-0 mt-2" />
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      );
+                    }
+                    return (
+                      <p
+                        key={idx}
+                        className="text-sm leading-relaxed text-muted-foreground text-justify sm:text-left"
+                      >
+                        {block.text}
+                      </p>
+                    );
+                  })}
+                </div>
+              )}
+            </Section>
+
+            {/* Systematic Dataset Metadata Table */}
+            <Section title="Dataset Specifications">
+              <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">
                 {[
-                  ["Modality", d.modality], ["Brain region", d.region], ["Species", d.species],
-                  ["Age group", d.ageGroup], ["Disease", d.disease], ["Subjects", d.subjects?.toString()],
-                  ["License", d.license], ["Access tier", d.access], ["Size", d.size],
-                ].filter(([, v]) => v != null && v !== "" && v !== "null").map(([k, v]) => (
-                  <div key={k}>
-                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{k}</div>
-                    <div className="mt-0.5">{v}</div>
-                  </div>
-                ))}
+                  ["Modality", d.modality],
+                  ["Species", d.species],
+                  ["Age Group", d.ageGroup],
+                  ["Disease / Condition", d.disease],
+                  ["Subject Count", d.subjects ? `${d.subjects.toLocaleString()} subjects` : null],
+                  ["Brain Region", d.region],
+                  ["License", d.license],
+                  ["Access Tier", d.access],
+                  ["Data Size", d.size],
+                  ["Repository", d.repo],
+                ]
+                  .filter(([, v]) => v != null && v !== "" && v !== "null" && v !== "DS")
+                  .map(([k, v]) => (
+                    <div
+                      key={k}
+                      className="rounded-xl border border-white/5 bg-white/[0.02] p-3 transition-colors hover:border-white/10"
+                    >
+                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">
+                        {k}
+                      </div>
+                      <div className="mt-1 font-medium text-foreground capitalize break-words">
+                        {v}
+                      </div>
+                    </div>
+                  ))}
               </div>
             </Section>
 
-            <Section title="Preview">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="aspect-square rounded-xl bg-gradient-to-br from-[oklch(0.24_0.08_240)] via-[oklch(0.22_0.06_260)] to-[oklch(0.28_0.1_285)] ring-1 ring-white/10" />
-                ))}
-              </div>
-            </Section> */}
-
-            <Section title="Citation">
+            {/* Citation Box */}
+            <Section title="Citation & Reference">
               <div className="rounded-xl bg-white/5 p-4 font-mono text-xs text-muted-foreground">
-                Author, A. et al. ({new Date().getFullYear()}). <span className="text-foreground">{d.name}</span>.
-                {" "}{d.repo}.{d.doi ? ` doi:${d.doi}` : ""}
+                Author, A. et al. ({new Date().getFullYear()}).{" "}
+                <span className="text-foreground">{d.name}</span>. {d.repo}.
+                {d.doi ? ` doi:${d.doi}` : ""}
+                <div className="mt-3 border-t border-white/5 pt-2.5">
+                  <button
+                    onClick={() => {
+                      const text = `Author, A. et al. (${new Date().getFullYear()}). ${d.name}. ${d.repo}.${d.doi ? ` doi:${d.doi}` : ""}`;
+                      navigator.clipboard.writeText(text);
+                      toast.success("Citation copied to clipboard");
+                    }}
+                    className="inline-flex items-center gap-1.5 text-xs text-cyan hover:underline font-sans"
+                  >
+                    <Copy className="h-3 w-3" /> Copy Citation
+                  </button>
+                </div>
               </div>
             </Section>
           </div>
 
+          {/* Right Sidebar */}
           <div className="space-y-6">
-            {/* <Section title="Repository">
+            <Section title="Repository & Source">
               <div className="flex items-center gap-3">
-                <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-cyan to-electric text-sm font-bold text-[oklch(0.15_0.03_258)]">
-                  {d.repo.slice(0, 2).toUpperCase()}
+                <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-cyan/40 to-neural/40 text-xs font-bold text-white uppercase">
+                  {d.repo.slice(0, 3)}
                 </div>
                 <div>
-                  <div className="text-sm font-medium">{d.repo}</div>
-                  {d.verified && <div className="text-[11px] text-muted-foreground">Last verified {d.verified}</div>}
+                  <div className="text-sm font-medium text-foreground">{d.repo}</div>
+                  {d.verified ? (
+                    <div className="text-[11px] text-cyan flex items-center gap-1 mt-0.5 font-medium">
+                      <CheckCircle2 className="h-3 w-3" /> Verified {d.verified}
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-muted-foreground">Community Catalog</div>
+                  )}
                 </div>
               </div>
             </Section>
-            <Section title="Access">
-              <div className="text-sm">
-                <div className="flex justify-between py-1"><span className="text-muted-foreground">License</span><span>{d.license ?? "—"}</span></div>
-                <div className="flex justify-between py-1"><span className="text-muted-foreground">Tier</span><span>{d.access ?? "—"}</span></div>
-                {d.doi && <div className="flex justify-between py-1"><span className="text-muted-foreground">DOI</span><span className="truncate max-w-[160px] font-mono text-xs">{d.doi}</span></div>}
+
+            <Section title="Access & Licensing">
+              <div className="space-y-2.5 text-xs">
+                <div className="flex justify-between py-1.5 border-b border-white/5">
+                  <span className="text-muted-foreground">License</span>
+                  <span className="font-medium text-foreground">{d.license ?? "Open Data"}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-white/5">
+                  <span className="text-muted-foreground">Access Tier</span>
+                  <span className="font-medium text-foreground uppercase">{d.access ?? "Open"}</span>
+                </div>
+                {d.doi && (
+                  <div className="flex justify-between py-1.5 border-b border-white/5">
+                    <span className="text-muted-foreground">DOI</span>
+                    <span className="truncate max-w-[150px] font-mono text-cyan">{d.doi}</span>
+                  </div>
+                )}
               </div>
-            </Section> */}
+            </Section>
           </div>
         </div>
       </div>
@@ -199,9 +433,12 @@ function DatasetPage() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="glass card-elevated rounded-2xl p-5">
-      <div className="text-xs uppercase tracking-widest text-muted-foreground">{title}</div>
-      <div className="mt-3">{children}</div>
+    <section className="glass card-elevated rounded-2xl p-5 sm:p-6">
+      <div className="text-xs uppercase tracking-widest text-muted-foreground font-mono">
+        {title}
+      </div>
+      <div className="mt-3.5">{children}</div>
     </section>
   );
 }
+
