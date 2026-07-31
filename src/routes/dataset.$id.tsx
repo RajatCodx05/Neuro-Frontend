@@ -26,6 +26,9 @@ export const Route = createFileRoute("/dataset/$id")({
 /**
  * Clean up raw web scraped markdown text / text blobs into clean, systematic sections
  */
+/**
+ * Clean up raw web scraped markdown text / text blobs into clean, systematic sections
+ */
 function cleanDescriptionText(raw: string): string {
   if (!raw) return "";
   let text = raw;
@@ -41,10 +44,19 @@ function cleanDescriptionText(raw: string): string {
   text = text.replace(/\.nbib/gi, "");
   text = text.replace(/\[\.\.\.\]/g, " ");
 
-  // 2. Insert newline breaks before markdown headers embedded inline
-  text = text.replace(/([^\n])\s*(#{1,4}\s+|[0-9]+\.[0-9]+\.\s+)/g, "$1\n\n$2");
+  // 2. Remove scraped ASCII/Markdown table noise (lines/blocks with pipe columns & dashes)
+  text = text.replace(/\|\|\s*[A-Za-z0-9\s()=|-]+(?:---|\|\|)[\s\S]*?\|\|/g, "");
+  text = text.replace(/^\|\|[\s\S]*?\|\|$/gm, "");
+  text = text.replace(/^\|.*---.*\|$/gm, "");
+  text = text.replace(/^\s*\|.*\|.*\|.*$/gm, "");
 
-  // 3. Clean up multiple empty lines
+  // 3. Remove standalone orphan markdown hashes (#, ##, ###, ####)
+  text = text.replace(/^\s*#+\s*$/gm, "");
+
+  // 4. Ensure newline breaks before embedded markdown headers or section numbers
+  text = text.replace(/([^\n])\s*(#{1,6}\s+|(?:\d+\.)+\d*\s+)/g, "$1\n\n$2");
+
+  // 5. Clean up multiple empty lines
   text = text.replace(/\n{3,}/g, "\n\n").trim();
 
   return text;
@@ -62,34 +74,83 @@ function parseDescriptionBlocks(raw: string): SectionBlock[] {
   const rawBlocks = cleaned.split(/\n\n+/);
   const blocks: SectionBlock[] = [];
 
-  for (const block of rawBlocks) {
-    const trimmed = block.trim();
+  for (const rawBlock of rawBlocks) {
+    let trimmed = rawBlock.trim();
     if (!trimmed) continue;
 
-    // Check if block is a heading (e.g. ### 3.2. Neuroimaging or ## Overview)
-    const headingMatch = trimmed.match(/^(#{1,4}\s*|[0-9]+\.[0-9]+\.\s*)(.+)$/);
-    if (headingMatch && trimmed.length < 120 && !trimmed.includes("\n")) {
-      const headingText = headingMatch[2].replace(/^#+\s*/, "").trim();
-      if (headingText) {
-        blocks.push({ type: "heading", text: headingText });
+    // Strip leading/trailing hashes and pipes
+    trimmed = trimmed.replace(/^#+\s*/, "").replace(/#+\s*$/, "").trim();
+    if (!trimmed || trimmed === "#" || trimmed === "##" || trimmed === "###") continue;
+
+    // Check if block contains an embedded section heading at start followed by body text
+    // E.g. "3.3. Code availability All participants were scanned on a Siemens..."
+    // E.g. "Neuroimaging specificities All MRI acquisitions are available..."
+    const headingMatch = trimmed.match(
+      /^((?:(?:\d+\.)+\d*\s*)?[A-Z0-9][A-Za-z0-9\s,&\/\-:\(\)]{2,65}?)(?=\s+[A-Z][a-z]{3,}|\s+[0-9]+\s+[A-Z]|\n|$)/
+    );
+
+    const isExplicitHeading = /^(#{1,6}\s*|(?:\d+\.)+\d+\s+)/.test(rawBlock.trim());
+    const headingTextCandidate = headingMatch ? headingMatch[1].trim() : "";
+
+    if (
+      isExplicitHeading ||
+      (headingTextCandidate && headingTextCandidate.length < 80 && trimmed.length > headingTextCandidate.length + 15)
+    ) {
+      if (headingTextCandidate && headingTextCandidate.length < 80 && trimmed.length > headingTextCandidate.length + 10) {
+        const headingText = headingTextCandidate.replace(/^#+\s*/, "").trim();
+        const bodyText = trimmed.slice(headingTextCandidate.length).replace(/^[:\-\s]+/, "").trim();
+
+        if (headingText && headingText !== "#") {
+          blocks.push({ type: "heading", text: headingText });
+        }
+        if (bodyText && bodyText !== "#") {
+          if (/\b1,\s+.*\b2,\s+/.test(bodyText)) {
+            const items = bodyText
+              .split(/(?=\b\d+,\s+)/)
+              .map((s) => s.replace(/^\d+,\s*/, "").trim())
+              .filter((s) => Boolean(s) && s !== "#");
+            if (items.length > 1) {
+              blocks.push({ type: "list", items });
+              continue;
+            }
+          }
+          const cleanBody = bodyText.replace(/\|\|/g, " ").replace(/\s+/g, " ").trim();
+          if (cleanBody && cleanBody !== "#") {
+            blocks.push({ type: "paragraph", text: cleanBody });
+          }
+        }
         continue;
       }
     }
 
-    // Check if block contains list items like "1, item 1 2, item 2 3, item 3"
+    // Standard heading check if single short line
+    if (trimmed.length < 90 && !trimmed.includes(".") && !trimmed.includes("\n")) {
+      blocks.push({ type: "heading", text: trimmed });
+      continue;
+    }
+
+    // List item check
     if (/\b1,\s+.*\b2,\s+/.test(trimmed)) {
       const items = trimmed
         .split(/(?=\b\d+,\s+)/)
         .map((s) => s.replace(/^\d+,\s*/, "").trim())
-        .filter(Boolean);
+        .filter((s) => Boolean(s) && s !== "#");
       if (items.length > 1) {
         blocks.push({ type: "list", items });
         continue;
       }
     }
 
-    // Standard paragraph
-    blocks.push({ type: "paragraph", text: trimmed });
+    // Clean paragraph
+    const cleanParagraph = trimmed
+      .replace(/\|\|/g, " ")
+      .replace(/\|\s*---\s*---\s*\|/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (cleanParagraph && cleanParagraph !== "#") {
+      blocks.push({ type: "paragraph", text: cleanParagraph });
+    }
   }
 
   return blocks;
@@ -191,8 +252,13 @@ function DatasetPage() {
 
   const descriptionBlocks = parseDescriptionBlocks(d.description);
   const firstParagraph = descriptionBlocks.find((b) => b.type === "paragraph")?.text || d.description;
+  const cleanSummaryText = firstParagraph
+    .replace(/^#+\s*/, "")
+    .replace(/\|\|/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   const heroSummary =
-    firstParagraph.length > 280 ? firstParagraph.slice(0, 277) + "..." : firstParagraph;
+    cleanSummaryText.length > 280 ? cleanSummaryText.slice(0, 277) + "..." : cleanSummaryText;
 
   return (
     <AppShell>
