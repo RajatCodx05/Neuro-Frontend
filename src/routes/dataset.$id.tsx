@@ -29,6 +29,9 @@ export const Route = createFileRoute("/dataset/$id")({
 /**
  * Clean up raw web scraped markdown text / text blobs into clean, systematic sections
  */
+/**
+ * Clean up raw web scraped markdown text / text blobs into clean, systematic sections
+ */
 function cleanDescriptionText(raw: string): string {
   if (!raw) return "";
   let text = raw;
@@ -50,11 +53,12 @@ function cleanDescriptionText(raw: string): string {
   text = text.replace(/^\|.*---.*\|$/gm, "");
   text = text.replace(/^\s*\|.*\|.*\|.*$/gm, "");
 
-  // 3. Remove standalone orphan markdown hashes (#, ##, ###, ####)
+  // 3. Remove standalone orphan markdown hashes (#, ##) and orphan section numbers (e.g. "3.", "2.", "1.")
   text = text.replace(/^\s*#+\s*$/gm, "");
+  text = text.replace(/^\s*\d+\.\s*$/gm, "");
 
-  // 4. Ensure newline breaks before embedded markdown headers or section numbers
-  text = text.replace(/([^\n])\s*(#{1,6}\s+|(?:\d+\.)+\d*\s+)/g, "$1\n\n$2");
+  // 4. Ensure newline breaks before embedded markdown headers or section numbers with titles
+  text = text.replace(/([^\n])\s*(#{1,6}\s+|(?:\d+\.)+\d*\s+[A-Z])/g, "$1\n\n$2");
 
   // 5. Clean up multiple empty lines
   text = text.replace(/\n{3,}/g, "\n\n").trim();
@@ -80,7 +84,7 @@ function parseDescriptionBlocks(raw: string): SectionBlock[] {
 
     // Strip leading/trailing hashes and pipes
     trimmed = trimmed.replace(/^#+\s*/, "").replace(/#+\s*$/, "").trim();
-    if (!trimmed || trimmed === "#" || trimmed === "##" || trimmed === "###") continue;
+    if (!trimmed || /^(?:#+|\d+\.|\d+|#|\.\s*)$/.test(trimmed)) continue;
 
     // Check if block contains an embedded section heading at start followed by body text
     // E.g. "3.3. Code availability All participants were scanned on a Siemens..."
@@ -89,7 +93,7 @@ function parseDescriptionBlocks(raw: string): SectionBlock[] {
       /^((?:(?:\d+\.)+\d*\s*)?[A-Z0-9][A-Za-z0-9\s,&\/\-:\(\)]{2,65}?)(?=\s+[A-Z][a-z]{3,}|\s+[0-9]+\s+[A-Z]|\n|$)/
     );
 
-    const isExplicitHeading = /^(#{1,6}\s*|(?:\d+\.)+\d+\s+)/.test(rawBlock.trim());
+    const isExplicitHeading = /^(#{1,6}\s*|(?:\d+\.)+\d+\s+[A-Z])/.test(rawBlock.trim());
     const headingTextCandidate = headingMatch ? headingMatch[1].trim() : "";
 
     if (
@@ -100,10 +104,11 @@ function parseDescriptionBlocks(raw: string): SectionBlock[] {
         const headingText = headingTextCandidate.replace(/^#+\s*/, "").trim();
         const bodyText = trimmed.slice(headingTextCandidate.length).replace(/^[:\-\s]+/, "").trim();
 
-        if (headingText && headingText !== "#") {
+        // Require headingText to have actual letter content (not just "3.")
+        if (headingText && /[a-zA-Z]/.test(headingText) && headingText !== "#") {
           blocks.push({ type: "heading", text: headingText });
         }
-        if (bodyText && bodyText !== "#") {
+        if (bodyText && bodyText !== "#" && !/^\d+\.\s*$/.test(bodyText)) {
           if (/\b1,\s+.*\b2,\s+/.test(bodyText)) {
             const items = bodyText
               .split(/(?=\b\d+,\s+)/)
@@ -115,7 +120,7 @@ function parseDescriptionBlocks(raw: string): SectionBlock[] {
             }
           }
           const cleanBody = bodyText.replace(/\|\|/g, " ").replace(/\s+/g, " ").trim();
-          if (cleanBody && cleanBody !== "#") {
+          if (cleanBody && cleanBody !== "#" && !/^\d+\.\s*$/.test(cleanBody)) {
             blocks.push({ type: "paragraph", text: cleanBody });
           }
         }
@@ -123,8 +128,8 @@ function parseDescriptionBlocks(raw: string): SectionBlock[] {
       }
     }
 
-    // Standard heading check if single short line
-    if (trimmed.length < 90 && !trimmed.includes(".") && !trimmed.includes("\n")) {
+    // Standard heading check if single short line with letters
+    if (trimmed.length < 90 && /[a-zA-Z]/.test(trimmed) && !trimmed.includes(".") && !trimmed.includes("\n")) {
       blocks.push({ type: "heading", text: trimmed });
       continue;
     }
@@ -148,7 +153,7 @@ function parseDescriptionBlocks(raw: string): SectionBlock[] {
       .replace(/\s+/g, " ")
       .trim();
 
-    if (cleanParagraph && cleanParagraph !== "#") {
+    if (cleanParagraph && cleanParagraph !== "#" && !/^\d+\.\s*$/.test(cleanParagraph)) {
       blocks.push({ type: "paragraph", text: cleanParagraph });
     }
   }
@@ -294,7 +299,7 @@ function DatasetPage() {
             </svg>
           </div>
           <div className="p-6 sm:p-8">
-            <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-widest text-muted-foreground">
+            {/* <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-widest text-muted-foreground">
               <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-foreground font-medium">
                 {d.repo}
               </span>
@@ -304,7 +309,7 @@ function DatasetPage() {
                   <CheckCircle2 className="h-3 w-3" /> Verified {d.verified}
                 </span>
               )}
-            </div>
+            </div> */}
             <h1 className="mt-2 font-display text-2xl font-semibold sm:text-3xl leading-snug">
               {d.name}
             </h1>
@@ -429,27 +434,6 @@ function DatasetPage() {
                   ))}
               </div>
             </Section>
-
-            {/* Citation Box */}
-            <Section title="Citation & Reference">
-              <div className="rounded-xl bg-white/5 p-4 font-mono text-xs text-muted-foreground">
-                Author, A. et al. ({new Date().getFullYear()}).{" "}
-                <span className="text-foreground">{d.name}</span>. {d.repo}.
-                {d.doi ? ` doi:${d.doi}` : ""}
-                <div className="mt-3 border-t border-white/5 pt-2.5">
-                  <button
-                    onClick={() => {
-                      const text = `Author, A. et al. (${new Date().getFullYear()}). ${d.name}. ${d.repo}.${d.doi ? ` doi:${d.doi}` : ""}`;
-                      navigator.clipboard.writeText(text);
-                      toast.success("Citation copied to clipboard");
-                    }}
-                    className="inline-flex items-center gap-1.5 text-xs text-cyan hover:underline font-sans"
-                  >
-                    <Copy className="h-3 w-3" /> Copy Citation
-                  </button>
-                </div>
-              </div>
-            </Section>
           </div>
 
           {/* Right Sidebar */}
@@ -488,6 +472,27 @@ function DatasetPage() {
                     <span className="truncate max-w-[150px] font-mono text-cyan">{d.doi}</span>
                   </div>
                 )}
+              </div>
+            </Section>
+
+            {/* Citation Box */}
+            <Section title="Citation & Reference">
+              <div className="rounded-xl bg-white/5 p-4 font-mono text-xs text-muted-foreground">
+                Author, A. et al. ({new Date().getFullYear()}).{" "}
+                <span className="text-foreground">{d.name}</span>. {d.repo}.
+                {d.doi ? ` doi:${d.doi}` : ""}
+                <div className="mt-3 border-t border-white/5 pt-2.5">
+                  <button
+                    onClick={() => {
+                      const text = `Author, A. et al. (${new Date().getFullYear()}). ${d.name}. ${d.repo}.${d.doi ? ` doi:${d.doi}` : ""}`;
+                      navigator.clipboard.writeText(text);
+                      toast.success("Citation copied to clipboard");
+                    }}
+                    className="inline-flex items-center gap-1.5 text-xs text-cyan hover:underline font-sans"
+                  >
+                    <Copy className="h-3 w-3" /> Copy Citation
+                  </button>
+                </div>
               </div>
             </Section>
           </div>
