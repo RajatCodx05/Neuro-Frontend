@@ -6,7 +6,7 @@ import {
   CheckCircle2, Shield, Zap, Database, Activity, Bookmark, Share2,
   MessageSquare, Wand2, Search, BrainCircuit, Waves, Download,
   Rocket, Bell, BellRing, LogIn, UserPlus, LogOut, Settings, ShieldCheck,
-  Megaphone, Volume2, VolumeX
+  Megaphone, Volume2, VolumeX, X
 } from "lucide-react";
 import { NeuralBackground } from "@/components/site/neural-background";
 import { SiteFooter } from "@/components/site/site-footer";
@@ -113,6 +113,7 @@ export default function Landing() {
   const [q, setQ] = useState("");
   const [togglingNotifs, setTogglingNotifs] = useState(false);
   const [announcements, setAnnouncements] = useState<Array<{ id: string; title: string; body: string; created_at: string }>>([]);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<{ id: string; title: string; body: string; created_at: string } | null>(null);
 
   const notificationsEnabled = profile?.notifications_enabled ?? true;
 
@@ -264,10 +265,17 @@ export default function Landing() {
               <div className="mt-4 space-y-2 max-h-56 overflow-y-auto pr-1">
                 {announcements.length > 0 ? (
                   announcements.map((a) => (
-                    <div key={a.id} className="rounded-xl border border-white/5 [.light_&]:border-black/10 bg-white/5 [.light_&]:bg-black/[0.03] p-3 text-xs">
-                      <div className="font-medium text-foreground">{a.title}</div>
-                      <div className="mt-1 text-muted-foreground leading-relaxed">{a.body}</div>
-                      <div className="mt-2 text-[10px] text-muted-foreground/70">{new Date(a.created_at).toLocaleDateString()}</div>
+                    <div
+                      key={a.id}
+                      onClick={() => setSelectedAnnouncement(a)}
+                      className="group cursor-pointer rounded-xl border border-white/5 [.light_&]:border-black/10 bg-white/5 [.light_&]:bg-black/[0.03] p-3 text-xs transition hover:bg-white/10 [.light_&]:hover:bg-black/5 hover:border-cyan/30 active:scale-[0.99]"
+                    >
+                      <div className="font-medium text-foreground group-hover:text-cyan transition-colors">{a.title}</div>
+                      <div className="mt-1 text-muted-foreground leading-relaxed line-clamp-2">{a.body}</div>
+                      <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground/70">
+                        <span>{new Date(a.created_at).toLocaleDateString()}</span>
+                        <span className="text-[10px] text-cyan opacity-80 group-hover:opacity-100 font-medium">Click to read &rarr;</span>
+                      </div>
                     </div>
                   ))
                 ) : (
@@ -597,6 +605,47 @@ export default function Landing() {
 
         <SiteFooter />
       </div>
+
+      {/* Notification Detail Modal View */}
+      {selectedAnnouncement && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/60 p-4"
+          onClick={() => setSelectedAnnouncement(null)}
+        >
+          <div
+            className="glass relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl p-6 shadow-2xl border border-white/10 [.light_&]:border-black/15"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Red close button — top right */}
+            <button
+              onClick={() => setSelectedAnnouncement(null)}
+              className="absolute top-4 right-4 grid h-8 w-8 place-items-center rounded-full bg-rose-500/20 text-rose-400 transition hover:bg-rose-500/30 hover:text-rose-300"
+              title="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            {/* Announcement Subject / Title */}
+            <div className="flex items-center gap-2.5 pr-10">
+              <Megaphone className="h-5 w-5 text-cyan shrink-0" />
+              <h2 className="text-lg font-semibold text-foreground">{selectedAnnouncement.title}</h2>
+            </div>
+
+            {/* Metadata info */}
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded-full border border-cyan/30 bg-cyan/10 px-2.5 py-0.5 text-[11px] font-medium text-cyan">
+                <Volume2 className="h-3 w-3" /> Broadcast
+              </span>
+              <span>Received {new Date(selectedAnnouncement.created_at).toLocaleString()}</span>
+            </div>
+
+            {/* Full message body text */}
+            <div className="mt-5 whitespace-pre-wrap rounded-xl border border-white/10 [.light_&]:border-black/10 bg-white/[0.03] [.light_&]:bg-black/[0.02] p-4 text-sm text-foreground/90 leading-relaxed">
+              {selectedAnnouncement.body}
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }
