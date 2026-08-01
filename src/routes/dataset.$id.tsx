@@ -403,6 +403,10 @@ function DatasetPage() {
               )}
             </Section>
 
+          </div>
+
+          {/* Right Sidebar */}
+          <div className="space-y-6">
             {/* Systematic Dataset Metadata Table */}
             <Section title="Dataset Specifications">
               <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">
@@ -434,10 +438,7 @@ function DatasetPage() {
                   ))}
               </div>
             </Section>
-          </div>
 
-          {/* Right Sidebar */}
-          <div className="space-y-6">
             <Section title="Repository & Source">
               <div className="flex items-center gap-3">
                 <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-cyan/40 to-neural/40 text-xs font-bold text-white uppercase">
