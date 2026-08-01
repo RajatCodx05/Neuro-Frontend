@@ -52,14 +52,27 @@ function OnboardingPage() {
     if (profile?.onboarding_complete) navigate({ to: "/", replace: true });
   }, [profile, navigate]);
 
+  const defaultName = profile?.full_name || "";
+  const isNameDisabled = Boolean(defaultName);
+  const isPhoneDisabled = Boolean(profile?.phone);
+
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user) return;
     const form = new FormData(e.currentTarget);
+
+    const rawName = isNameDisabled ? defaultName : ((form.get("full_name") as string) || defaultName);
+    const phoneMatch = (profile?.phone ?? "").match(/^(\+\d{1,4})(\d+)$/);
+    const fallbackCode = phoneMatch ? phoneMatch[1] : "+91";
+    const fallbackDigits = phoneMatch ? phoneMatch[2] : (profile?.phone ?? "").replace(/^\+\d{1,4}/, "").trim();
+
+    const countryCodeVal = isPhoneDisabled ? fallbackCode : ((form.get("countryCode") as string) || fallbackCode);
+    const phoneVal = isPhoneDisabled ? fallbackDigits : ((form.get("phone") as string) || fallbackDigits);
+
     const parsed = schema.safeParse({
-      full_name: form.get("full_name"),
-      countryCode: form.get("countryCode"),
-      phone: form.get("phone"),
+      full_name: rawName,
+      countryCode: countryCodeVal,
+      phone: phoneVal,
       role: form.get("role"),
       institute: form.get("institute") ?? "",
     });
@@ -85,8 +98,6 @@ function OnboardingPage() {
     navigate({ to: "/", replace: true });
   };
 
-  const defaultName = profile?.full_name || "";
-
   return (
     <div className="relative flex min-h-screen items-center justify-center px-4 py-12">
       <div className="pointer-events-none absolute inset-0 hero-bg" />
@@ -103,8 +114,8 @@ function OnboardingPage() {
             A quick profile so we can personalize your dataset recommendations.
           </p>
           <form onSubmit={submit} className="mt-6 space-y-3">
-            <Field label="Full name" name="full_name" defaultValue={defaultName} required />
-            <PhoneField defaultPhone={profile?.phone ?? ""} />
+            <Field label="Full name" name="full_name" defaultValue={defaultName} required={!isNameDisabled} disabled={isNameDisabled} readOnly={isNameDisabled} />
+            <PhoneField defaultPhone={profile?.phone ?? ""} disabled={isPhoneDisabled} />
             <label className="block">
               <span className="text-xs text-muted-foreground">Role</span>
               <select name="role" required value={role} onChange={(e) => setRole(e.target.value)}
@@ -139,29 +150,29 @@ function Field({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> 
     <label className="block">
       <span className="text-xs text-muted-foreground">{label}</span>
       <input {...props}
-        className="mt-1 w-full rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-cyan/50" />
+        className="mt-1 w-full rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-cyan/50 disabled:opacity-60 disabled:cursor-not-allowed" />
     </label>
   );
 }
 
-function PhoneField({ defaultPhone }: { defaultPhone: string }) {
+function PhoneField({ defaultPhone, disabled }: { defaultPhone: string; disabled?: boolean }) {
   // Split stored combined phone (e.g. "+919876543210") back into code + digits for display
   const match = defaultPhone.match(/^(\+\d{1,4})(\d+)$/);
   const defaultCode = match ? match[1] : "+91";
-  const defaultDigits = match ? match[2] : defaultPhone.replace(/^\+\d{1,4}/, "");
+  const defaultDigits = match ? match[2] : defaultPhone.replace(/^\+\d{1,4}/, "").trim();
   return (
     <div className="block">
       <span className="text-xs text-muted-foreground">Phone number</span>
       <div className="mt-1 flex gap-2">
-        <select name="countryCode" defaultValue={defaultCode} required
-          className="w-36 shrink-0 rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-2 py-2 text-sm text-foreground outline-none focus:border-cyan/50">
+        <select name="countryCode" defaultValue={defaultCode} required={!disabled} disabled={disabled}
+          className="w-36 shrink-0 rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-2 py-2 text-sm text-foreground outline-none focus:border-cyan/50 disabled:opacity-60 disabled:cursor-not-allowed">
           {COUNTRY_CODES.map((c) => (
             <option key={c.code} value={c.code} className="bg-background text-foreground">{c.label}</option>
           ))}
         </select>
-        <input name="phone" type="tel" required defaultValue={defaultDigits}
+        <input name="phone" type="tel" required={!disabled} defaultValue={defaultDigits} disabled={disabled} readOnly={disabled}
           placeholder="9876543210"
-          className="min-w-0 flex-1 rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-cyan/50" />
+          className="min-w-0 flex-1 rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-cyan/50 disabled:opacity-60 disabled:cursor-not-allowed" />
       </div>
     </div>
   );
