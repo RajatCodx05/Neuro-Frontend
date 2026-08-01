@@ -183,17 +183,18 @@ function SettingsPage() {
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Field label="Full name" name="full_name" defaultValue={profile.full_name ?? ""} required />
             <Field label="Email" name="email" defaultValue={profile.email ?? user?.email ?? ""} readOnly disabled />
-            <Field label="Phone" name="phone" type="tel" defaultValue={profile.phone ?? ""} />
+            <Field label="Phone" name="phone" type="tel" defaultValue={profile.phone ?? ""} readOnly disabled />
             <Field label="Organization/Institute Name" name="institute" defaultValue={profile.institute ?? ""} />
             <label className="block">
               <span className="text-xs text-muted-foreground">Role</span>
               <select name="role" defaultValue={profile.role ?? ""}
                 className="mt-1 w-full rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50">
                 <option value="" className="bg-background text-foreground">—</option>
-                <option value="student" className="bg-background text-foreground">Student</option>
-                <option value="researcher" className="bg-background text-foreground">Researcher</option>
-                <option value="scientist" className="bg-background text-foreground">Scientist</option>
-                <option value="working_professional" className="bg-background text-foreground">Working Professional</option>
+                <option value="academic_researcher" className="bg-background text-foreground">Academic Researcher</option>
+                <option value="industry_researcher" className="bg-background text-foreground">Industry Researcher</option>
+                <option value="healthcare_professional" className="bg-background text-foreground">Healthcare Professional</option>
+                <option value="data_ai_engineer" className="bg-background text-foreground">Data/AI Engineer</option>
+                <option value="other" className="bg-background text-foreground">Other</option>
               </select>
             </label>
           </div>
