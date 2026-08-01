@@ -133,8 +133,7 @@ function HelpPage() {
               <div className="font-display text-base font-semibold">What is NeuroSearch AI?</div>
               <p className="mt-1 text-sm text-muted-foreground">
                 NeuroSearch AI is an AI-powered research and search platform that lets you search
-                datasets, save results, and organize them into collections. Whether you are a
-                researcher, scientist, or working professional, NeuroSearch AI helps you discover
+                datasets, save results, and organize them into collections. Whether you are an academic researcher, industry researcher, healthcare professional, or data/AI engineer, NeuroSearch AI helps you discover
                 and manage data efficiently.
               </p>
             </div>

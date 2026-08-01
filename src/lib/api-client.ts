@@ -21,7 +21,7 @@ export type UserProfile = {
   full_name: string | null;
   email: string | null;
   phone: string | null;
-  role: "student" | "researcher" | "scientist" | "working_professional" | null;
+  role: "academic_researcher" | "industry_researcher" | "healthcare_professional" | "data_ai_engineer" | "other" | null;
   institute: string | null;
   notifications_enabled: boolean;
   notification_preferences: NotificationPreferences;

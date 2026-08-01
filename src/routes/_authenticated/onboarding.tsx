@@ -38,7 +38,7 @@ const schema = z.object({
   full_name: z.string().trim().min(1).max(100),
   countryCode: z.string().min(1, "Select a country code"),
   phone: z.string().trim().min(5, "Phone number is required").max(20),
-  role: z.enum(["student", "researcher", "scientist", "working_professional"]),
+  role: z.enum(["academic_researcher", "industry_researcher", "healthcare_professional", "data_ai_engineer", "other"]),
   institute: z.string().trim().min(1, "Organization/Institute Name is required").max(150),
 });
 
@@ -110,10 +110,11 @@ function OnboardingPage() {
               <select name="role" required value={role} onChange={(e) => setRole(e.target.value)}
                 className="mt-1 w-full rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50">
                 <option value="" className="bg-background text-foreground">Select a role</option>
-                <option value="student" className="bg-background text-foreground">Student</option>
-                <option value="researcher" className="bg-background text-foreground">Researcher</option>
-                <option value="scientist" className="bg-background text-foreground">Scientist</option>
-                <option value="working_professional" className="bg-background text-foreground">Working Professional</option>
+                <option value="academic_researcher" className="bg-background text-foreground">Academic Researcher</option>
+                <option value="industry_researcher" className="bg-background text-foreground">Industry Researcher</option>
+                <option value="healthcare_professional" className="bg-background text-foreground">Healthcare Professional</option>
+                <option value="data_ai_engineer" className="bg-background text-foreground">Data/AI Engineer</option>
+                <option value="other" className="bg-background text-foreground">Other</option>
               </select>
             </label>
             <Field
