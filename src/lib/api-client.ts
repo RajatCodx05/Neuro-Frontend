@@ -57,6 +57,22 @@ export type SearchResult = {
   doi: string | null;
   url: string | null;
 };
+export type DatasetReactionSummary = {
+  datasetId: string;
+  likes: number;
+  dislikes: number;
+  userReaction: "like" | "dislike" | null;
+};
+
+function getAnonKey(): string {
+  if (typeof window === "undefined") return "anon_ssr";
+  let key = localStorage.getItem("neuro_anon_key");
+  if (!key) {
+    key = "anon_" + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
+    localStorage.setItem("neuro_anon_key", key);
+  }
+  return key;
+}
 
 type Envelope<T> = { success: boolean; message: string; data: T };
 let accessToken: string | null = null;
@@ -604,6 +620,21 @@ export const api = {
     async getById(id: string): Promise<SearchResult> {
       const data = await request<Record<string, unknown>>(`/datasets/${id}`, {}, false);
       return mapDataset(data);
+    },
+    reactions: {
+      async toggle(datasetId: string, reaction: "like" | "dislike" | null): Promise<DatasetReactionSummary> {
+        return request<DatasetReactionSummary>("/datasets/reactions", {
+          method: "POST",
+          body: JSON.stringify({ datasetId, reaction, anonKey: getAnonKey() }),
+        });
+      },
+      async getBatch(datasetIds: string[]): Promise<Record<string, DatasetReactionSummary>> {
+        if (!datasetIds.length) return {};
+        return request<Record<string, DatasetReactionSummary>>("/datasets/reactions/batch", {
+          method: "POST",
+          body: JSON.stringify({ datasetIds, anonKey: getAnonKey() }),
+        });
+      },
     },
   },
   streamUrl: (queryId: string) => `${BASE_URL}/stream/${encodeURIComponent(queryId)}`,

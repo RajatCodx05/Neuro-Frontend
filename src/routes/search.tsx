@@ -1,10 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, SlidersHorizontal, CheckCircle2, Bookmark, ArrowRight, ChevronDown, Loader2, Check, ExternalLink, RotateCcw } from "lucide-react";
+import { Sparkles, SlidersHorizontal, CheckCircle2, Bookmark, ArrowRight, ChevronDown, Loader2, Check, ExternalLink, RotateCcw, ThumbsUp, ThumbsDown } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
-import { api } from "@/lib/api-client";
+import { api, type DatasetReactionSummary } from "@/lib/api-client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/search")({
@@ -72,6 +72,7 @@ function SearchResults() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [reactions, setReactions] = useState<Record<string, DatasetReactionSummary>>({});
   const [showFilters, setShowFilters] = useState(Boolean(search.filters === "true" || Object.keys(search).some((k) => k !== "q" && k !== "filters")));
   const [msgIndex, setMsgIndex] = useState(0);
   const loadingMessages = [
@@ -79,6 +80,19 @@ function SearchResults() {
     "Scanning Neural Pathways",
     "Indexing Brain Waves",
   ];
+
+  // Load dataset reactions whenever search results change
+  useEffect(() => {
+    if (!results.length) {
+      setReactions({});
+      return;
+    }
+    const ids = results.map((r) => r.id).filter(Boolean);
+    if (!ids.length) return;
+    api.datasets.reactions.getBatch(ids)
+      .then((batch) => setReactions(batch))
+      .catch(() => {});
+  }, [results]);
 
   // Rotate loading messages every 1 second while streaming
   useEffect(() => {
@@ -228,6 +242,40 @@ function SearchResults() {
         return next;
       });
       toast.error(err instanceof Error ? err.message : "Save failed");
+    }
+  };
+
+  const handleReaction = async (datasetId: string, reaction: "like" | "dislike") => {
+    const current = reactions[datasetId] || { datasetId, likes: 0, dislikes: 0, userReaction: null };
+    const prevReaction = current.userReaction;
+
+    let newReaction: "like" | "dislike" | null = reaction;
+    let newLikes = current.likes;
+    let newDislikes = current.dislikes;
+
+    if (prevReaction === reaction) {
+      newReaction = null;
+      if (reaction === "like") newLikes = Math.max(0, newLikes - 1);
+      if (reaction === "dislike") newDislikes = Math.max(0, newDislikes - 1);
+    } else {
+      if (prevReaction === "like") newLikes = Math.max(0, newLikes - 1);
+      if (prevReaction === "dislike") newDislikes = Math.max(0, newDislikes - 1);
+
+      if (reaction === "like") newLikes += 1;
+      if (reaction === "dislike") newDislikes += 1;
+    }
+
+    setReactions((prev) => ({
+      ...prev,
+      [datasetId]: { datasetId, likes: newLikes, dislikes: newDislikes, userReaction: newReaction },
+    }));
+
+    try {
+      const updated = await api.datasets.reactions.toggle(datasetId, newReaction);
+      setReactions((prev) => ({ ...prev, [datasetId]: updated }));
+    } catch (err) {
+      setReactions((prev) => ({ ...prev, [datasetId]: current }));
+      toast.error(err instanceof Error ? err.message : "Reaction failed");
     }
   };
 
@@ -475,6 +523,33 @@ function SearchResults() {
                       <Bookmark className="h-3.5 w-3.5" /> Save
                     </button>
                   )}
+                  {/* Small Like & Dislike buttons just below Save button */}
+                  <div className="flex items-center justify-between gap-1.5 pt-1">
+                    <button
+                      onClick={() => handleReaction(d.id, "like")}
+                      className={`flex-1 inline-flex items-center justify-center gap-1 rounded-full border px-2 py-1 text-[11px] font-medium transition-colors ${
+                        reactions[d.id]?.userReaction === "like"
+                          ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-400"
+                          : "border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] text-muted-foreground hover:bg-white/10 hover:text-foreground"
+                      }`}
+                      title="Like dataset"
+                    >
+                      <ThumbsUp className="h-3 w-3" />
+                      <span>{reactions[d.id]?.likes || 0}</span>
+                    </button>
+                    <button
+                      onClick={() => handleReaction(d.id, "dislike")}
+                      className={`flex-1 inline-flex items-center justify-center gap-1 rounded-full border px-2 py-1 text-[11px] font-medium transition-colors ${
+                        reactions[d.id]?.userReaction === "dislike"
+                          ? "border-rose-500/50 bg-rose-500/15 text-rose-400"
+                          : "border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] text-muted-foreground hover:bg-white/10 hover:text-foreground"
+                      }`}
+                      title="Dislike dataset"
+                    >
+                      <ThumbsDown className="h-3 w-3" />
+                      <span>{reactions[d.id]?.dislikes || 0}</span>
+                    </button>
+                  </div>
                 </div>
               </motion.article>
             ))}
