@@ -256,14 +256,6 @@ function DatasetPage() {
   }
 
   const descriptionBlocks = parseDescriptionBlocks(d.description);
-  const firstParagraph = descriptionBlocks.find((b) => b.type === "paragraph")?.text || d.description;
-  const cleanSummaryText = firstParagraph
-    .replace(/^#+\s*/, "")
-    .replace(/\|\|/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  const heroSummary =
-    cleanSummaryText.length > 280 ? cleanSummaryText.slice(0, 277) + "..." : cleanSummaryText;
 
   return (
     <AppShell>
@@ -292,9 +284,6 @@ function DatasetPage() {
             <h1 className="mt-2 font-display text-2xl font-semibold sm:text-3xl leading-snug">
               {d.name}
             </h1>
-            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-              {heroSummary}
-            </p>
             <div className="mt-6 flex flex-wrap gap-2.5">
               {isSaved ? (
                 <button
