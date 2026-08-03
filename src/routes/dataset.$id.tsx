@@ -275,29 +275,8 @@ function DatasetPage() {
           <ArrowLeft className="h-3 w-3" /> Back to results
         </button>
 
-        {/* Hero Banner */}
+        {/* Hero Card */}
         <div className="relative mt-6 overflow-hidden rounded-3xl glass-strong card-elevated">
-          <div className="relative h-48 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-[oklch(0.28_0.1_240)] via-[oklch(0.24_0.09_285)] to-[oklch(0.22_0.06_200)]" />
-            <svg viewBox="0 0 800 200" className="absolute inset-0 h-full w-full opacity-60">
-              <defs>
-                <linearGradient id="wave" x1="0" x2="1">
-                  <stop offset="0" stopColor="oklch(0.86 0.15 200)" />
-                  <stop offset="1" stopColor="oklch(0.68 0.22 285)" />
-                </linearGradient>
-              </defs>
-              {Array.from({ length: 20 }).map((_, k) => (
-                <path
-                  key={k}
-                  d={`M0 ${100 + Math.sin(k) * 40} Q200 ${20 + k * 4} 400 ${100 - k * 3} T800 ${80 + k * 5}`}
-                  stroke="url(#wave)"
-                  strokeWidth="1"
-                  fill="none"
-                  opacity={0.4 - k * 0.015}
-                />
-              ))}
-            </svg>
-          </div>
           <div className="p-6 sm:p-8">
             {/* <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-widest text-muted-foreground">
               <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-foreground font-medium">
@@ -355,6 +334,38 @@ function DatasetPage() {
         {/* Main Details Grid */}
         <div className="mt-8 grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
+            {/* Systematic Dataset Metadata Table */}
+            <Section title="Dataset Specifications">
+              <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">
+                {[
+                  ["Modality", d.modality],
+                  ["Species", d.species],
+                  ["Age Group", d.ageGroup],
+                  ["Disease / Condition", d.disease],
+                  ["Subject Count", d.subjects ? `${d.subjects.toLocaleString()} subjects` : null],
+                  ["Brain Region", d.region],
+                  ["License", d.license],
+                  ["Access Tier", d.access],
+                  ["Data Size", d.size],
+                  ["Repository", d.repo],
+                ]
+                  .filter(([, v]) => v != null && v !== "" && v !== "null" && v !== "DS")
+                  .map(([k, v]) => (
+                    <div
+                      key={k}
+                      className="rounded-xl border border-white/5 bg-white/[0.02] p-3 transition-colors hover:border-white/10"
+                    >
+                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">
+                        {k}
+                      </div>
+                      <div className="mt-1 font-medium text-foreground capitalize break-words">
+                        {v}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </Section>
+
             {/* Structured Overview & Description Section */}
             <Section title="Overview & Description">
               {descriptionBlocks.length === 0 ? (
@@ -407,37 +418,6 @@ function DatasetPage() {
 
           {/* Right Sidebar */}
           <div className="space-y-6">
-            {/* Systematic Dataset Metadata Table */}
-            <Section title="Dataset Specifications">
-              <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">
-                {[
-                  ["Modality", d.modality],
-                  ["Species", d.species],
-                  ["Age Group", d.ageGroup],
-                  ["Disease / Condition", d.disease],
-                  ["Subject Count", d.subjects ? `${d.subjects.toLocaleString()} subjects` : null],
-                  ["Brain Region", d.region],
-                  ["License", d.license],
-                  ["Access Tier", d.access],
-                  ["Data Size", d.size],
-                  ["Repository", d.repo],
-                ]
-                  .filter(([, v]) => v != null && v !== "" && v !== "null" && v !== "DS")
-                  .map(([k, v]) => (
-                    <div
-                      key={k}
-                      className="rounded-xl border border-white/5 bg-white/[0.02] p-3 transition-colors hover:border-white/10"
-                    >
-                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">
-                        {k}
-                      </div>
-                      <div className="mt-1 font-medium text-foreground capitalize break-words">
-                        {v}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </Section>
 
             <Section title="Repository & Source">
               <div className="flex items-center gap-3">
