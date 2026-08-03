@@ -32,6 +32,39 @@ export const Route = createFileRoute("/dataset/$id")({
 /**
  * Clean up raw web scraped markdown text / text blobs into clean, systematic sections
  */
+function cleanHeadingTitle(raw: string): string {
+  if (!raw) return "";
+  // Strip markdown hashes, leading section numbers (e.g., "3.", "2.2", "3.1.2", "3 ", "1-")
+  let text = raw
+    .replace(/^#+\s*/, "")
+    .replace(/^(?:\d+[\.\-]\s*)+/, "")
+    .replace(/^\d+\s+/, "")
+    .trim();
+
+  // Strip trailing colons, hashes, or dashes
+  text = text.replace(/[:\-#]+$/, "").trim();
+
+  // Convert all-caps or all-lowercase short headings to Title Case
+  if (text.length > 0 && text.length < 60) {
+    if (text === text.toUpperCase() || text === text.toLowerCase()) {
+      text = text.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+    }
+  }
+  return text;
+}
+
+function cleanBodyText(raw: string): string {
+  if (!raw) return "";
+  let text = raw
+    .replace(/\|\|/g, " ")
+    .replace(/\|\s*---\s*---\s*\|/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  // Strip orphan leading section number from start of paragraph like "1. The dataset contains..." -> "The dataset contains..."
+  text = text.replace(/^(?:\d+\.)+\s+/, "").replace(/^\d+\.\s+(?=[A-Z])/, "");
+  return text;
+}
+
 function cleanDescriptionText(raw: string): string {
   if (!raw) return "";
   let text = raw;
@@ -47,20 +80,24 @@ function cleanDescriptionText(raw: string): string {
   text = text.replace(/\.nbib/gi, "");
   text = text.replace(/\[\.\.\.\]/g, " ");
 
-  // 2. Remove scraped ASCII/Markdown table noise (lines/blocks with pipe columns & dashes)
+  // 2. Remove scraped citation noise & CrossRef/Google Scholar lists (Image 2)
+  text = text.replace(/\+\s*CrossRef\s*\+\s*Google\s*Scholar.*$/gim, "");
+  text = text.replace(/^.*(?:Gorgolewski|Holdgraf|Khambhati).*(?:doi:|Sci\.|Nat\.|Int\.|Neurolmage).*$/gm, "");
+
+  // 3. Remove scraped ASCII/Markdown table noise (lines/blocks with pipe columns & dashes)
   text = text.replace(/\|\|\s*[A-Za-z0-9\s()=|-]+(?:---|\|\|)[\s\S]*?\|\|/g, "");
   text = text.replace(/^\|\|[\s\S]*?\|\|$/gm, "");
   text = text.replace(/^\|.*---.*\|$/gm, "");
   text = text.replace(/^\s*\|.*\|.*\|.*$/gm, "");
 
-  // 3. Remove standalone orphan markdown hashes (#, ##) and orphan section numbers (e.g. "3.", "2.", "1.")
+  // 4. Remove standalone orphan markdown hashes (#, ##) and orphan section numbers (e.g. "3.", "2.", "1.")
   text = text.replace(/^\s*#+\s*$/gm, "");
   text = text.replace(/^\s*\d+\.\s*$/gm, "");
 
-  // 4. Ensure newline breaks before embedded markdown headers or section numbers with titles
+  // 5. Ensure newline breaks before embedded headers or section numbers with titles
   text = text.replace(/([^\n])\s*(#{1,6}\s+|(?:\d+\.)+\d*\s+[A-Z])/g, "$1\n\n$2");
 
-  // 5. Clean up multiple empty lines
+  // 6. Clean up multiple empty lines
   text = text.replace(/\n{3,}/g, "\n\n").trim();
 
   return text;
@@ -87,42 +124,36 @@ function parseDescriptionBlocks(raw: string): SectionBlock[] {
     if (!trimmed || /^(?:#+|\d+\.|\d+|#|\.\s*)$/.test(trimmed)) continue;
 
     // Check if block contains an embedded section heading at start followed by body text
-    // E.g. "3.3. Code availability All participants were scanned on a Siemens..."
-    // E.g. "Neuroimaging specificities All MRI acquisitions are available..."
     const headingMatch = trimmed.match(
       /^((?:(?:\d+\.)+\d*\s*)?[A-Z0-9][A-Za-z0-9\s,&\/\-:\(\)]{2,65}?)(?=\s+[A-Z][a-z]{3,}|\s+[0-9]+\s+[A-Z]|\n|$)/
     );
 
     const isExplicitHeading = /^(#{1,6}\s*|(?:\d+\.)+\d+\s+[A-Z])/.test(rawBlock.trim());
-    const headingTextCandidate = headingMatch ? headingMatch[1].trim() : "";
+    const headingCandidateRaw = headingMatch ? headingMatch[1].trim() : "";
 
     if (
       isExplicitHeading ||
-      (headingTextCandidate && headingTextCandidate.length < 80 && trimmed.length > headingTextCandidate.length + 15)
+      (headingCandidateRaw && headingCandidateRaw.length < 80 && trimmed.length > headingCandidateRaw.length + 15)
     ) {
-      if (headingTextCandidate && headingTextCandidate.length < 80 && trimmed.length > headingTextCandidate.length + 10) {
-        const headingText = headingTextCandidate.replace(/^#+\s*/, "").trim();
-        const bodyText = trimmed.slice(headingTextCandidate.length).replace(/^[:\-\s]+/, "").trim();
+      if (headingCandidateRaw && headingCandidateRaw.length < 80 && trimmed.length > headingCandidateRaw.length + 10) {
+        const cleanHeading = cleanHeadingTitle(headingCandidateRaw);
+        const bodyText = cleanBodyText(trimmed.slice(headingCandidateRaw.length).replace(/^[:\-\s]+/, ""));
 
-        // Require headingText to have actual letter content (not just "3.")
-        if (headingText && /[a-zA-Z]/.test(headingText) && headingText !== "#") {
-          blocks.push({ type: "heading", text: headingText });
+        if (cleanHeading && /[a-zA-Z]/.test(cleanHeading)) {
+          blocks.push({ type: "heading", text: cleanHeading });
         }
         if (bodyText && bodyText !== "#" && !/^\d+\.\s*$/.test(bodyText)) {
           if (/\b1,\s+.*\b2,\s+/.test(bodyText)) {
             const items = bodyText
               .split(/(?=\b\d+,\s+)/)
-              .map((s) => s.replace(/^\d+,\s*/, "").trim())
+              .map((s) => cleanBodyText(s.replace(/^\d+,\s*/, "")))
               .filter((s) => Boolean(s) && s !== "#");
             if (items.length > 1) {
               blocks.push({ type: "list", items });
               continue;
             }
           }
-          const cleanBody = bodyText.replace(/\|\|/g, " ").replace(/\s+/g, " ").trim();
-          if (cleanBody && cleanBody !== "#" && !/^\d+\.\s*$/.test(cleanBody)) {
-            blocks.push({ type: "paragraph", text: cleanBody });
-          }
+          blocks.push({ type: "paragraph", text: bodyText });
         }
         continue;
       }
@@ -130,15 +161,18 @@ function parseDescriptionBlocks(raw: string): SectionBlock[] {
 
     // Standard heading check if single short line with letters
     if (trimmed.length < 90 && /[a-zA-Z]/.test(trimmed) && !trimmed.includes(".") && !trimmed.includes("\n")) {
-      blocks.push({ type: "heading", text: trimmed });
-      continue;
+      const cleanHeading = cleanHeadingTitle(trimmed);
+      if (cleanHeading) {
+        blocks.push({ type: "heading", text: cleanHeading });
+        continue;
+      }
     }
 
     // List item check
     if (/\b1,\s+.*\b2,\s+/.test(trimmed)) {
       const items = trimmed
         .split(/(?=\b\d+,\s+)/)
-        .map((s) => s.replace(/^\d+,\s*/, "").trim())
+        .map((s) => cleanBodyText(s.replace(/^\d+,\s*/, "")))
         .filter((s) => Boolean(s) && s !== "#");
       if (items.length > 1) {
         blocks.push({ type: "list", items });
@@ -147,15 +181,15 @@ function parseDescriptionBlocks(raw: string): SectionBlock[] {
     }
 
     // Clean paragraph
-    const cleanParagraph = trimmed
-      .replace(/\|\|/g, " ")
-      .replace(/\|\s*---\s*---\s*\|/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    if (cleanParagraph && cleanParagraph !== "#" && !/^\d+\.\s*$/.test(cleanParagraph)) {
-      blocks.push({ type: "paragraph", text: cleanParagraph });
+    const paragraphText = cleanBodyText(trimmed);
+    if (paragraphText && paragraphText !== "#" && !/^\d+\.\s*$/.test(paragraphText)) {
+      blocks.push({ type: "paragraph", text: paragraphText });
     }
+  }
+
+  // Enforce writing pattern like Images 4 & 5: if first block is a paragraph without a heading, prepend Overview heading
+  if (blocks.length > 0 && blocks[0].type === "paragraph") {
+    blocks.unshift({ type: "heading", text: "Overview" });
   }
 
   return blocks;
@@ -362,22 +396,21 @@ function DatasetPage() {
                   No detailed description available for this dataset.
                 </p>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {descriptionBlocks.map((block, idx) => {
                     if (block.type === "heading") {
                       return (
-                        <h3
-                          key={idx}
-                          className="mt-6 mb-2 text-sm font-semibold text-foreground border-b border-white/10 pb-1.5 flex items-center gap-2"
-                        >
-                          <FileText className="h-4 w-4 text-cyan" />
-                          {block.text}
-                        </h3>
+                        <div key={idx} className="border-b border-white/10 pb-2 pt-3 first:pt-0">
+                          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-cyan shrink-0" />
+                            <span>{block.text}</span>
+                          </h3>
+                        </div>
                       );
                     }
                     if (block.type === "list") {
                       return (
-                        <ul key={idx} className="my-3 space-y-2 pl-2">
+                        <ul key={idx} className="space-y-2 pl-2">
                           {block.items.map((item, itemIdx) => (
                             <li
                               key={itemIdx}
@@ -393,7 +426,7 @@ function DatasetPage() {
                     return (
                       <p
                         key={idx}
-                        className="text-sm leading-relaxed text-muted-foreground text-justify sm:text-left"
+                        className="text-sm leading-relaxed text-muted-foreground text-justify sm:text-left break-words"
                       >
                         {block.text}
                       </p>
