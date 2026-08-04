@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, SlidersHorizontal, CheckCircle2, Bookmark, ArrowRight, ChevronDown, Loader2, Check, ExternalLink, RotateCcw, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Sparkles, SlidersHorizontal, CheckCircle2, Bookmark, ArrowRight, ChevronDown, Loader2, Check, ExternalLink, RotateCcw, ThumbsUp, ThumbsDown, Info } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
 import { api, type DatasetReactionSummary } from "@/lib/api-client";
@@ -365,6 +365,18 @@ function SearchResults() {
             </button>
           </div>
         </form>
+
+        {/* AI disclaimer (ChatGPT/Claude-style) */}
+        <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground/70">
+          <Info className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+          <span>
+            AI can make mistakes.{" "}
+            <span className="cursor-help font-medium text-cyan/80 underline decoration-cyan/30 underline-offset-2">
+              Please double-check the datasets
+            </span>{" "}
+            before use.
+          </span>
+        </div>
 
         <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
           <div>
