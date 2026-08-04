@@ -524,7 +524,7 @@ function SearchResults() {
                     {d.license && <><span>·</span><span>{d.license}</span></>}
                     {(d.access || d.access_tier) && <><span>·</span><span>{d.access || d.access_tier}</span></>}
                   </div>
-                  <Link to="/dataset/$id" params={{ id: d.id }} className="mt-1 block font-display text-lg font-semibold hover:text-cyan">
+                  <Link to="/dataset/$id" params={{ id: d.id }} target="_blank" className="mt-1 block font-display text-lg font-semibold hover:text-cyan">
                     {d.name ?? d.id}
                   </Link>
                   {d.description && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{d.description}</p>}
@@ -552,7 +552,7 @@ function SearchResults() {
                       <ExternalLink className="h-3.5 w-3.5" /> Access the Data
                     </button>
                   )}
-                  <Link to="/dataset/$id" params={{ id: d.id }} className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1.5 text-xs hover:bg-white/10 [.light_&]:hover:bg-black/[0.08]">
+                  <Link to="/dataset/$id" params={{ id: d.id }} target="_blank" className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1.5 text-xs hover:bg-white/10 [.light_&]:hover:bg-black/[0.08]">
                     Expand <ArrowRight className="h-3 w-3" />
                   </Link>
                   {savedIds.has(d.id) ? (

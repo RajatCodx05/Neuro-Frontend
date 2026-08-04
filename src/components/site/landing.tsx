@@ -539,10 +539,10 @@ export default function Landing() {
                       <Meta k="License" v={d.license} />
                     </dl>
                     <div className="mt-5 flex items-center gap-2 border-t border-white/5 pt-4">
-                      <Link to="/dataset/$id" params={{ id: d.id }} className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium hover:bg-white/10">
+                      <Link to="/dataset/$id" params={{ id: d.id }} target="_blank" className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium hover:bg-white/10">
                         <Rocket className="h-3 w-3" /> Visit
                       </Link>
-                      <Link to="/dataset/$id" params={{ id: d.id }} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">
+                      <Link to="/dataset/$id" params={{ id: d.id }} target="_blank" className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">
                         Details <ArrowRight className="h-3 w-3" />
                       </Link>
                       <button className="ml-auto grid h-8 w-8 place-items-center rounded-full hover:bg-white/5"><Bookmark className="h-3.5 w-3.5" /></button>

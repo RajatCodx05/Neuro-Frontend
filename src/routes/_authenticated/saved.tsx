@@ -218,7 +218,7 @@ function SavedPage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{snap.repo ?? "Dataset"}</div>
-                      <Link to="/dataset/$id" params={{ id: sd.datasetId }} className="mt-0.5 block font-display text-sm font-semibold hover:text-cyan">
+                      <Link to="/dataset/$id" params={{ id: sd.datasetId }} target="_blank" className="mt-0.5 block font-display text-sm font-semibold hover:text-cyan">
                         {snap.name ?? sd.datasetId}
                       </Link>
                       {snap.description && <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{snap.description}</p>}
@@ -312,13 +312,13 @@ function SavedPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{snap.repo ?? "Dataset"} · {s.dataset_id.slice(0, 16)}…</div>
-                    <Link to="/dataset/$id" params={{ id: s.dataset_id }} className="mt-0.5 block font-display text-base font-semibold hover:text-cyan">
+                    <Link to="/dataset/$id" params={{ id: s.dataset_id }} target="_blank" className="mt-0.5 block font-display text-base font-semibold hover:text-cyan">
                       {snap.name ?? s.dataset_id}
                     </Link>
                     {snap.description && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{snap.description}</p>}
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Link to="/dataset/$id" params={{ id: s.dataset_id }}
+                    <Link to="/dataset/$id" params={{ id: s.dataset_id }} target="_blank"
                       className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs hover:bg-white/5">
                       View <ArrowRight className="h-3 w-3" />
                     </Link>
