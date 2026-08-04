@@ -370,11 +370,11 @@ function SearchResults() {
         <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground/70">
           <Info className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
           <span>
-            AI can make mistakes.{" "}
-            <span className="cursor-help font-medium text-cyan/80 underline decoration-cyan/30 underline-offset-2">
-              Please double-check the datasets
-            </span>{" "}
-            before use.
+            AI can make mistakes Please double-check the datasets before use.{" "}
+            {/* <span className="cursor-help font-medium text-cyan/80 underline decoration-cyan/30 underline-offset-2">
+              
+            </span>{" "} */}
+            .
           </span>
         </div>
 
