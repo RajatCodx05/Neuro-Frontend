@@ -120,7 +120,7 @@ function OnboardingPage() {
               <span className="text-xs text-muted-foreground">Role</span>
               <select name="role" required value={role} onChange={(e) => setRole(e.target.value)}
                 className="mt-1 w-full rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50">
-                <option value="" className="bg-background text-foreground">Select a role</option>
+                <option value="" className="bg-background text-foreground">Select role</option>
                 <option value="academic_researcher" className="bg-background text-foreground">Academic Researcher</option>
                 <option value="industry_researcher" className="bg-background text-foreground">Industry Researcher</option>
                 <option value="healthcare_professional" className="bg-background text-foreground">Healthcare Professional</option>
