@@ -374,7 +374,7 @@ function SearchResults() {
             {/* <span className="cursor-help font-medium text-cyan/80 underline decoration-cyan/30 underline-offset-2">
               
             </span>{" "} */}
-            .
+          
           </span>
         </div>
 
