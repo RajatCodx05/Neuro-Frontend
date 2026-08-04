@@ -468,8 +468,37 @@ function SearchResults() {
                 transition={{ duration: 0.4, delay: Math.min(i, 5) * 0.06 }}
                 className="glass card-elevated group flex flex-col gap-4 rounded-2xl p-5 sm:flex-row"
               >
-                <div className="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan/40 to-neural/40 font-display text-xs font-bold text-white ring-1 ring-white/10">
-                  {d.modality ?? "DS"}
+                <div className="flex flex-col items-center gap-2 shrink-0">
+                  <div className="grid h-16 w-16 place-items-center rounded-xl bg-gradient-to-br from-cyan/40 to-neural/40 font-display text-xs font-bold text-white ring-1 ring-white/10">
+                    {d.modality ?? "DS"}
+                  </div>
+                  {/* Like & Dislike buttons positioned on the left under modality avatar */}
+                  <div className="flex w-16 items-center justify-between gap-1">
+                    <button
+                      onClick={() => handleReaction(d.id, "like")}
+                      className={`flex-1 inline-flex items-center justify-center gap-0.5 rounded-full border px-1 py-0.5 text-[10px] font-medium transition-colors ${
+                        reactions[d.id]?.userReaction === "like"
+                          ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-400"
+                          : "border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] text-muted-foreground hover:bg-white/10 hover:text-foreground"
+                      }`}
+                      title="Like dataset"
+                    >
+                      <ThumbsUp className="h-3 w-3" />
+                      <span>{reactions[d.id]?.likes || 0}</span>
+                    </button>
+                    <button
+                      onClick={() => handleReaction(d.id, "dislike")}
+                      className={`flex-1 inline-flex items-center justify-center gap-0.5 rounded-full border px-1 py-0.5 text-[10px] font-medium transition-colors ${
+                        reactions[d.id]?.userReaction === "dislike"
+                          ? "border-rose-500/50 bg-rose-500/15 text-rose-400"
+                          : "border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] text-muted-foreground hover:bg-white/10 hover:text-foreground"
+                      }`}
+                      title="Dislike dataset"
+                    >
+                      <ThumbsDown className="h-3 w-3" />
+                      <span>{reactions[d.id]?.dislikes || 0}</span>
+                    </button>
+                  </div>
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-widest text-muted-foreground">
@@ -523,33 +552,6 @@ function SearchResults() {
                       <Bookmark className="h-3.5 w-3.5" /> Save
                     </button>
                   )}
-                  {/* Small Like & Dislike buttons just below Save button */}
-                  <div className="flex items-center justify-between gap-1.5 pt-1">
-                    <button
-                      onClick={() => handleReaction(d.id, "like")}
-                      className={`flex-1 inline-flex items-center justify-center gap-1 rounded-full border px-2 py-1 text-[11px] font-medium transition-colors ${
-                        reactions[d.id]?.userReaction === "like"
-                          ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-400"
-                          : "border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] text-muted-foreground hover:bg-white/10 hover:text-foreground"
-                      }`}
-                      title="Like dataset"
-                    >
-                      <ThumbsUp className="h-3 w-3" />
-                      <span>{reactions[d.id]?.likes || 0}</span>
-                    </button>
-                    <button
-                      onClick={() => handleReaction(d.id, "dislike")}
-                      className={`flex-1 inline-flex items-center justify-center gap-1 rounded-full border px-2 py-1 text-[11px] font-medium transition-colors ${
-                        reactions[d.id]?.userReaction === "dislike"
-                          ? "border-rose-500/50 bg-rose-500/15 text-rose-400"
-                          : "border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] text-muted-foreground hover:bg-white/10 hover:text-foreground"
-                      }`}
-                      title="Dislike dataset"
-                    >
-                      <ThumbsDown className="h-3 w-3" />
-                      <span>{reactions[d.id]?.dislikes || 0}</span>
-                    </button>
-                  </div>
                 </div>
               </motion.article>
             ))}
