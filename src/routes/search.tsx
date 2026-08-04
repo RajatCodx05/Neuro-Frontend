@@ -279,37 +279,57 @@ function SearchResults() {
     }
   };
 
-  // Client-side real-time result filter matching
+  // Helper to check if a dataset matches a selected filter option
+  const datasetMatchesOption = (d: SearchResult, opt: string): boolean => {
+    const normOpt = opt.toLowerCase().trim();
+    if (!normOpt) return true;
+
+    const searchableText = [
+      d.name,
+      d.description,
+      d.modality,
+      d.disease,
+      d.species,
+      d.ageGroup,
+      d.region,
+      d.repo,
+      d.source,
+      d.license,
+      d.access,
+      d.access_tier,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    // 1. Direct substring match
+    if (searchableText.includes(normOpt)) return true;
+
+    // 2. Normalize punctuation / apostrophes (e.g. "Parkinson's" vs "Parkinson")
+    const cleanOpt = normOpt.replace(/['’]s\b/g, "").replace(/[^a-z0-9]/g, " ");
+    const cleanText = searchableText.replace(/['’]s\b/g, "").replace(/[^a-z0-9]/g, " ");
+    if (cleanOpt.trim() && cleanText.includes(cleanOpt.trim())) return true;
+
+    // 3. Domain-specific synonyms & aliases
+    if (normOpt === "adhd" && (cleanText.includes("attention deficit") || cleanText.includes("hyperactivity"))) return true;
+    if (normOpt === "resting-state" && (cleanText.includes("resting state") || cleanText.includes("resting"))) return true;
+    if (normOpt === "pediatric" && (cleanText.includes("child") || cleanText.includes("children") || cleanText.includes("infant") || cleanText.includes("adolescent"))) return true;
+    if (normOpt === "adult" && cleanText.includes("adult")) return true;
+    if (normOpt === "older adult" && (cleanText.includes("elderly") || cleanText.includes("aging") || cleanText.includes("aged"))) return true;
+    if (normOpt === "human" && (cleanText.includes("subject") || cleanText.includes("people") || cleanText.includes("patient"))) return true;
+    if (normOpt === "mouse" && (cleanText.includes("mice") || cleanText.includes("murine"))) return true;
+
+    return false;
+  };
+
+  // Client-side real-time result filter matching across all search result datasets
   const filteredResults = results.filter((d) => {
     if (!hasActiveFilters) return true;
-    for (const [groupId, selected] of Object.entries(activeFilters)) {
+    for (const [, selected] of Object.entries(activeFilters)) {
       if (!selected || selected.length === 0) continue;
-      const lowerSelected = selected.map((s) => s.toLowerCase());
-
-      if (groupId === "modality") {
-        const m = String(d.modality || "").toLowerCase();
-        if (!lowerSelected.some((val) => m.includes(val))) return false;
-      } else if (groupId === "disease") {
-        const dis = String(d.disease || "").toLowerCase();
-        const desc = String(d.description || "").toLowerCase();
-        if (!lowerSelected.some((val) => dis.includes(val) || desc.includes(val))) return false;
-      } else if (groupId === "species") {
-        const sp = String(d.species || "").toLowerCase();
-        if (!lowerSelected.some((val) => sp.includes(val))) return false;
-      } else if (groupId === "ageGroup") {
-        const ag = String(d.ageGroup || "").toLowerCase();
-        if (!lowerSelected.some((val) => ag.includes(val))) return false;
-      } else if (groupId === "task" || groupId === "format") {
-        const desc = String(d.description || "").toLowerCase();
-        const name = String(d.name || "").toLowerCase();
-        if (!lowerSelected.some((val) => desc.includes(val) || name.includes(val))) return false;
-      } else if (groupId === "repository") {
-        const repo = String(d.repo || d.source || "").toLowerCase();
-        if (!lowerSelected.some((val) => repo.includes(val))) return false;
-      } else if (groupId === "availability") {
-        const acc = String(d.access || d.access_tier || "").toLowerCase();
-        if (!lowerSelected.some((val) => acc.includes(val))) return false;
-      }
+      // Dataset must match at least ONE selected option in this filter group
+      const groupMatch = selected.some((opt) => datasetMatchesOption(d, opt));
+      if (!groupMatch) return false;
     }
     return true;
   });
