@@ -53,6 +53,7 @@ export type SearchResult = {
   disease: string | null;
   license: string | null;
   access: string | null;
+  access_tier?: string | null;
   verified: string | null;
   doi: string | null;
   url: string | null;
@@ -212,6 +213,7 @@ export function mapDataset(data: Record<string, unknown>, resultSource?: string)
     disease: (data.disease as string | null) ?? null,
     license: (data.license as string | null) ?? null,
     access: (data.access_tier as string | null) ?? null,
+    access_tier: (data.access_tier as string | null) ?? null,
     verified,
     doi: (data.doi as string | null) ?? null,
     url: (data.url as string | null) ?? null,
@@ -612,10 +614,20 @@ export const api = {
       const data = await request<{
         source: string;
         results?: Record<string, unknown>[];
+        metrics?: Record<string, unknown>;
+        filters?: Record<string, unknown>;
         queryId?: string;
       }>("/datasets/search", { method: "POST", body: JSON.stringify({ query, filters }) });
       // ponytail: pass response-level source so mapDataset can relabel 'web_search' → 'Database' on cache hits.
-      return { ...data, results: (data.results ?? []).map((r) => mapDataset(r, data.source)) };
+      // v0.3 (§8.4/§9.2, additive): keep the RAW structured records so the filtering engine sees
+      // arrays (not flattened display strings), and surface the parsed-intent `filters` (FR-8/FR-7).
+      // Older consumers only read `results` and are unaffected.
+      return {
+        ...data,
+        results: (data.results ?? []).map((r) => mapDataset(r, data.source)),
+        rawResults: data.results ?? [],
+        filters: data.filters ?? {},
+      };
     },
     async getById(id: string): Promise<SearchResult> {
       const data = await request<Record<string, unknown>>(`/datasets/${id}`, {}, false);

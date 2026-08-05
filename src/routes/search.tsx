@@ -1,16 +1,35 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, SlidersHorizontal, CheckCircle2, Bookmark, ArrowRight, ChevronDown, Loader2, Check, ExternalLink, RotateCcw, ThumbsUp, ThumbsDown, Info } from "lucide-react";
+import { Sparkles, SlidersHorizontal, Bookmark, ArrowRight, ChevronDown, Loader2, Check, ExternalLink, RotateCcw, ThumbsUp, ThumbsDown, Info } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
-import { api, type DatasetReactionSummary } from "@/lib/api-client";
+import { api, type DatasetReactionSummary, type SearchResult } from "@/lib/api-client";
+import { useSearchState } from "@/lib/search-state";
+import {
+  FILTER_DIMENSIONS,
+  FILTER_DIMENSION_LABELS,
+  PAGE_SIZE,
+  facetDisplayLabel,
+  hasAnySelection,
+  parseUrlFilters,
+  type FilterDimension,
+} from "@/lib/search-filters";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+} from "@/components/ui/pagination";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/search")({
   validateSearch: (s: Record<string, unknown>) => ({
     q: typeof s.q === "string" ? s.q : "",
     filters: typeof s.filters === "string" ? s.filters : undefined,
+    page: typeof s.page === "string" ? s.page : undefined,
     modality: typeof s.modality === "string" ? s.modality : undefined,
     disease: typeof s.disease === "string" ? s.disease : undefined,
     species: typeof s.species === "string" ? s.species : undefined,
@@ -23,57 +42,37 @@ export const Route = createFileRoute("/search")({
   component: SearchResults,
 });
 
-type FilterGroup = {
-  id: string;
-  title: string;
-  opts: string[];
-};
-
-const filterGroups: FilterGroup[] = [
-  { id: "modality", title: "Modality", opts: ["MRI", "fMRI", "PET", "EEG", "MEG", "iEEG"] },
-  { id: "disease", title: "Disease / Condition", opts: ["ADHD", "Parkinson's", "Alzheimer's", "Autism", "Stroke", "Epilepsy"] },
-  { id: "species", title: "Species", opts: ["Human", "Mouse", "Rat", "Monkey"] },
-  { id: "ageGroup", title: "Age Group", opts: ["Pediatric", "Adult", "Older Adult"] },
-  { id: "task", title: "Experimental Task", opts: ["Resting-state", "Motor", "Memory", "Language", "Visual", "Auditory"] },
-  { id: "format", title: "Data Format", opts: ["BIDS", "NIfTI", "DICOM", "MNE"] },
-  { id: "repository", title: "Repository", opts: ["OpenNeuro", "DANDI", "ADNI", "EBRAINS", "UK Biobank", "NEMAR"] },
-  { id: "availability", title: "Availability", opts: ["Open", "Registered", "Restricted"] },
-];
-
-type SearchResult = {
-  id: string;
-  name?: string;
-  repo?: string;
-  source?: string;
-  modality?: string;
-  description?: string;
-  subjects?: number | null;
-  size?: string | null;
-  region?: string | null;
-  species?: string | null;
-  ageGroup?: string | null;
-  disease?: string | null;
-  license?: string | null;
-  access?: string | null;
-  access_tier?: string | null;
-  verified?: string | null;
-  doi?: string | null;
-  url?: string | null;
-  [key: string]: unknown;
-};
-
 function SearchResults() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const search = Route.useSearch();
 
+  const {
+    mode,
+    error,
+    hasBaseline,
+    originalQuery,
+    baselineCount,
+    activeFilters,
+    appliedFilters,
+    filteredResults,
+    facets,
+    conflict,
+    restrictHint,
+    runSearch,
+    expandSearch,
+    setActiveFilters,
+    clearFilters,
+    reset,
+  } = useSearchState();
+
   const [q, setQ] = useState(search.q || "");
   const [open, setOpen] = useState<string[]>(["modality", "disease", "task"]);
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [streaming, setStreaming] = useState(false);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [reactions, setReactions] = useState<Record<string, DatasetReactionSummary>>({});
-  const [showFilters, setShowFilters] = useState(Boolean(search.filters === "true" || Object.keys(search).some((k) => k !== "q" && k !== "filters")));
+  const [showFilters, setShowFilters] = useState(
+    Boolean(search.filters === "true" || Object.keys(search).some((k) => k !== "q" && k !== "filters" && k !== "page")),
+  );
   const [msgIndex, setMsgIndex] = useState(0);
   const loadingMessages = [
     "Cooking Datasets for You",
@@ -81,18 +80,31 @@ function SearchResults() {
     "Indexing Brain Waves",
   ];
 
-  // Load dataset reactions whenever search results change
+  // v0.3 G1: streaming is driven by the state machine — the pipeline runs only
+  // on submit / initial load / explicit "Search entire database".
+  const streaming = mode === "searching" || mode === "expanding";
+
+  const urlFilters = parseUrlFilters(search as unknown as Record<string, unknown>);
+  const hasActiveFilters = hasAnySelection(activeFilters);
+
+  // FR-10 pagination: slices of the already-ranked filtered list. Ranking is
+  // never recomputed per page; `page` lives in the URL (G7/G8).
+  const totalPages = Math.max(1, Math.ceil(filteredResults.length / PAGE_SIZE));
+  const page = Math.min(Math.max(1, parseInt(search.page || "1", 10) || 1), totalPages);
+  const pageItems = filteredResults.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Load dataset reactions whenever the filtered result set changes
   useEffect(() => {
-    if (!results.length) {
+    if (!filteredResults.length) {
       setReactions({});
       return;
     }
-    const ids = results.map((r) => r.id).filter(Boolean);
+    const ids = filteredResults.map((r) => r.id).filter(Boolean);
     if (!ids.length) return;
     api.datasets.reactions.getBatch(ids)
       .then((batch) => setReactions(batch))
       .catch(() => {});
-  }, [results]);
+  }, [filteredResults]);
 
   // Rotate loading messages every 1 second while streaming
   useEffect(() => {
@@ -106,19 +118,35 @@ function SearchResults() {
     return () => clearInterval(interval);
   }, [streaming]);
 
-  const parseFilter = (v?: string): string[] => (v ? v.split(",").filter(Boolean) : []);
-  const activeFilters: Record<string, string[]> = {
-    modality: parseFilter(search.modality),
-    disease: parseFilter(search.disease),
-    species: parseFilter(search.species),
-    ageGroup: parseFilter(search.ageGroup),
-    task: parseFilter(search.task),
-    format: parseFilter(search.format),
-    repository: parseFilter(search.repository),
-    availability: parseFilter(search.availability),
-  };
+  // Sync URL filter params → search state. Filter toggles navigate to a new
+  // URL; this effect applies the change LOCALLY — zero backend calls (G1/G2).
+  useEffect(() => {
+    setActiveFilters(parseUrlFilters(search as unknown as Record<string, unknown>));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.modality, search.disease, search.species, search.ageGroup, search.task, search.format, search.repository, search.availability]);
 
-  const hasActiveFilters = Object.values(activeFilters).some((arr) => arr.length > 0);
+  // v0.3 FR-1: the pipeline is invoked ONLY when (a) there is no baseline yet
+  // (initial load / shareable URL reload) or (b) the query text changed
+  // (submit). Filter param changes are deliberately NOT in this effect's deps.
+  useEffect(() => {
+    if (!user) return;
+    const textQuery = search.q?.trim() || "";
+    const urlFilters = parseUrlFilters(search as unknown as Record<string, unknown>);
+    const hasAny = textQuery !== "" || hasAnySelection(urlFilters);
+    if (!hasAny) {
+      if (hasBaseline || mode !== "idle") reset();
+      return;
+    }
+    if (!hasBaseline || textQuery !== originalQuery) {
+      runSearch(textQuery, urlFilters);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.q, user, hasBaseline, originalQuery, mode, runSearch, reset]);
+
+  // Surface pipeline failures the same way the previous debounced effect did.
+  useEffect(() => {
+    if (error) toast.error(error);
+  }, [error]);
 
   // Sync text input when URL search query changes externally
   useEffect(() => {
@@ -140,70 +168,33 @@ function SearchResults() {
 
   const toggleGroup = (id: string) => setOpen((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
+  // Local, synchronous filter toggle (FR-2): updates the URL only; the sync
+  // effect applies it to the cached baseline. Never triggers a search.
   const toggleFilterOption = (groupId: string, opt: string) => {
-    const current = activeFilters[groupId] || [];
+    const dim = groupId as FilterDimension;
+    const current = appliedFilters[dim] || [];
     const updated = current.includes(opt) ? current.filter((x) => x !== opt) : [...current, opt];
 
     const nextSearch = {
       ...search,
       [groupId]: updated.length ? updated.join(",") : undefined,
+      page: undefined, // FR-10: page resets to 1 when filters change
     };
     navigate({ to: "/search", search: nextSearch as never });
   };
 
+  // FR-9: clearing all filters restores the cached baseline instantly.
   const resetFilters = () => {
+    clearFilters();
     navigate({
       to: "/search",
       search: { q: search.q, filters: showFilters ? "true" : undefined } as never,
     });
   };
 
-  // Search execution hook (runs when text or filters change)
-  useEffect(() => {
-    const activeTextQuery = search.q?.trim() || "";
-    if (!activeTextQuery && !hasActiveFilters) {
-      setResults([]);
-      setStreaming(false);
-      return;
-    }
-    if (!user) return;
-
-    let cancelled = false;
-    const timer = setTimeout(() => {
-      setResults([]);
-      setStreaming(true);
-      void (async () => {
-        try {
-          const response = await api.datasets.search(activeTextQuery, activeFilters);
-          if (cancelled) return;
-          setResults(response.results ?? []);
-        } catch (err) {
-          if (!cancelled) toast.error(err instanceof Error ? err.message : "Search failed");
-        } finally {
-          if (!cancelled) setStreaming(false);
-        }
-      })();
-    }, 300);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [
-    search.q,
-    search.modality,
-    search.disease,
-    search.species,
-    search.ageGroup,
-    search.task,
-    search.format,
-    search.repository,
-    search.availability,
-    user,
-  ]);
-
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!q.trim() && !hasActiveFilters) return;
+    if (!q.trim() && !hasAnySelection(urlFilters)) return;
     if (!user) {
       navigate({ to: "/auth", search: { redirect: `/search?q=${encodeURIComponent(q.trim())}`, mode: "login" } });
       return;
@@ -214,6 +205,7 @@ function SearchResults() {
         ...search,
         q: q.trim(),
         filters: showFilters ? "true" : undefined,
+        page: undefined, // FR-10: new search resets page
       } as never,
     });
   };
@@ -279,60 +271,11 @@ function SearchResults() {
     }
   };
 
-  // Helper to check if a dataset matches a selected filter option
-  const datasetMatchesOption = (d: SearchResult, opt: string): boolean => {
-    const normOpt = opt.toLowerCase().trim();
-    if (!normOpt) return true;
-
-    const searchableText = [
-      d.name,
-      d.description,
-      d.modality,
-      d.disease,
-      d.species,
-      d.ageGroup,
-      d.region,
-      d.repo,
-      d.source,
-      d.license,
-      d.access,
-      d.access_tier,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-
-    // 1. Direct substring match
-    if (searchableText.includes(normOpt)) return true;
-
-    // 2. Normalize punctuation / apostrophes (e.g. "Parkinson's" vs "Parkinson")
-    const cleanOpt = normOpt.replace(/['’]s\b/g, "").replace(/[^a-z0-9]/g, " ");
-    const cleanText = searchableText.replace(/['’]s\b/g, "").replace(/[^a-z0-9]/g, " ");
-    if (cleanOpt.trim() && cleanText.includes(cleanOpt.trim())) return true;
-
-    // 3. Domain-specific synonyms & aliases
-    if (normOpt === "adhd" && (cleanText.includes("attention deficit") || cleanText.includes("hyperactivity"))) return true;
-    if (normOpt === "resting-state" && (cleanText.includes("resting state") || cleanText.includes("resting"))) return true;
-    if (normOpt === "pediatric" && (cleanText.includes("child") || cleanText.includes("children") || cleanText.includes("infant") || cleanText.includes("adolescent"))) return true;
-    if (normOpt === "adult" && cleanText.includes("adult")) return true;
-    if (normOpt === "older adult" && (cleanText.includes("elderly") || cleanText.includes("aging") || cleanText.includes("aged"))) return true;
-    if (normOpt === "human" && (cleanText.includes("subject") || cleanText.includes("people") || cleanText.includes("patient"))) return true;
-    if (normOpt === "mouse" && (cleanText.includes("mice") || cleanText.includes("murine"))) return true;
-
-    return false;
+  const goToPage = (p: number) => {
+    const clamped = Math.min(Math.max(p, 1), totalPages);
+    if (clamped === page) return;
+    navigate({ to: "/search", search: { ...search, page: clamped > 1 ? String(clamped) : undefined } as never });
   };
-
-  // Client-side real-time result filter matching across all search result datasets
-  const filteredResults = results.filter((d) => {
-    if (!hasActiveFilters) return true;
-    for (const [, selected] of Object.entries(activeFilters)) {
-      if (!selected || selected.length === 0) continue;
-      // Dataset must match at least ONE selected option in this filter group
-      const groupMatch = selected.some((opt) => datasetMatchesOption(d, opt));
-      if (!groupMatch) return false;
-    }
-    return true;
-  });
 
   return (
     <AppShell>
@@ -373,7 +316,7 @@ function SearchResults() {
               <SlidersHorizontal className="h-3 w-3" /> Filters
               {hasActiveFilters && (
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-cyan text-[10px] font-bold text-slate-950">
-                  {Object.values(activeFilters).reduce((acc, curr) => acc + curr.length, 0)}
+                  {Object.values(activeFilters).reduce((acc, curr) => acc + (curr?.length ?? 0), 0)}
                 </span>
               )}
             </button>
@@ -390,11 +333,7 @@ function SearchResults() {
         <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground/70">
           <Info className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
           <span>
-            AI can make mistakes Please double-check the datasets before use.{" "}
-            {/* <span className="cursor-help font-medium text-cyan/80 underline decoration-cyan/30 underline-offset-2">
-              
-            </span>{" "} */}
-          
+            AI can make mistakes. Please double-check the datasets before use.
           </span>
         </div>
 
@@ -421,8 +360,45 @@ function SearchResults() {
           )}
         </div>
 
+        {/* FR-7: conflicting filter selection — never silently re-runs search. */}
+        {conflict && (
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm">
+            <Info className="h-4 w-4 shrink-0 text-amber-400" />
+            <span className="flex-1 min-w-0 text-amber-100/90">
+              Your selection <span className="font-medium text-amber-200">{conflict.values.join(", ")}</span> on{" "}
+              <span className="font-medium text-amber-200">{FILTER_DIMENSION_LABELS[conflict.dimension]}</span>{" "}
+              conflicts with what the AI understood from your query. Filters apply to the current results only —
+              search again to look beyond them?
+            </span>
+            <button
+              onClick={() => void expandSearch()}
+              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-3 py-1.5 text-xs font-medium text-[oklch(0.15_0.03_258)]"
+            >
+              Search again using these filters <ArrowRight className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+
+        {/* FR-6: filtered pool at/below the low watermark — explicit expanded search. */}
+        {restrictHint && !conflict && (
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-cyan/30 bg-cyan/10 px-4 py-3 text-sm">
+            <Info className="h-4 w-4 shrink-0 text-cyan" />
+            <span className="flex-1 min-w-0 text-foreground/90">
+              Showing {filteredResults.length} of the original {baselineCount} results. Filters apply to the
+              current results only — search the entire database using these filters?
+            </span>
+            <button
+              onClick={() => void expandSearch()}
+              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-3 py-1.5 text-xs font-medium text-[oklch(0.15_0.03_258)]"
+            >
+              Search entire database <ArrowRight className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+
         <div className={`mt-8 grid grid-cols-1 gap-6 ${showFilters ? "lg:grid-cols-[260px_1fr]" : ""}`}>
-          {/* Filters Sidebar */}
+          {/* Filters Sidebar — dynamic facets (G4): options are derived from the
+              cached pool; zero-count options are never rendered. */}
           {showFilters && (
             <aside className="glass rounded-2xl p-4 lg:sticky lg:top-24 lg:self-start">
               <div className="flex items-center justify-between pb-2 border-b border-white/5 [.light_&]:border-black/10">
@@ -434,18 +410,26 @@ function SearchResults() {
                 )}
               </div>
               <div className="mt-3 space-y-1">
-                {filterGroups.map((g) => {
-                  const isOpen = open.includes(g.id);
-                  const selectedOpts = activeFilters[g.id] || [];
+                {FILTER_DIMENSIONS.map((dim) => {
+                  const groupFacets = facets[dim] ?? [];
+                  // Always keep currently-selected values visible so they can be unticked
+                  // even when another group's selection drops their count to zero.
+                  const selected = appliedFilters[dim] ?? [];
+                  const options = [...groupFacets];
+                  for (const v of selected) {
+                    if (!options.some((o) => o.value === v)) options.push({ value: v, count: 0 });
+                  }
+                  if (options.length === 0) return null;
+                  const isOpen = open.includes(dim);
                   return (
-                    <div key={g.id} className="rounded-xl">
+                    <div key={dim} className="rounded-xl">
                       <button
-                        onClick={() => toggleGroup(g.id)}
+                        onClick={() => toggleGroup(dim)}
                         className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-xs font-medium uppercase tracking-widest text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5"
                       >
                         <span className="flex items-center gap-2">
-                          {g.title}
-                          {selectedOpts.length > 0 && (
+                          {FILTER_DIMENSION_LABELS[dim]}
+                          {selected.length > 0 && (
                             <span className="h-1.5 w-1.5 rounded-full bg-cyan" />
                           )}
                         </span>
@@ -453,22 +437,23 @@ function SearchResults() {
                       </button>
                       {isOpen && (
                         <div className="space-y-1 px-2 pb-2 pt-1">
-                          {g.opts.map((o) => {
-                            const isChecked = selectedOpts.includes(o);
+                          {options.map((f) => {
+                            const isChecked = selected.includes(f.value);
                             return (
                               <label
-                                key={o}
+                                key={f.value}
                                 className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-sm hover:bg-white/5 [.light_&]:hover:bg-black/5"
                               >
                                 <input
                                   type="checkbox"
                                   checked={isChecked}
-                                  onChange={() => toggleFilterOption(g.id, o)}
+                                  onChange={() => toggleFilterOption(dim, f.value)}
                                   className="h-3.5 w-3.5 rounded border-white/20 accent-cyan cursor-pointer"
                                 />
                                 <span className={isChecked ? "font-medium text-cyan" : "text-foreground/90"}>
-                                  {o}
+                                  {facetDisplayLabel(f.value)}
                                 </span>
+                                <span className="ml-auto text-[10px] font-medium text-muted-foreground">{f.count}</span>
                               </label>
                             );
                           })}
@@ -492,7 +477,7 @@ function SearchResults() {
                 </span>
               </div>
             )}
-            {filteredResults.map((d, i) => (
+            {pageItems.map((d, i) => (
               <motion.article
                 key={`${d.id}-${i}`}
                 initial={{ opacity: 0, y: 12 }}
@@ -534,13 +519,6 @@ function SearchResults() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-widest text-muted-foreground">
-                    {/* {d.verified && (
-                      <span className="inline-flex items-center gap-1 text-cyan">
-                        <CheckCircle2 className="h-3 w-3" /> Verified {d.verified}
-                      </span>
-                    )} */}
-                    {/* {d.repo && <span className="rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-2 py-0.5 text-foreground">{d.repo}</span>} */}
-                    {/* {d.verified && <span className="inline-flex items-center gap-1 text-cyan"><CheckCircle2 className="h-3 w-3" /> Verified {d.verified}</span>} */}
                     {d.license && <><span>·</span><span>{d.license}</span></>}
                     {(d.access || d.access_tier) && <><span>·</span><span>{d.access || d.access_tier}</span></>}
                   </div>
@@ -587,6 +565,37 @@ function SearchResults() {
                 </div>
               </motion.article>
             ))}
+
+            {/* FR-10 pagination — reuses the existing (previously unused) component */}
+            {totalPages > 1 && (
+              <Pagination className="pt-4">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={(e) => { e.preventDefault(); goToPage(page - 1); }}
+                      className={page <= 1 ? "pointer-events-none opacity-40" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <PaginationItem key={p}>
+                      <PaginationLink
+                        isActive={p === page}
+                        onClick={(e) => { e.preventDefault(); goToPage(p); }}
+                        className="cursor-pointer"
+                      >
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={(e) => { e.preventDefault(); goToPage(page + 1); }}
+                      className={page >= totalPages ? "pointer-events-none opacity-40" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
           </div>
         </div>
       </div>

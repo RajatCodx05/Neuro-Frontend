@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
+import { SearchProvider } from "@/lib/search-state";
 
 function NotFoundComponent() {
   return (
@@ -107,8 +108,12 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <Outlet />
-          <Toaster position="top-right" />
+          {/* v0.3 §8.3: the search baseline cache lives above the routes so it
+              survives navigation between /search and /dataset/:id. */}
+          <SearchProvider>
+            <Outlet />
+            <Toaster position="top-right" />
+          </SearchProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
