@@ -211,15 +211,27 @@ export function valuePairMatches(
   return false;
 }
 
+/**
+ * True when at least one dataset source value in `declaredValues` matches the
+ * requested filter value for `dimension`. Single source of truth for the
+ * per-value matching predicate — `matchesFilter` and the facet counter both
+ * delegate here, so counts and filtered lists can never diverge.
+ */
+function anyValueMatches(
+  dimension: FilterDimension,
+  requested: string,
+  declaredValues: string[],
+): boolean {
+  return declaredValues.some((declared) => valuePairMatches(dimension, requested, declared));
+}
+
 /** True when a dataset matches one filter value on one dimension. */
 export function matchesFilter(
   dataset: RawDataset,
   dimension: FilterDimension,
   value: string,
 ): boolean {
-  return dimensionFieldSources(dataset, dimension).some((s) =>
-    valuePairMatches(dimension, value, s),
-  );
+  return anyValueMatches(dimension, value, dimensionFieldSources(dataset, dimension));
 }
 
 /** AND across selected groups, OR within a group. Pure; returns a new array. */
@@ -263,25 +275,65 @@ export function matchesAllOtherGroups(
  * via substring/synonym matching ("MRI" vs "fMRI" each count the same
  * matching datasets). Only values with count > 0 are returned (G4 — zero-count
  * options never render).
+ *
+ * Performance (optimized 2026-08-06): the pool is traversed a constant number
+ * of times per dimension instead of once per candidate value. Per dimension we
+ * (1) precompute every dataset's dimension source values and whether it
+ * satisfies every OTHER selected group in a single pass, then (2) count the
+ * candidates against only the eligible datasets using the same `anyValueMatches`
+ * predicate. This removes the previous repeated `pool.filter(...)` per
+ * candidate, which re-ran `dimensionFieldSources` and the other-group checks
+ * for every (candidate × dataset) pair — the old worst case was O(N²) pool
+ * scans. Results are identical to the previous implementation.
  */
 export function computeFacets(pool: RawDataset[], filters: ActiveFilters): FacetMap {
+  // Precompute each dataset's source values for every dimension ONCE — the old
+  // version recomputed them inside every (candidate × dataset) predicate.
+  // Shape: [datasetIndex][dimensionIndex] -> source value list.
+  const datasetValues: string[][][] = pool.map((dataset) =>
+    FILTER_DIMENSIONS.map((dimension) => dimensionFieldSources(dataset, dimension)),
+  );
+
   const facets: FacetMap = {};
-  for (const dimension of FILTER_DIMENSIONS) {
-    // Distinct candidate values present in the pool (case-insensitive dedupe,
-    // first-seen casing preserved for display).
+  for (let di = 0; di < FILTER_DIMENSIONS.length; di++) {
+    const dimension = FILTER_DIMENSIONS[di];
+
+    // Pass 1 — distinct candidate values (first-seen casing, unchanged) and,
+    // per dataset, whether it satisfies every OTHER selected group.
     const candidates = new Map<string, string>();
-    for (const dataset of pool) {
-      for (const value of dimensionFieldSources(dataset, dimension)) {
+    const eligible = new Array<boolean>(pool.length).fill(false);
+    for (let i = 0; i < pool.length; i++) {
+      eligible[i] = matchesAllOtherGroups(pool[i], filters, dimension);
+      const values = datasetValues[i][di];
+      for (const value of values) {
         const key = String(value).trim().toLowerCase();
         if (key && !candidates.has(key)) candidates.set(key, String(value).trim());
       }
     }
+    if (candidates.size === 0) continue;
+    // Display labels (first-seen casing, preserved exactly like before).
+    const labels = [...candidates.values()];
+
+    // Pass 2 — count each candidate over eligible datasets only, using the
+    // identical per-value predicate (`anyValueMatches` == `matchesFilter`'s
+    // inner matching). A dataset contributes at most once per candidate.
+    const counts = new Map<string, number>();
+    for (let i = 0; i < pool.length; i++) {
+      if (!eligible[i]) continue;
+      const values = datasetValues[i][di];
+      if (values.length === 0) continue;
+      for (const label of labels) {
+        if (anyValueMatches(dimension, label, values)) {
+          counts.set(label, (counts.get(label) ?? 0) + 1);
+        }
+      }
+    }
+
     const list: FacetValue[] = [];
-    for (const [, label] of candidates) {
-      const count = pool.filter(
-        (d) => matchesAllOtherGroups(d, filters, dimension) && matchesFilter(d, dimension, label),
-      ).length;
-      if (count > 0) list.push({ value: label, count });
+    for (const label of labels) {
+      // counts only ever stores positive values (labels with zero matches are absent).
+      const count = counts.get(label);
+      if (count !== undefined) list.push({ value: label, count });
     }
     list.sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
     if (list.length > 0) facets[dimension] = list;
