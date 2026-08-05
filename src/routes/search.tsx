@@ -59,11 +59,6 @@ type SearchResult = {
   verified?: string | null;
   doi?: string | null;
   url?: string | null;
-  modalities?: string[];
-  speciesValues?: string[];
-  task?: string[];
-  format?: string[];
-  keywords?: string[];
   [key: string]: unknown;
 };
 
@@ -285,35 +280,7 @@ function SearchResults() {
   };
 
   // Helper to check if a dataset matches a selected filter option
-  const normalizeFilterValue = (value: string) => value
-    .trim()
-    .toLocaleLowerCase()
-    .replace(/[\u2018\u2019']/g, "")
-    .replace(/[\s_-]+/g, " ");
-
-  const asValues = (value: string | string[] | null | undefined) => Array.isArray(value)
-    ? value
-    : value ? value.split(",") : [];
-
-  // Each filter checks only its corresponding metadata field. In particular,
-  // modality is compared exactly, so MRI cannot match fMRI by substring.
-  const datasetMatchesOption = (d: SearchResult, groupId: string, opt: string): boolean => {
-    const fields: Record<string, string[]> = {
-      modality: d.modalities?.length ? d.modalities : asValues(d.modality),
-      disease: asValues(d.disease),
-      species: d.speciesValues?.length ? d.speciesValues : asValues(d.species),
-      ageGroup: asValues(d.ageGroup),
-      task: d.task?.length ? d.task : (d.keywords ?? []),
-      format: d.format?.length ? d.format : (d.keywords ?? []),
-      repository: asValues(d.repo ?? d.source),
-      availability: asValues(d.access ?? d.access_tier),
-    };
-    const expected = normalizeFilterValue(opt);
-    return fields[groupId]?.some((value) => normalizeFilterValue(value) === expected) ?? false;
-  };
-
-  /* Legacy broad text matcher retained below temporarily for source history.
-  const datasetMatchesOptionLegacy = (d: SearchResult, opt: string): boolean => {
+  const datasetMatchesOption = (d: SearchResult, opt: string): boolean => {
     const normOpt = opt.toLowerCase().trim();
     if (!normOpt) return true;
 
@@ -354,15 +321,14 @@ function SearchResults() {
 
     return false;
   };
-  */
 
   // Client-side real-time result filter matching across all search result datasets
   const filteredResults = results.filter((d) => {
     if (!hasActiveFilters) return true;
-    for (const [groupId, selected] of Object.entries(activeFilters)) {
+    for (const [, selected] of Object.entries(activeFilters)) {
       if (!selected || selected.length === 0) continue;
       // Dataset must match at least ONE selected option in this filter group
-      const groupMatch = selected.some((opt) => datasetMatchesOption(d, groupId, opt));
+      const groupMatch = selected.some((opt) => datasetMatchesOption(d, opt));
       if (!groupMatch) return false;
     }
     return true;
