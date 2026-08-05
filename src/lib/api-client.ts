@@ -193,6 +193,9 @@ function mapProfile(data: Record<string, unknown>): UserProfile {
 // ponytail: resultSource='cache' means record already in DB — relabel 'web_search' → 'Database'.
 export function mapDataset(data: Record<string, unknown>, resultSource?: string): SearchResult {
   const list = (value: unknown) => (Array.isArray(value) ? value.join(", ") : String(value ?? ""));
+  const array = (value: unknown) => Array.isArray(value)
+    ? value.map((item) => String(item)).filter(Boolean)
+    : (value ? [String(value)] : []);
   const verified = data.last_verified_at
     ? new Date(String(data.last_verified_at)).toLocaleDateString()
     : ((data.trust_tier as string | null) ?? null);
@@ -203,13 +206,18 @@ export function mapDataset(data: Record<string, unknown>, resultSource?: string)
     name: String(data.title ?? "Untitled dataset"),
     repo,
     modality: list(data.modality) || "DS",
+    modalities: array(data.modality),
     description: String(data.description ?? ""),
     subjects: typeof data.subject_count === "number" ? data.subject_count : null,
     size: (data.size_label as string | null) ?? null,
     region: (data.region as string | null) ?? null,
     species: list(data.species) || null,
+    speciesValues: array(data.species),
     ageGroup: (data.age_group as string | null) ?? null,
     disease: (data.disease as string | null) ?? null,
+    task: array(data.task),
+    format: array(data.format),
+    keywords: array(data.keywords),
     license: (data.license as string | null) ?? null,
     access: (data.access_tier as string | null) ?? null,
     verified,
