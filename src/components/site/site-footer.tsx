@@ -38,6 +38,11 @@ export function SiteFooter() {
           </div>
         ))}
       </div>
+      <div className="mx-auto max-w-7xl px-6 pb-6">
+        <div className="mx-auto max-w-xl rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-center text-sm text-yellow-200 backdrop-blur">
+          Footer Section is currently under development and will be available soon.
+        </div>
+      </div>
       <div className="border-t border-white/5 [.light_&]:border-black/10">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-6 py-6 text-xs text-muted-foreground sm:flex-row">
           <div>© 2026 NeuroSearch AI · Advancing open brain science</div>
