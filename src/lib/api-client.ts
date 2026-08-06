@@ -191,6 +191,22 @@ function mapProfile(data: Record<string, unknown>): UserProfile {
     scheduled_deletion_at: data.scheduledDeletionAt ? String(data.scheduledDeletionAt) : null,
   };
 }
+export function stripHtml(rawHtml: string): string {
+  if (!rawHtml) return "";
+  return rawHtml
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<\/(p|div|h[1-6]|li)>/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#39;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 // ponytail: resultSource='cache' means record already in DB — relabel 'web_search' → 'Database'.
 export function mapDataset(data: Record<string, unknown>, resultSource?: string): SearchResult {
   const list = (value: unknown) => (Array.isArray(value) ? value.join(", ") : String(value ?? ""));
@@ -209,7 +225,7 @@ export function mapDataset(data: Record<string, unknown>, resultSource?: string)
     name: String(data.title ?? "Untitled dataset"),
     repo,
     modality: list(data.modality) || "DS",
-    description: String(data.description ?? ""),
+    description: stripHtml(String(data.description ?? "")),
     subjects: typeof data.subject_count === "number" ? data.subject_count : null,
     size: (data.size_label as string | null) ?? null,
     region: (data.region as string | null) ?? null,
