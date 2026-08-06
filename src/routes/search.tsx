@@ -72,7 +72,7 @@ function SearchResults() {
   } = useSearchState();
 
   const [q, setQ] = useState(search.q || "");
-  const [open, setOpen] = useState<string[]>(["modality", "disease", "task"]);
+  const [open, setOpen] = useState<string[]>([]);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [reactions, setReactions] = useState<Record<string, DatasetReactionSummary>>({});
   const [msgIndex, setMsgIndex] = useState(0);
