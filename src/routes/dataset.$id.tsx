@@ -292,12 +292,12 @@ function DatasetPage() {
     return (
       <AppShell>
         <div className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6">
-          {/* <button
+          <button
             onClick={() => window.history.back()}
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-3 w-3" /> Back to results
-          </button> */}
+          </button>
           <div className="mt-10 text-center text-muted-foreground">Dataset not found.</div>
         </div>
       </AppShell>
@@ -309,12 +309,12 @@ function DatasetPage() {
   return (
     <AppShell>
       <div className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6">
-        <button
+        {/* <button
           onClick={() => window.history.back()}
           className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-3 w-3" /> Back to results
-        </button>
+        </button> */}
 
         {/* Hero Card */}
         <div className="relative mt-6 overflow-hidden rounded-3xl glass-strong card-elevated">
