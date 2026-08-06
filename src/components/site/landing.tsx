@@ -354,31 +354,21 @@ export default function Landing() {
             <motion.div
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7 }}
-              className="mx-auto max-w-4xl text-center"
+              className="mx-auto max-w-6xl text-center"
             >
               <div className="inline-flex items-center gap-2 rounded-full glass px-3 py-1 text-xs text-foreground/80">
                 <span className="h-1.5 w-1.5 rounded-full bg-cyan animate-pulse" />
                 {dbRepos.length || 10} repositories indexed · 1,827+ verified datasets
                 <ArrowUpRight className="h-3 w-3" />
               </div>
-              <h1 className="mt-6 font-display text-5xl font-semibold leading-[1.02] tracking-tight sm:text-6xl md:text-7xl">
-                Search Every Open <br className="hidden sm:block" />
-                <span className="gradient-text">Neuroscience Dataset</span> with AI
+              <h1 className="mt-6 font-display text-2xl font-semibold leading-tight tracking-tight sm:text-4xl md:text-5xl lg:text-5xl">
+                Search Every Open <span className="gradient-text">Neuroscience Dataset</span> with AI
               </h1>
-              <p className="mx-auto mt-6 max-w-2xl text-base text-muted-foreground sm:text-lg">
-                Discover MRI, EEG, PET, MEG, clinical and neuroimaging datasets from OpenNeuro, DANDI,
-                ADNI, EBRAINS, UK Biobank and more — through one intelligent semantic search engine.
+              <p className="mx-auto mt-4 max-w-6xl text-xs sm:text-sm text-muted-foreground whitespace-normal lg:whitespace-nowrap">
+                Discover MRI, EEG, PET, MEG, clinical and neuroimaging datasets from OpenNeuro, DANDI, ADNI, EBRAINS, UK Biobank and more — through one intelligent semantic search engine.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                <Link
-                  to="/"
-                  search={{ q: "" }}
-                  className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-5 py-3 text-sm font-medium text-[oklch(0.15_0.03_258)] glow-cyan transition hover:shadow-2xl"
-                >
-                  Start Searching
-                  <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
-                </Link>
                 <a href="/help" className="inline-flex items-center gap-2 rounded-full glass px-5 py-3 text-sm font-medium hover:bg-white/10">
                   <Play className="h-3.5 w-3.5" /> View Documentation
                 </a>
