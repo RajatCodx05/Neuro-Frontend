@@ -91,6 +91,6 @@ export const stats = [
   { label: "Repositories Connected", value: 10, suffix: "" },
   { label: "Verified Links", value: 98.4, suffix: "%" },
   { label: "OverAll Searches", value: 571, suffix: "" },
-  // { label: "Research Papers Linked", value: 21290, suffix: "" },
+  { label: "Research Papers Linked", value: 100, suffix: "+" },
   { label: "Avg Search Time", value: 5.42, suffix: "s" },
 ];

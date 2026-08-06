@@ -358,7 +358,8 @@ export default function Landing() {
             >
               <div className="inline-flex items-center gap-2 rounded-full glass px-3 py-1 text-xs text-foreground/80">
                 <span className="h-1.5 w-1.5 rounded-full bg-cyan animate-pulse" />
-                {dbRepos.length || 10} repositories indexed · 1,827+ verified datasets
+                {/* <span>{dbRepos.length || 10}</span>  */}
+               10 repositories indexed · 710+ verified datasets
                 <ArrowUpRight className="h-3 w-3" />
               </div>
               <h1 className="mt-6 font-display text-3xl font-semibold leading-snug tracking-tight sm:text-5xl md:text-6xl">
@@ -402,7 +403,7 @@ export default function Landing() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2 px-3 pb-2 pt-3">
                   <button type="button" className="inline-flex items-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1 text-xs text-muted-foreground [.light_&]:text-foreground/80 hover:text-foreground hover:border-cyan/40">
-                    <SlidersHorizontal className="h-3 w-3" /> Advanced filters
+                    Example Queries <ArrowRight className="h-3 w-3" /> 
                   </button>
                   {suggestions.map((s) => (
                     <button type="button" key={s} onClick={() => setQ(s)} className="rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1 text-xs text-muted-foreground [.light_&]:text-foreground/80 hover:border-cyan/40 hover:text-foreground">
@@ -491,6 +492,9 @@ export default function Landing() {
               title={<>Handpicked, <span className="gradient-text">verified</span> and citation-ready</>}
               subtitle="Every dataset is validated with DOI resolution, license extraction and metadata normalization."
             />
+            <div className="mx-auto mt-6 max-w-xl rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-center text-sm text-yellow-200 backdrop-blur">
+              Featured datasets are currently under development and will be available soon.
+            </div>
             <div className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
               {datasets.map((d, i) => (
                 <motion.article
