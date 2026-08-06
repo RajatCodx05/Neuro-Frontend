@@ -448,7 +448,7 @@ export default function Landing() {
           <div className="mx-auto max-w-7xl px-6">
             <SectionHead
               eyebrow="Connected Repositories"
-              title={<>Every major neuroscience archive, <span className="gradient-text">unified</span></>}
+              /* title={<>Every major neuroscience archive, <span className="gradient-text">unified</span></>} */
               subtitle="We continuously index and verify open-science repositories so you can search across all of them at once."
             />
             <div className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -646,11 +646,11 @@ export default function Landing() {
   );
 }
 
-function SectionHead({ eyebrow, title, subtitle }: { eyebrow: string; title: React.ReactNode; subtitle: string }) {
+function SectionHead({ eyebrow, title, subtitle }: { eyebrow: string; title?: React.ReactNode; subtitle: string }) {
   return (
     <div className="mx-auto max-w-3xl text-center">
       <div className="inline-flex rounded-full glass px-3 py-1 text-[11px] uppercase tracking-widest text-cyan">{eyebrow}</div>
-      <h2 className="mt-4 font-display text-3xl font-semibold sm:text-5xl">{title}</h2>
+      {title && <h2 className="mt-4 font-display text-3xl font-semibold sm:text-5xl">{title}</h2>}
       <p className="mt-4 text-muted-foreground">{subtitle}</p>
     </div>
   );
