@@ -242,7 +242,7 @@ export default function Landing() {
             className="inline-flex items-center gap-1.5 rounded-full glass border border-white/10 [.light_&]:border-black/15 px-3 py-1.5 text-xs font-medium text-foreground/90 hover:bg-white/10 hover:text-foreground transition-all shadow-md backdrop-blur-xl"
           >
             <Play className="h-3 w-3 text-cyan" />
-            <span>View Documentation</span>
+            <span>View Docs</span>
           </a>
 
           {/* Notification Option */}
