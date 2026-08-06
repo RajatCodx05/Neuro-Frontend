@@ -77,9 +77,10 @@ function SearchResults() {
   const [reactions, setReactions] = useState<Record<string, DatasetReactionSummary>>({});
   const [msgIndex, setMsgIndex] = useState(0);
   const loadingMessages = [
-    "Cooking Datasets for You",
+    "Searching Datasets for You",
     "Scanning Neural Pathways",
     "Indexing Brain Waves",
+    "Analyzing the Results"
   ];
 
   // v0.3 G1: streaming is driven by the state machine — the pipeline runs only
