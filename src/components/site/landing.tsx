@@ -236,6 +236,15 @@ export default function Landing() {
       <div className="relative overflow-x-clip">
         {/* Top Right Options: Notification & Auth positioned at extreme top-right */}
         <div className="fixed top-4 right-6 sm:top-5 sm:right-8 z-40 flex items-center gap-2 sm:gap-3">
+          {/* View Documentation Button */}
+          <a
+            href="/help"
+            className="inline-flex items-center gap-1.5 rounded-full glass border border-white/10 [.light_&]:border-black/15 px-3 py-1.5 text-xs font-medium text-foreground/90 hover:bg-white/10 hover:text-foreground transition-all shadow-md backdrop-blur-xl"
+          >
+            <Play className="h-3 w-3 text-cyan" />
+            <span>View Documentation</span>
+          </a>
+
           {/* Notification Option */}
           <Popover>
             <PopoverTrigger asChild>
@@ -362,19 +371,14 @@ export default function Landing() {
                10 repositories indexed · 710+ verified datasets
                 <ArrowUpRight className="h-3 w-3" />
               </div>
-              <h1 className="mt-6 font-display text-3xl font-semibold leading-snug tracking-tight sm:text-5xl md:text-6xl">
+              <h1 className="mt-6 font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl md:text-7xl">
                 Search Every Open <br />
-                <span className="gradient-text">Neuroscience Dataset</span> with AI
+                <span className="gradient-text">Neuroscience Dataset</span> <br />
+                with AI
               </h1>
-              <p className="mx-auto mt-4 max-w-6xl text-xs sm:text-sm text-muted-foreground whitespace-normal lg:whitespace-nowrap">
+              <p className="mx-auto mt-6 max-w-3xl text-sm text-muted-foreground sm:text-base leading-relaxed">
                 Discover MRI, EEG, PET, MEG, clinical and neuroimaging datasets from OpenNeuro, DANDI, ADNI, EBRAINS, UK Biobank and more — through one intelligent semantic search engine.
               </p>
-
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                <a href="/help" className="inline-flex items-center gap-2 rounded-full glass px-5 py-3 text-sm font-medium hover:bg-white/10">
-                  <Play className="h-3.5 w-3.5" /> View Documentation
-                </a>
-              </div>
             </motion.div>
 
             {/* Search Interface */}
