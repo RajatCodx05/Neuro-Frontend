@@ -17,6 +17,7 @@ import {
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
 import { api, type SearchResult } from "@/lib/api-client";
+import { modalityDisplayLabel } from "@/lib/search-filters";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dataset/$id")({
@@ -381,8 +382,13 @@ function DatasetPage() {
                       <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">
                         {k}
                       </div>
-                      <div className="mt-1 font-medium text-foreground capitalize break-words">
-                        {v}
+                      {/* Issue 1: modality uses the canonical display label
+                          (and skips CSS `capitalize`, which would mangle
+                          "fMRI" → "FMRI"). All other cells keep title-casing. */}
+                      <div
+                        className={`mt-1 font-medium text-foreground break-words ${k === "Modality" ? "" : "capitalize"}`}
+                      >
+                        {k === "Modality" ? modalityDisplayLabel(String(v)) : v}
                       </div>
                     </div>
                   ))}

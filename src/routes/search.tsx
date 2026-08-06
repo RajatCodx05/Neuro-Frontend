@@ -12,6 +12,7 @@ import {
   PAGE_SIZE,
   facetDisplayLabel,
   hasAnySelection,
+  modalityDisplayLabel,
   parseUrlFilters,
   type FilterDimension,
 } from "@/lib/search-filters";
@@ -38,6 +39,9 @@ export const Route = createFileRoute("/search")({
     format: typeof s.format === "string" ? s.format : undefined,
     repository: typeof s.repository === "string" ? s.repository : undefined,
     availability: typeof s.availability === "string" ? s.availability : undefined,
+    // Issue 5: region is a first-class filter dimension — it must round-trip
+    // through the URL exactly like modality/species so checkboxes are live.
+    region: typeof s.region === "string" ? s.region : undefined,
   }),
   component: SearchResults,
 });
@@ -71,9 +75,6 @@ function SearchResults() {
   const [open, setOpen] = useState<string[]>(["modality", "disease", "task"]);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [reactions, setReactions] = useState<Record<string, DatasetReactionSummary>>({});
-  const [showFilters, setShowFilters] = useState(
-    Boolean(search.filters === "true" || Object.keys(search).some((k) => k !== "q" && k !== "filters" && k !== "page")),
-  );
   const [msgIndex, setMsgIndex] = useState(0);
   const loadingMessages = [
     "Cooking Datasets for You",
@@ -84,6 +85,11 @@ function SearchResults() {
   // v0.3 G1: streaming is driven by the state machine — the pipeline runs only
   // on submit / initial load / explicit "Search entire database".
   const streaming = mode === "searching" || mode === "expanding";
+
+  // Issue 3: the sidebar is CLOSED by default and opens only when the user
+  // presses the "Filters" button (which persists `filters=true` in the URL).
+  // Filter params alone never force it open.
+  const [showFilters, setShowFilters] = useState(() => search.filters === "true");
 
   const urlFilters = parseUrlFilters(search as unknown as Record<string, unknown>);
   const hasActiveFilters = hasAnySelection(activeFilters);
@@ -124,7 +130,7 @@ function SearchResults() {
   useEffect(() => {
     setActiveFilters(parseUrlFilters(search as unknown as Record<string, unknown>));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.modality, search.disease, search.species, search.ageGroup, search.task, search.format, search.repository, search.availability]);
+  }, [search.modality, search.disease, search.species, search.ageGroup, search.task, search.format, search.repository, search.availability, search.region]);
 
   // v0.3 FR-1: the pipeline is invoked ONLY when (a) there is no baseline yet
   // (initial load / shareable URL reload) or (b) the query text changed
@@ -470,7 +476,7 @@ function SearchResults() {
                                   className="h-3.5 w-3.5 rounded border-white/20 accent-cyan cursor-pointer"
                                 />
                                 <span className={isChecked ? "font-medium text-cyan" : "text-foreground/90"}>
-                                  {facetDisplayLabel(f.value)}
+                                  {dim === "modality" ? modalityDisplayLabel(f.value) : facetDisplayLabel(f.value)}
                                 </span>
                                 <span className="ml-auto text-[10px] font-medium text-muted-foreground">{f.count}</span>
                               </label>
@@ -506,7 +512,7 @@ function SearchResults() {
               >
                 <div className="flex flex-col items-center gap-2 shrink-0">
                   <div className="grid h-16 w-16 place-items-center rounded-xl bg-gradient-to-br from-cyan/40 to-neural/40 font-display text-xs font-bold text-white ring-1 ring-white/10">
-                    {d.modality ?? "DS"}
+                    {modalityDisplayLabel(d.modality ?? "DS")}
                   </div>
                   {/* Like & Dislike buttons positioned on the left under modality avatar */}
                   <div className="flex w-16 items-center justify-between gap-1">

@@ -199,8 +199,13 @@ export function mapDataset(data: Record<string, unknown>, resultSource?: string)
     : ((data.trust_tier as string | null) ?? null);
   const rawSource = String(data.source ?? "Dataset");
   const repo = rawSource === "web_search" && resultSource === "cache" ? "Database" : rawSource;
+  // Stability (Expand 404 fix): repository/discovery-tier records come straight
+  // from Python without a Mongo `_id` (and `id` is null), so fall back to
+  // `source_id` — the backend getById resolves `/datasets/:id` by Mongo `_id`
+  // OR `source_id`. Filtering never touches these fields, so the identifier is
+  // preserved end-to-end from the cached pool to the card's Expand button.
   return {
-    id: idOf(data),
+    id: String(data._id ?? data.id ?? data.source_id ?? ""),
     name: String(data.title ?? "Untitled dataset"),
     repo,
     modality: list(data.modality) || "DS",

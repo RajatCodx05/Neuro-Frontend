@@ -13,6 +13,7 @@ import { SiteFooter } from "@/components/site/site-footer";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api-client";
+import { modalityDisplayLabel } from "@/lib/search-filters";
 import { toast } from "sonner";
 import {
   Popover, PopoverTrigger, PopoverContent
@@ -519,7 +520,7 @@ export default function Landing() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                     <div className="absolute left-3 top-3 flex gap-1.5">
-                      <Badge>{d.modality}</Badge>
+                      <Badge>{modalityDisplayLabel(d.modality)}</Badge>
                       <Badge variant="cyan">{d.access}</Badge>
                     </div>
                     <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-[10px] text-white backdrop-blur">

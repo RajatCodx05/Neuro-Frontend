@@ -81,8 +81,10 @@ export const FILTER_DIMENSION_LABELS: Record<FilterDimension, string> = {
   region: "Region",
 };
 
-// The 8 dimensions synchronized through URL params (region is a derived-only
-// facet; see search.tsx validateSearch).
+// All dimensions synchronized through URL params — including `region`, which
+// is a first-class filter dimension like modality/species (Issue 5: the
+// backend buildMongoQuery already handles `region`, so region checkboxes must
+// round-trip through the URL exactly like every other group).
 export const URL_DIMENSIONS: FilterDimension[] = [
   "modality",
   "disease",
@@ -92,6 +94,7 @@ export const URL_DIMENSIONS: FilterDimension[] = [
   "format",
   "repository",
   "availability",
+  "region",
 ];
 
 /** Parser/UI key → canonical dimension (FR-5). `keywords`/`raw_query` are ignored. */
@@ -161,6 +164,204 @@ export function listOf(value: unknown): string[] {
 }
 
 /**
+ * Issue 4 — string sentinels written by Python's str(None)/str(nan) that must
+ * never surface as facet values.
+ */
+const NONE_LITERALS = new Set(["none", "null", "nan", "n/a", "-"]);
+
+/**
+ * Issue 4 — expand a raw STRUCTURED metadata value into individual values.
+ *
+ * Structured fields are single- or multi-valued by schema (arrays like
+ * `modality`/`keywords`, strings like `disease`/`region`), but real records
+ * sometimes store them as:
+ *   - Python-stringified lists        `"['meg']"` / `"['a', 'b']"`
+ *   - semicolon/pipe-joined lists     `"Alzheimer's disease; neuroimaging; …"`
+ *   - string sentinels                `"None"`, `"nan"`
+ *
+ * These must be split/parsed BEFORE facet generation or matching, otherwise a
+ * concatenated metadata blob becomes a single (meaningless) facet value. Only
+ * structured fields ever pass through here — free-text content
+ * (title/description/HTML) is never a source, so no prose is tokenized.
+ */
+function expandStructuredValue(value: unknown): string[] {
+  if (Array.isArray(value)) return value.flatMap((v) => expandStructuredValue(v));
+  if (value === null || value === undefined) return [];
+  const s = String(value).trim();
+  if (!s) return [];
+  if (NONE_LITERALS.has(s.toLowerCase())) return [];
+  // Python-stringified list: "['meg']", "['a', 'b']" (only when quoted — a
+  // bare "[meg]" is not a Python repr and is left alone).
+  const listMatch = s.match(/^\[(.*)\]$/s);
+  if (listMatch) {
+    const inner = listMatch[1].trim();
+    if (inner && (inner.includes("'") || inner.includes('"'))) {
+      const parts = inner
+        .split(/\s*'\s*,\s*'|\s*"\s*,\s*"/)
+        .map((p) => p.replace(/^['"]|['"]$/g, "").trim())
+        .filter(Boolean);
+      if (parts.length > 0) return parts.flatMap((p) => expandStructuredValue(p));
+    }
+  }
+  // Semicolon / pipe joined multi-values (never commas — a comma can be part
+  // of a legitimate single value and prose must not be tokenized).
+  if (/[;|]/.test(s)) {
+    return s.split(/[;|]/).flatMap((part) => expandStructuredValue(part.trim()));
+  }
+  return [s];
+}
+
+/** Dedupe a value list case-insensitively, keeping first-seen casing. */
+function dedupeValues(values: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of values) {
+    const v = String(raw ?? "").trim();
+    const key = v.toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(v);
+  }
+  return out;
+}
+
+/**
+ * Issue 4 — canonical modality label for a raw value (token -> "fmri", "meg", …).
+ * Mirrors MODALITY_VOCAB (Neuro-Agents/app/data/vocab.py) so variant labels
+ * ("functional mri", "functional magnetic resonance imaging") collapse onto
+ * one facet value, exactly like the synonym families already used for matching.
+ */
+const MODALITY_CANONICAL_TOKENS: Record<string, string> = {
+  meg: "meg",
+  magnetoencephalography: "meg",
+  magnetoencephalogram: "meg",
+  eeg: "eeg",
+  electroencephalography: "eeg",
+  electroencephalogram: "eeg",
+  ieeg: "ieeg",
+  "intracranial eeg": "ieeg",
+  "intracranial electroencephalography": "ieeg",
+  ecog: "ecog",
+  electrocorticography: "ecog",
+  mri: "mri",
+  "magnetic resonance imaging": "mri",
+  fmri: "fmri",
+  "functional mri": "fmri",
+  "functional magnetic resonance imaging": "fmri",
+  smri: "smri",
+  "structural mri": "smri",
+  "structural magnetic resonance imaging": "smri",
+  "t1-weighted": "smri",
+  "t2-weighted": "smri",
+  pet: "pet",
+  "positron emission tomography": "pet",
+  dti: "dti",
+  "diffusion tensor imaging": "dti",
+  "diffusion-weighted imaging": "dti",
+  "diffusion mri": "dti",
+  nirs: "nirs",
+  "near-infrared spectroscopy": "nirs",
+  fnirs: "fnirs",
+  "functional near-infrared spectroscopy": "fnirs",
+};
+
+/**
+ * Issue 4 — canonical disease label for a raw value (token -> "alzheimer",
+ * "parkinson", …). Mirrors DISEASE_TERMS (Neuro-Agents/app/data/vocab.py) so
+ * "Alzheimer", "Alzheimer's", "Alzheimer's disease" all collapse onto one
+ * facet value instead of appearing as three separate facets.
+ */
+const DISEASE_CANONICAL_TOKENS: Record<string, string> = {
+  parkinson: "parkinson",
+  "parkinson's": "parkinson",
+  parkinsons: "parkinson",
+  "parkinson disease": "parkinson",
+  "parkinson's disease": "parkinson",
+  alzheimer: "alzheimer",
+  "alzheimer's": "alzheimer",
+  alzheimers: "alzheimer",
+  "alzheimer disease": "alzheimer",
+  "alzheimer's disease": "alzheimer",
+  "mild cognitive impairment": "mild cognitive impairment",
+  "cognitive impairment": "mild cognitive impairment",
+  dementia: "dementia",
+  demented: "dementia",
+  "lewy body": "dementia",
+  adhd: "adhd",
+  "attention deficit hyperactivity disorder": "adhd",
+  "attention deficit disorder": "adhd",
+  schizophrenia: "schizophrenia",
+  schizophrenic: "schizophrenia",
+  psychosis: "schizophrenia",
+  psychotic: "schizophrenia",
+  bipolar: "bipolar",
+  "bipolar disorder": "bipolar",
+  "manic depression": "bipolar",
+  depression: "depression",
+  depressive: "depression",
+  "major depressive disorder": "depression",
+  mdd: "depression",
+  anxiety: "anxiety",
+  anxious: "anxiety",
+  "generalized anxiety": "anxiety",
+  autism: "autism",
+  autistic: "autism",
+  asd: "autism",
+  "autism spectrum disorder": "autism",
+  epilepsy: "epilepsy",
+  epileptic: "epilepsy",
+  epileptiform: "epilepsy",
+  seizure: "epilepsy",
+  seizures: "epilepsy",
+  "multiple sclerosis": "multiple sclerosis",
+  "amyotrophic lateral sclerosis": "amyotrophic lateral sclerosis",
+  huntington: "huntington",
+  "huntington's": "huntington",
+  huntingtons: "huntington",
+  "huntington disease": "huntington",
+  stroke: "stroke",
+  strokes: "stroke",
+  "ischemic stroke": "stroke",
+  "cerebrovascular accident": "stroke",
+  "traumatic brain injury": "traumatic brain injury",
+  "head injury": "traumatic brain injury",
+  concussion: "traumatic brain injury",
+  migraine: "migraine",
+  migraines: "migraine",
+  insomnia: "insomnia",
+  "sleep disorder": "insomnia",
+  "sleep disorders": "insomnia",
+  obesity: "obesity",
+  obese: "obesity",
+  diabetes: "diabetes",
+  diabetic: "diabetes",
+  "type 2 diabetes": "diabetes",
+  "type 1 diabetes": "diabetes",
+  covid: "covid",
+  "covid-19": "covid",
+  "sars-cov-2": "covid",
+  coronavirus: "covid",
+  tinnitus: "tinnitus",
+  "chronic pain": "chronic pain",
+  "neuropathic pain": "chronic pain",
+  fibromyalgia: "chronic pain",
+};
+
+/**
+ * Issue 4 — canonicalize a single structured value onto its dimension's
+ * canonical label when it matches a vocabulary token; otherwise unchanged.
+ */
+function canonicalizeDimensionValue(dimension: FilterDimension, value: string): string {
+  const v = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  if (!v) return value;
+  if (dimension === "modality") return MODALITY_CANONICAL_TOKENS[v] ?? value;
+  if (dimension === "disease") return DISEASE_CANONICAL_TOKENS[v] ?? value;
+  return value;
+}
+
+/**
  * The dataset's candidate values for a canonical dimension (§8.5 mapping).
  *
  * Structured metadata ONLY (Issue 4): facet/filter options must never be
@@ -172,32 +373,48 @@ export function dimensionFieldSources(dataset: RawDataset, dimension: FilterDime
   const sources: string[] = [];
   switch (dimension) {
     case "modality":
-      sources.push(...listOf(dataset.modality));
+      sources.push(...expandStructuredValue(dataset.modality));
       break;
     case "disease":
-      sources.push(...listOf(dataset.disease), ...listOf(dataset.keywords));
+      sources.push(
+        ...expandStructuredValue(dataset.disease),
+        ...expandStructuredValue(dataset.keywords),
+      );
       break;
     case "species":
-      sources.push(...listOf(dataset.species));
+      sources.push(...expandStructuredValue(dataset.species));
       break;
     case "ageGroup":
-      sources.push(...listOf(dataset.age_group), ...listOf(dataset.age_range));
+      sources.push(
+        ...expandStructuredValue(dataset.age_group),
+        ...expandStructuredValue(dataset.age_range),
+      );
       break;
     case "task":
     case "format":
-      sources.push(...listOf(dataset.keywords));
+      sources.push(...expandStructuredValue(dataset.keywords));
       break;
     case "repository":
-      sources.push(...listOf(dataset.source), ...listOf(dataset.repo));
+      sources.push(
+        ...expandStructuredValue(dataset.source),
+        ...expandStructuredValue(dataset.repo),
+      );
       break;
     case "availability":
-      sources.push(...listOf(dataset.access_tier), ...listOf(dataset.access));
+      sources.push(
+        ...expandStructuredValue(dataset.access_tier),
+        ...expandStructuredValue(dataset.access),
+      );
       break;
     case "region":
-      sources.push(...listOf(dataset.region));
+      sources.push(...expandStructuredValue(dataset.region));
       break;
   }
-  return sources.filter((s) => s !== "");
+  // Issue 4: normalize structured metadata BEFORE facet generation — split
+  // multi-value strings, drop sentinels, collapse vocabulary synonyms onto one
+  // canonical label, then dedupe. `dimensionFieldSources` feeds BOTH facet
+  // counting and `matchesFilter`, so facets and filtered lists stay consistent.
+  return dedupeValues(sources.map((s) => canonicalizeDimensionValue(dimension, s)));
 }
 
 /**
@@ -365,7 +582,11 @@ export function normalizeDimensions(
     const dimension = DIMENSION_ALIASES[key];
     if (!dimension) continue; // keywords / raw_query intentionally not facet dimensions
     const values = listOf(value);
-    if (values.length > 0) out[dimension] = values;
+    if (values.length === 0) continue;
+    // Issue 4: canonicalize parser-intent values the same way facets are
+    // canonicalized, so FR-8 pre-selected checkboxes use the exact same label
+    // as the facet row they tick (no "Alzheimer's disease" next to "Alzheimer").
+    out[dimension] = values.map((v) => canonicalizeDimensionValue(dimension, v));
   }
   return out;
 }
@@ -440,4 +661,38 @@ export function facetDisplayLabel(value: string): string {
   const v = String(value || "").trim();
   if (!v) return v;
   return v.charAt(0).toUpperCase() + v.slice(1);
+}
+
+/**
+ * Issue 1 — canonical professional display label for a modality value
+ * (DISPLAY ONLY: never used for matching, never stored). Mirrors
+ * MODALITY_VOCAB so "mri" → "MRI", "fmri" → "fMRI", "functional magnetic
+ * resonance imaging" → "MRI", etc. Unknown values keep title-case.
+ */
+export function modalityDisplayLabel(value: string): string {
+  const v = String(value ?? "").trim();
+  if (!v) return v;
+  // mapDataset joins modality arrays with ", " — display each token.
+  if (v.includes(",")) {
+    return v
+      .split(",")
+      .map((part) => modalityDisplayLabel(part))
+      .join(", ");
+  }
+  const canonical = MODALITY_CANONICAL_TOKENS[v.toLowerCase()];
+  if (!canonical) return facetDisplayLabel(v);
+  const display: Record<string, string> = {
+    meg: "MEG",
+    eeg: "EEG",
+    ieeg: "iEEG",
+    ecog: "ECoG",
+    mri: "MRI",
+    fmri: "fMRI",
+    smri: "sMRI",
+    pet: "PET",
+    dti: "DTI",
+    nirs: "NIRS",
+    fnirs: "fNIRS",
+  };
+  return display[canonical] ?? facetDisplayLabel(v);
 }
