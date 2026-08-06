@@ -236,6 +236,15 @@ export default function Landing() {
       <div className="relative overflow-x-clip">
         {/* Top Right Options: Notification & Auth positioned at extreme top-right */}
         <div className="fixed top-4 right-6 sm:top-5 sm:right-8 z-40 flex items-center gap-2 sm:gap-3">
+          {/* View Documentation Button */}
+          <a
+            href="/help"
+            className="inline-flex items-center gap-1.5 rounded-full glass border border-white/10 [.light_&]:border-black/15 px-3 py-1.5 text-xs font-medium text-foreground/90 hover:bg-white/10 hover:text-foreground transition-all shadow-md backdrop-blur-xl"
+          >
+            <Play className="h-3 w-3 text-cyan" />
+            <span>View Documentation</span>
+          </a>
+
           {/* Notification Option */}
           <Popover>
             <PopoverTrigger asChild>
@@ -369,12 +378,6 @@ export default function Landing() {
               <p className="mx-auto mt-4 max-w-6xl text-xs sm:text-sm text-muted-foreground whitespace-normal lg:whitespace-nowrap">
                 Discover MRI, EEG, PET, MEG, clinical and neuroimaging datasets from OpenNeuro, DANDI, ADNI, EBRAINS, UK Biobank and more — through one intelligent semantic search engine.
               </p>
-
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                <a href="/help" className="inline-flex items-center gap-2 rounded-full glass px-5 py-3 text-sm font-medium hover:bg-white/10">
-                  <Play className="h-3.5 w-3.5" /> View Documentation
-                </a>
-              </div>
             </motion.div>
 
             {/* Search Interface */}
