@@ -375,7 +375,7 @@ export default function Landing() {
                 <span className="gradient-text">Neuroscience Dataset</span> <br />
                 with AI
               </h1>
-              <p className="mx-auto mt-4 max-w-6xl text-xs sm:text-sm text-muted-foreground whitespace-normal lg:whitespace-nowrap">
+              <p className="mx-auto mt-6 max-w-3xl text-sm text-muted-foreground sm:text-base leading-relaxed">
                 Discover MRI, EEG, PET, MEG, clinical and neuroimaging datasets from OpenNeuro, DANDI, ADNI, EBRAINS, UK Biobank and more — through one intelligent semantic search engine.
               </p>
             </motion.div>
