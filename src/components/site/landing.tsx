@@ -361,8 +361,9 @@ export default function Landing() {
                 {dbRepos.length || 10} repositories indexed · 1,827+ verified datasets
                 <ArrowUpRight className="h-3 w-3" />
               </div>
-              <h1 className="mt-6 font-display text-2xl font-semibold leading-tight tracking-tight sm:text-4xl md:text-5xl lg:text-5xl">
-                Search Every Open <span className="gradient-text">Neuroscience Dataset</span> with AI
+              <h1 className="mt-6 font-display text-3xl font-semibold leading-snug tracking-tight sm:text-5xl md:text-6xl">
+                Search Every Open <br />
+                <span className="gradient-text">Neuroscience Dataset</span> with AI
               </h1>
               <p className="mx-auto mt-4 max-w-6xl text-xs sm:text-sm text-muted-foreground whitespace-normal lg:whitespace-nowrap">
                 Discover MRI, EEG, PET, MEG, clinical and neuroimaging datasets from OpenNeuro, DANDI, ADNI, EBRAINS, UK Biobank and more — through one intelligent semantic search engine.
