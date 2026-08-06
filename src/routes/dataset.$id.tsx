@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
+import { useSearchState } from "@/lib/search-state";
 import { api, type SearchResult } from "@/lib/api-client";
 import { modalityDisplayLabel } from "@/lib/search-filters";
 import { toast } from "sonner";
@@ -203,6 +204,10 @@ function DatasetPage() {
   const [d, setD] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
+  const { filteredResults } = useSearchState();
+  // Read the latest search pool without re-triggering the fetch effect.
+  const filteredResultsRef = useRef(filteredResults);
+  filteredResultsRef.current = filteredResults;
 
   useEffect(() => {
     setLoading(true);
@@ -220,6 +225,15 @@ function DatasetPage() {
         }
       })
       .catch(async (err) => {
+        // Expand fix: repository-tier / discovery records are returned by search
+        // with no Mongo _id (id: null) and are NOT persisted in the DB, so the
+        // backend getById 404s. The exact snapshot the user clicked is still in
+        // the search-state cache — render it instead of "Dataset not found."
+        const snapshot = filteredResultsRef.current.find((r) => r.id === id);
+        if (snapshot) {
+          setD(snapshot);
+          return;
+        }
         // Fallback check in user saved datasets snapshot
         try {
           const list = await api.savedDatasets.list();
