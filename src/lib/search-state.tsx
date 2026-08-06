@@ -7,8 +7,11 @@
  *                     pipeline run — initial search or "Search entire database")
  *   - `parsedIntent`  parser-derived dimensions from the last response (FR-8/FR-7)
  *   - `activeFilters` user selection, synchronized from the URL by the route
- *   - `appliedFilters` activeFilters + parser pre-selection, minus any
- *                     conflicting selection (derived — what actually filters)
+ *   - `appliedFilters` user selection MINUS the filters the backend already
+ *                     applied when the pool was built (never includes parser
+ *                     intent — the backend already filtered by it; Issue 1)
+ *   - `displayFilters` user selection + parser pre-selection minus user
+ *                     overrides (checkbox display only, FR-8/Issue 3)
  *   - `filteredResults` / `facets` derived synchronously by the single engine
  *
  * Filter toggles, clearing, and pagination NEVER call the backend (G1). The
@@ -61,7 +64,10 @@ export type SearchState = {
   hasBaseline: boolean;
   baselineCount: number;
   activeFilters: ActiveFilters;
+  /** User selection minus what the backend already applied when the pool was built. */
   appliedFilters: ActiveFilters;
+  /** Parser pre-selection for facet checkboxes (FR-8) — display ONLY, never applied to the pool. */
+  displayFilters: ActiveFilters;
   parsedIntent: ActiveFilters | null;
   filteredResults: SearchResult[];
   facets: FacetMap;
@@ -70,11 +76,24 @@ export type SearchState = {
   runSearch: (query: string, filters: ActiveFilters) => void;
   expandSearch: () => void;
   setActiveFilters: (filters: ActiveFilters) => void;
+  /** Record a user interaction on a dimension so parser pre-selection stops applying to it (Issue 3). */
+  markFilterOverride: (dimension: FilterDimension) => void;
   clearFilters: () => void;
   reset: () => void;
 };
 
 const SearchStateContext = createContext<SearchState | null>(null);
+
+/** True when two per-dimension selections hold the same values (order-insensitive). */
+function sameSelection(a: string[] | undefined, b: string[] | undefined): boolean {
+  const listA = a ?? [];
+  const listB = b ?? [];
+  return (
+    listA.length === listB.length &&
+    listA.every((v) => listB.includes(v)) &&
+    listB.every((v) => listA.includes(v))
+  );
+}
 
 export function SearchProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<SearchMode>("idle");
@@ -88,6 +107,13 @@ export function SearchProvider({ children }: { children: ReactNode }) {
   // loaded — for those, parser pre-selection (FR-8) is suppressed so a
   // pre-ticked value can be unticked.
   const [overrides, setOverrides] = useState<ReadonlySet<FilterDimension>>(new Set());
+  // The explicit filters that were sent to the backend when the current pool
+  // was produced. The backend ALREADY applied those (and its parser intent)
+  // when building the pool, so re-applying the same selection client-side with
+  // this stricter structured-field engine would drop legitimate results that
+  // the backend matched via free text (Issue 1). Only selections the backend
+  // did NOT see (i.e. toggled after the baseline loaded) are applied locally.
+  const [baselineFilters, setBaselineFilters] = useState<ActiveFilters>({});
 
   const queryRef = useRef("");
   const activeFiltersRef = useRef<ActiveFilters>({});
@@ -124,6 +150,9 @@ export function SearchProvider({ children }: { children: ReactNode }) {
       try {
         const response = await api.datasets.search(query, filters);
         if (seq !== requestSeq.current) return; // superseded by a newer request
+        // The backend applied exactly `filters` (plus its parser intent) to
+        // produce this pool — never re-apply them client-side (Issue 1).
+        setBaselineFilters(filters);
         applySearchResponse(query, response);
       } catch (err) {
         if (seq !== requestSeq.current) return;
@@ -142,6 +171,9 @@ export function SearchProvider({ children }: { children: ReactNode }) {
     try {
       const response = await api.datasets.search(queryRef.current, activeFiltersRef.current);
       if (seq !== requestSeq.current) return; // superseded by a newer request
+      // The expanded search ran WITH the current selection, so the new pool
+      // already reflects it — no client-side re-application (Issue 1).
+      setBaselineFilters(activeFiltersRef.current);
       applySearchResponse(queryRef.current, response);
     } catch (err) {
       if (seq !== requestSeq.current) return;
@@ -153,14 +185,12 @@ export function SearchProvider({ children }: { children: ReactNode }) {
   /** Sync user selection from the URL; dimensions that changed become user-overridden. */
   const setActiveFilters = useCallback((filters: ActiveFilters) => {
     const prev = prevActiveRef.current;
-    const same = (a: string[] | undefined, b: string[] | undefined) =>
-      JSON.stringify(a ?? []) === JSON.stringify(b ?? []);
     if (
       Object.keys(prev).every((k) =>
-        same(prev[k as FilterDimension], filters[k as FilterDimension]),
+        sameSelection(prev[k as FilterDimension], filters[k as FilterDimension]),
       ) &&
       Object.keys(filters).every((k) =>
-        same(prev[k as FilterDimension], filters[k as FilterDimension]),
+        sameSelection(prev[k as FilterDimension], filters[k as FilterDimension]),
       )
     ) {
       return;
@@ -171,7 +201,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
     ]) as Set<FilterDimension>;
     const changed: FilterDimension[] = [];
     for (const dim of allDims) {
-      if (!same(prev[dim], filters[dim])) changed.push(dim);
+      if (!sameSelection(prev[dim], filters[dim])) changed.push(dim);
     }
     if (changed.length > 0) {
       setOverrides((o) => {
@@ -200,35 +230,75 @@ export function SearchProvider({ children }: { children: ReactNode }) {
     setParsedIntent(null);
     setActiveFiltersState({});
     setOverrides(new Set());
+    setBaselineFilters({});
     prevActiveRef.current = {};
     queryRef.current = "";
     setOriginalQuery("");
   }, []);
 
-  // Applied filters = user selection + parser pre-selection (FR-8), with any
-  // conflicting selection held back and surfaced as a banner (FR-7, R4).
+  // What actually filters the pool (Issue 1): ONLY user selections that the
+  // backend did not already apply when building the pool. The backend applied
+  // both its parser intent and the explicit filters sent with the search
+  // (dataset.controller.js merges them into the Mongo query, which matches
+  // free text as well as structured fields). Re-applying those same selections
+  // client-side with this stricter structured-field engine is what dropped
+  // legitimate results to zero — so parser intent is never applied here (it is
+  // display-only via `displayFilters`), and identical selections are skipped.
+  //
+  // FR-7 conflicts: a selection disjoint from the parser's intent on the same
+  // dimension is NOT silently applied — the cached pool is shown unfiltered by
+  // that group (§11.5) and an explicit "Search again using these filters"
+  // banner is surfaced instead.
+  //
+  // Deliberate edge (documented design tradeoff): a user toggle whose value
+  // equals a parser-intent value on a dimension the backend already filtered
+  // is still applied locally and can drop free-text-matched records. Facet
+  // counts stay honest (G3) and the conflict banner covers the disjoint case,
+  // so this matches the intended Search ≠ Filter semantics.
   const { appliedFilters, conflict } = useMemo(() => {
-    const display = mergeFilters(activeFilters, parsedIntent, overrides);
+    const applied: ActiveFilters = {};
+    for (const dimension of FILTER_DIMENSIONS) {
+      const current = activeFilters[dimension];
+      if (sameSelection(current, baselineFilters[dimension])) continue; // backend already applied it
+      if (current?.length) applied[dimension] = [...current];
+    }
+    let foundConflict: ConflictState = null;
     if (parsedIntent) {
-      for (const dimension of Object.keys(activeFilters) as FilterDimension[]) {
-        const selected = activeFilters[dimension];
+      for (const dimension of Object.keys(applied) as FilterDimension[]) {
+        const selected = applied[dimension];
         const intentValues = parsedIntent[dimension];
         if (
           selected?.length &&
           intentValues?.length &&
           !valuesOverlap(dimension, selected, intentValues)
         ) {
-          // Disjoint selection → do NOT filter by it; show the explicit
-          // "Search again using these filters" action instead (§11.5).
-          return {
-            appliedFilters: { ...display, [dimension]: intentValues },
-            conflict: { dimension, values: selected },
-          };
+          delete applied[dimension];
+          foundConflict = { dimension, values: selected };
         }
       }
     }
-    return { appliedFilters: display, conflict: null };
-  }, [activeFilters, parsedIntent, overrides]);
+    return { appliedFilters: applied, conflict: foundConflict };
+  }, [activeFilters, baselineFilters, parsedIntent]);
+
+  // Parser pre-selection (FR-8) for the facet checkboxes — display ONLY. The
+  // pool is already filtered by the parser, so these values must never filter
+  // again; they only pre-tick checkboxes. `overrides` (Issue 3) suppresses the
+  // parser's value on any dimension the user touched, so the user's choice
+  // always wins until a new search re-applies parser intent.
+  const displayFilters = useMemo(
+    () => mergeFilters(activeFilters, parsedIntent, overrides),
+    [activeFilters, parsedIntent, overrides],
+  );
+
+  /** Record a user interaction on `dimension` so parser pre-selection stops applying to it (Issue 3). */
+  const markFilterOverride = useCallback((dimension: FilterDimension) => {
+    setOverrides((o) => {
+      if (o.has(dimension)) return o;
+      const next = new Set(o);
+      next.add(dimension);
+      return next;
+    });
+  }, []);
 
   const filteredResults = useMemo(
     () => applyFilters(pool, appliedFilters).map((r) => mapDataset(r, resultSource)),
@@ -249,6 +319,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
       baselineCount: pool.length,
       activeFilters,
       appliedFilters,
+      displayFilters,
       parsedIntent,
       filteredResults,
       facets,
@@ -257,6 +328,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
       runSearch,
       expandSearch,
       setActiveFilters,
+      markFilterOverride,
       clearFilters,
       reset,
     }),
@@ -267,6 +339,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
       pool.length,
       activeFilters,
       appliedFilters,
+      displayFilters,
       parsedIntent,
       filteredResults,
       facets,
@@ -275,6 +348,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
       runSearch,
       expandSearch,
       setActiveFilters,
+      markFilterOverride,
       clearFilters,
       reset,
     ],

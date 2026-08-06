@@ -9,7 +9,7 @@
  * (`matchesFilter`) drives both filtered result lists and dynamic facet
  * counts, so "EEG (18)" always means exactly 18 datasets (G3 by construction).
  *
- * Semantics mirror the backend `buildMongoQuery` (dataset.service.js):
+ * Matching semantics mirror the backend `buildMongoQuery` (dataset.service.js):
  * case-insensitive substring matching over the dataset's structured fields,
  * operating on already-retrieved documents instead of MongoDB. On top of that
  * the engine reuses the codebase's existing MODALITY_SYNONYMS modality
@@ -17,13 +17,25 @@
  * repository-native values (`mri`) match precise parser terms (`fMRI`) and
  * vice versa — the same semantic matching the ranking engine already uses.
  *
- * Canonical dimension → dataset fields (§8.5 table):
+ * NOTE: unlike the backend's Mongo query (which additionally scans
+ * title/description free text), this engine deliberately reads structured
+ * metadata fields only — the backend's broad matching happens once when the
+ * ranked pool is produced, and must not be re-applied with a narrower engine
+ * against the same pool (see search-state.tsx baseline filter diffing).
+ *
+ * Canonical dimension → structured metadata fields ONLY. Free-text content
+ * (title, description, abstract, rendered HTML) NEVER generates facet values
+ * or filter options — facet values must be canonical metadata so that a facet
+ * click filters the exact same value set it was counted from (Issues 2 & 4).
+ * `keywords` is a structured metadata array on the dataset document (not free
+ * text), so it remains a valid source for task/format/disease.
+ *
  *   modality     → modality[]
  *   disease      → disease + keywords[]        (parser may emit `condition`)
  *   species      → species[]
  *   ageGroup     → age_group[] / age_range[]   (parser may emit `age_range`)
- *   task         → keywords[] + title + description
- *   format       → keywords[] + title + description
+ *   task         → keywords[]
+ *   format       → keywords[]
  *   repository   → source
  *   availability → access_tier
  *   region       → region
@@ -148,7 +160,14 @@ export function listOf(value: unknown): string[] {
   return [String(value)];
 }
 
-/** The dataset's candidate values for a canonical dimension (§8.5 mapping). */
+/**
+ * The dataset's candidate values for a canonical dimension (§8.5 mapping).
+ *
+ * Structured metadata ONLY (Issue 4): facet/filter options must never be
+ * tokenized out of free-text content. `task`/`format` are read exclusively
+ * from the structured `keywords` array — title/description (which can be HTML
+ * or prose) are no longer sources for facet values (Issue 2).
+ */
 export function dimensionFieldSources(dataset: RawDataset, dimension: FilterDimension): string[] {
   const sources: string[] = [];
   switch (dimension) {
@@ -166,11 +185,7 @@ export function dimensionFieldSources(dataset: RawDataset, dimension: FilterDime
       break;
     case "task":
     case "format":
-      sources.push(
-        ...listOf(dataset.keywords),
-        ...listOf(dataset.title),
-        ...listOf(dataset.description),
-      );
+      sources.push(...listOf(dataset.keywords));
       break;
     case "repository":
       sources.push(...listOf(dataset.source), ...listOf(dataset.repo));

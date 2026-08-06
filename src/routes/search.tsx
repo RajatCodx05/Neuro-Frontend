@@ -54,7 +54,7 @@ function SearchResults() {
     originalQuery,
     baselineCount,
     activeFilters,
-    appliedFilters,
+    displayFilters,
     filteredResults,
     facets,
     conflict,
@@ -62,6 +62,7 @@ function SearchResults() {
     runSearch,
     expandSearch,
     setActiveFilters,
+    markFilterOverride,
     clearFilters,
     reset,
   } = useSearchState();
@@ -170,10 +171,26 @@ function SearchResults() {
 
   // Local, synchronous filter toggle (FR-2): updates the URL only; the sync
   // effect applies it to the cached baseline. Never triggers a search.
+  //
+  // The toggle operates on the USER's own selection (`activeFilters`), never on
+  // `displayFilters` (which includes parser pre-selection) — otherwise the
+  // parser's value would be baked into the URL and could never be removed
+  // (Issue 3). Unticking a parser pre-selected value never changes
+  // the URL (it was never in it), so the override is recorded explicitly via
+  // `markFilterOverride`; once a dimension is overridden, parser intent stops
+  // re-selecting it until a new search is executed.
   const toggleFilterOption = (groupId: string, opt: string) => {
     const dim = groupId as FilterDimension;
-    const current = appliedFilters[dim] || [];
-    const updated = current.includes(opt) ? current.filter((x) => x !== opt) : [...current, opt];
+    const userValues = activeFilters[dim] || [];
+    const displayed = displayFilters[dim] || [];
+    if (displayed.includes(opt) && !userValues.includes(opt)) {
+      // Clicking a parser-pre-ticked checkbox removes the parser's pre-selection.
+      markFilterOverride(dim);
+      return;
+    }
+    const updated = userValues.includes(opt)
+      ? userValues.filter((x) => x !== opt)
+      : [...userValues, opt];
 
     const nextSearch = {
       ...search,
@@ -413,8 +430,10 @@ function SearchResults() {
                 {FILTER_DIMENSIONS.map((dim) => {
                   const groupFacets = facets[dim] ?? [];
                   // Always keep currently-selected values visible so they can be unticked
-                  // even when another group's selection drops their count to zero.
-                  const selected = appliedFilters[dim] ?? [];
+                  // even when another group's selection drops their count to zero. `displayFilters`
+                  // (user selection + parser pre-selection, minus user overrides) drives the
+                  // checkbox state — parser intent is display-only (Issue 1/3).
+                  const selected = displayFilters[dim] ?? [];
                   const options = [...groupFacets];
                   for (const v of selected) {
                     if (!options.some((o) => o.value === v)) options.push({ value: v, count: 0 });
