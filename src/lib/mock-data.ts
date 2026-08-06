@@ -11,16 +11,16 @@ export type Repository = {
 };
 
 export const repositories: Repository[] = [
-  { id: "openneuro", name: "OpenNeuro", short: "ON", datasets: 1204, tier: "Open", status: "online", lastSync: "2 min ago", color: "from-cyan-400 to-blue-500", url: "https://openneuro.org/" },
-  { id: "dandi", name: "DANDI Archive", short: "DA", datasets: 862, tier: "Open", status: "online", lastSync: "5 min ago", color: "from-blue-400 to-indigo-500", url: "https://dandiarchive.org/" },
+  { id: "openneuro", name: "OpenNeuro", short: "ON", datasets: 1848, tier: "Open", status: "online", lastSync: "2 min ago", color: "from-cyan-400 to-blue-500", url: "https://openneuro.org/" },
+  { id: "dandi", name: "DANDI Archive", short: "DA", datasets: 1153, tier: "Open", status: "online", lastSync: "5 min ago", color: "from-blue-400 to-indigo-500", url: "https://dandiarchive.org/" },
   { id: "nitrc", name: "NITRC", short: "NI", datasets: 431, tier: "Open", status: "online", lastSync: "12 min ago", color: "from-teal-400 to-cyan-500", url:"https://www.nitrc.org/" },
-  { id: "nemar", name: "NEMAR", short: "NE", datasets: 289, tier: "Open", status: "online", lastSync: "8 min ago", color: "from-sky-400 to-cyan-500", url: "https://nemar.org/" },
-  { id: "allen", name: "Allen Brain Atlas", short: "AB", datasets: 156, tier: "Open", status: "online", lastSync: "1 hr ago", color: "from-purple-400 to-blue-500", url:"https://brain-map.org/atlases" },
+  { id: "nemar", name: "NEMAR", short: "NE", datasets: 754, tier: "Open", status: "online", lastSync: "8 min ago", color: "from-sky-400 to-cyan-500", url: "https://nemar.org/" },
+  { id: "allen", name: "Allen Brain Atlas", short: "AB", datasets: 172, tier: "Open", status: "online", lastSync: "1 hr ago", color: "from-purple-400 to-blue-500", url:"https://brain-map.org/atlases" },
   { id: "hcp", name: "Human Connectome", short: "HC", datasets: 96, tier: "Registered", status: "online", lastSync: "20 min ago", color: "from-indigo-400 to-cyan-500", url:'https://www.humanconnectome.org/' },
   { id: "adni", name: "ADNI", short: "AD", datasets: 74, tier: "Restricted", status: "online", lastSync: "35 min ago", color: "from-blue-500 to-purple-500", url:'https://adni.loni.usc.edu/' },
-  { id: "ebrains", name: "EBRAINS", short: "EB", datasets: 512, tier: "Open", status: "online", lastSync: "6 min ago", color: "from-cyan-400 to-teal-500", url:'https://ebrains.eu/data-tools-services/data-knowledge/find-data' },
+  { id: "ebrains", name: "EBRAINS", short: "EB", datasets: 1148, tier: "Open", status: "online", lastSync: "6 min ago", color: "from-cyan-400 to-teal-500", url:'https://ebrains.eu/data-tools-services/data-knowledge/find-data' },
   { id: "ukbb", name: "UK Biobank", short: "UK", datasets: 218, tier: "Restricted", status: "online", lastSync: "1 hr ago", color: "from-blue-400 to-cyan-400", url:'https://www.ukbiobank.ac.uk/projects/analysis-of-biobank-neuro-imaging-data/' },
-  { id: "neuromorpho", name: "NeuroMorpho", short: "NM", datasets: 1875, tier: "Open", status: "online", lastSync: "3 min ago", color: "from-teal-400 to-blue-500", url:'https://neuromorpho.org/' },
+  { id: "neuromorpho", name: "NeuroMorpho", short: "NM", datasets: 1011, tier: "Open", status: "online", lastSync: "3 min ago", color: "from-teal-400 to-blue-500", url:'https://neuromorpho.org/' },
 ];
 
 export type Dataset = {
