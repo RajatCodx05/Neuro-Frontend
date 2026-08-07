@@ -2,6 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, SlidersHorizontal, Bookmark, ArrowRight, ChevronDown, Loader2, Check, ExternalLink, RotateCcw, ThumbsUp, ThumbsDown, Info } from "lucide-react";
+import Lottie from "lottie-react";
+import lottieLoadingData from "@/assets/lottieflow-loading-07-000000-easey.json";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
 import { api, type DatasetReactionSummary, type SearchResult } from "@/lib/api-client";
@@ -400,7 +402,7 @@ function SearchResults() {
           <div>
             {streaming ? (
               <span className="inline-flex items-center gap-1.5">
-                <Loader2 className="h-3 w-3 animate-spin" /> {loadingMessages[msgIndex]}
+                <LottieSearchLoader className="h-4 w-4" /> {loadingMessages[msgIndex]}
                 <AnimatedDots />
               </span>
             ) : filteredResults.length > 0 ? (
@@ -576,7 +578,7 @@ function SearchResults() {
           <div className="space-y-4">
             {streaming && filteredResults.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <Loader2 className="h-6 w-6 animate-spin" />
+                <LottieSearchLoader className="h-12 w-12" />
                 <span className="mt-4 text-sm">
                   {loadingMessages[msgIndex]}
                   <AnimatedDots />
@@ -725,4 +727,12 @@ function AnimatedDots() {
 
 function Chip({ children }: { children: React.ReactNode }) {
   return <span className="rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/[0.04] [.light_&]:bg-black/[0.04] px-2 py-0.5">{children}</span>;
+}
+
+function LottieSearchLoader({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <div className={`inline-flex items-center justify-center shrink-0 brightness-0 invert [.light_&]:invert-0 ${className}`}>
+      <Lottie animationData={lottieLoadingData} loop={true} autoplay={true} />
+    </div>
+  );
 }
