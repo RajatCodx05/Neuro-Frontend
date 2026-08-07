@@ -69,8 +69,8 @@ function TokensPage() {
               </button>
             ))}
           </div>
-          <input value={userFilter} onChange={(e) => setUserFilter(e.target.value)} placeholder="Filter by user email…"
-            className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm outline-none focus:border-cyan/50" />
+          {/* <input value={userFilter} onChange={(e) => setUserFilter(e.target.value)} placeholder="Filter by user email…"
+            className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm outline-none focus:border-cyan/50" /> */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground shrink-0">Agent:</span>
             <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)}
