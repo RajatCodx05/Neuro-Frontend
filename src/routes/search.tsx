@@ -12,6 +12,8 @@ import {
   PAGE_SIZE,
   facetDisplayLabel,
   hasAnySelection,
+  keywordDisplayLabel,
+  licenseDisplayLabel,
   modalityDisplayLabel,
   parseUrlFilters,
   type FilterDimension,
@@ -39,6 +41,13 @@ export const Route = createFileRoute("/search")({
     format: typeof s.format === "string" ? s.format : undefined,
     repository: typeof s.repository === "string" ? s.repository : undefined,
     availability: typeof s.availability === "string" ? s.availability : undefined,
+    // v0.4 fixed filter groups: client-side metadata facets round-trip through
+    // the URL like every other group (values are bucket labels / years).
+    year: typeof s.year === "string" ? s.year : undefined,
+    participants: typeof s.participants === "string" ? s.participants : undefined,
+    size: typeof s.size === "string" ? s.size : undefined,
+    license: typeof s.license === "string" ? s.license : undefined,
+    type: typeof s.type === "string" ? s.type : undefined,
     // Issue 5: region is a first-class filter dimension — it must round-trip
     // through the URL exactly like modality/species so checkboxes are live.
     region: typeof s.region === "string" ? s.region : undefined,
@@ -71,8 +80,27 @@ function SearchResults() {
     reset,
   } = useSearchState();
 
+  // v0.4 fixed filter groups: primary scientific groups are open by default so
+  // the stable category list is immediately visible; Advanced Keywords and the
+  // secondary groups (Availability/Region) stay collapsed by default.
+  const DEFAULT_OPEN_GROUPS: string[] = [
+    "repository",
+    "modality",
+    "disease",
+    "species",
+    "ageGroup",
+    "year",
+    "participants",
+    "size",
+    "license",
+    "type",
+  ];
+  const SHOW_MORE_LIMIT = 10; // options per group before "Show More"
+  const ADVANCED_KEYWORDS_LIMIT = 15; // top-N frequency-sorted keywords
+
   const [q, setQ] = useState(search.q || "");
-  const [open, setOpen] = useState<string[]>([]);
+  const [open, setOpen] = useState<string[]>(DEFAULT_OPEN_GROUPS);
+  const [showMore, setShowMore] = useState<Set<string>>(new Set());
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [reactions, setReactions] = useState<Record<string, DatasetReactionSummary>>({});
   const [msgIndex, setMsgIndex] = useState(0);
@@ -131,7 +159,7 @@ function SearchResults() {
   useEffect(() => {
     setActiveFilters(parseUrlFilters(search as unknown as Record<string, unknown>));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.modality, search.disease, search.species, search.ageGroup, search.task, search.format, search.repository, search.availability, search.region]);
+  }, [search.modality, search.disease, search.species, search.ageGroup, search.task, search.format, search.repository, search.availability, search.region, search.year, search.participants, search.size, search.license, search.type]);
 
   // v0.3 FR-1: the pipeline is invoked ONLY when (a) there is no baseline yet
   // (initial load / shareable URL reload) or (b) the query text changed
@@ -175,6 +203,13 @@ function SearchResults() {
   }, [user]);
 
   const toggleGroup = (id: string) => setOpen((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  const toggleShowMore = (id: string) =>
+    setShowMore((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   // Local, synchronous filter toggle (FR-2): updates the URL only; the sync
   // effect applies it to the cached baseline. Never triggers a search.
@@ -435,6 +470,11 @@ function SearchResults() {
               </div>
               <div className="mt-3 space-y-1">
                 {FILTER_DIMENSIONS.map((dim) => {
+                  // `format` reads the identical `keywords` array as `task` and
+                  // is kept only for pre-existing `format=` URLs — never rendered
+                  // as its own (duplicate) group.
+                  if (dim === "format") return null;
+                  const isAdvanced = dim === "task";
                   const groupFacets = facets[dim] ?? [];
                   // Always keep currently-selected values visible so they can be unticked
                   // even when another group's selection drops their count to zero. `displayFilters`
@@ -447,6 +487,19 @@ function SearchResults() {
                   }
                   if (options.length === 0) return null;
                   const isOpen = open.includes(dim);
+                  // v0.4 Show More / Show Less: long groups (Advanced Keywords
+                  // above all) show a frequency-sorted top-N and reveal the rest
+                  // on demand instead of flooding the sidebar.
+                  const limit = isAdvanced ? ADVANCED_KEYWORDS_LIMIT : SHOW_MORE_LIMIT;
+                  const expanded = showMore.has(dim);
+                  let visible = options;
+                  if (!expanded) {
+                    visible = options.slice(0, limit);
+                    // Selected values must always be visible so they can be unticked.
+                    const extras = options.slice(limit).filter((o) => selected.includes(o.value));
+                    if (extras.length > 0) visible = [...visible, ...extras];
+                  }
+                  const hasMore = options.length > limit;
                   return (
                     <div key={dim} className="rounded-xl">
                       <button
@@ -455,6 +508,11 @@ function SearchResults() {
                       >
                         <span className="flex items-center gap-2">
                           {FILTER_DIMENSION_LABELS[dim]}
+                          {isAdvanced && (
+                            <span className="rounded-full bg-white/10 [.light_&]:bg-black/10 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              Advanced
+                            </span>
+                          )}
                           {selected.length > 0 && (
                             <span className="h-1.5 w-1.5 rounded-full bg-cyan" />
                           )}
@@ -463,7 +521,7 @@ function SearchResults() {
                       </button>
                       {isOpen && (
                         <div className="space-y-1 px-2 pb-2 pt-1">
-                          {options.map((f) => {
+                          {visible.map((f) => {
                             const isChecked = selected.includes(f.value);
                             return (
                               <label
@@ -476,13 +534,35 @@ function SearchResults() {
                                   onChange={() => toggleFilterOption(dim, f.value)}
                                   className="h-3.5 w-3.5 rounded border-white/20 accent-cyan cursor-pointer"
                                 />
-                                <span className={isChecked ? "font-medium text-cyan" : "text-foreground/90"}>
-                                  {dim === "modality" ? modalityDisplayLabel(f.value) : facetDisplayLabel(f.value)}
+                                <span className={`min-w-0 truncate ${isChecked ? "font-medium text-cyan" : "text-foreground/90"}`}>
+                                  {dim === "modality"
+                                    ? modalityDisplayLabel(f.value)
+                                    : dim === "license"
+                                      ? licenseDisplayLabel(f.value)
+                                      : isAdvanced
+                                        ? keywordDisplayLabel(f.value)
+                                        : facetDisplayLabel(f.value)}
                                 </span>
-                                <span className="ml-auto text-[10px] font-medium text-muted-foreground">{f.count}</span>
+                                <span className="ml-auto shrink-0 text-[10px] font-medium text-muted-foreground">{f.count}</span>
                               </label>
                             );
                           })}
+                          {hasMore && (
+                            <button
+                              onClick={() => toggleShowMore(dim)}
+                              className="mt-1 inline-flex w-full items-center justify-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-medium text-cyan hover:bg-white/5 [.light_&]:hover:bg-black/5"
+                            >
+                              {expanded ? (
+                                <>
+                                  <ChevronDown className="h-3 w-3 rotate-180" /> Show Less
+                                </>
+                              ) : (
+                                <>
+                                  Show More ({options.length - limit}) <ChevronDown className="h-3 w-3" />
+                                </>
+                              )}
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>

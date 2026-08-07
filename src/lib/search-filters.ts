@@ -30,27 +30,45 @@
  * `keywords` is a structured metadata array on the dataset document (not free
  * text), so it remains a valid source for task/format/disease.
  *
+ *   repository   → source
  *   modality     → modality[]
  *   disease      → disease + keywords[]        (parser may emit `condition`)
  *   species      → species[]
  *   ageGroup     → age_group[] / age_range[]   (parser may emit `age_range`)
- *   task         → keywords[]
- *   format       → keywords[]
- *   repository   → source
+ *   year         → published_at / publication_year / date_published
+ *                 (parsed to a 4-digit year; ABSENT records contribute nothing —
+ *                  the group auto-hides when no publication date survives)
+ *   participants → subject_count bucketed (1–25 / 26–50 / 51–100 / 101–250 / 251+)
+ *   size         → size_bytes / size_label bucketed (<10 / 10–100 / 100–500 / 500+ GB)
+ *   license      → license
+ *   type         → dataset_type / data_type (not populated by current metadata →
+ *                 the group auto-hides)
+ *   task         → keywords[]  (rendered as the single "Advanced Keywords" group;
+ *                 `format` is byte-identical and kept for URL backward compat)
  *   availability → access_tier
  *   region       → region
  */
 
+// FIXED filter categories + dynamic values (v0.4 filter redesign): the group
+// list and its order NEVER change; only the values/counts change per result
+// set. Advanced Keywords (`task`, sourced from the structured `keywords`
+// array — `format` reads the identical array and is kept only so pre-existing
+// `format=` URLs keep filtering) is collapsed by default in the UI.
 export const FILTER_DIMENSIONS = [
+  "repository",
   "modality",
   "disease",
   "species",
   "ageGroup",
-  "task",
-  "format",
-  "repository",
+  "year",
+  "participants",
+  "size",
+  "license",
+  "type",
+  "task", // rendered as "Advanced Keywords"
   "availability",
   "region",
+  "format", // hidden from the sidebar; URL backward compatibility only
 ] as const;
 
 export type FilterDimension = (typeof FILTER_DIMENSIONS)[number];
@@ -69,16 +87,52 @@ export type FacetMap = Partial<Record<FilterDimension, FacetValue[]>>;
 export const PAGE_SIZE = 10;
 export const LOW_WATERMARK = 3;
 
+/**
+ * Facet dimensions derived from record METADATA (buckets, parsed years,
+ * license strings, dataset types) that the backend search contract does not
+ * recognize (buildMongoQuery reads modality/species/disease/task/format/
+ * repository/age_group/region/access_tier only). They are pure client-side
+ * filters over the cached pool: the search payload strips them (so the
+ * baseline-exclusion in search-state can never drop them — they always apply
+ * locally, even when present in the URL at initial load).
+ */
+export const CLIENT_ONLY_FILTER_DIMENSIONS = new Set<FilterDimension>([
+  "year",
+  "participants",
+  "size",
+  "license",
+  "type",
+]);
+
+/**
+ * Dimensions whose facet values are canonical (bucket labels, parsed years,
+ * license strings, dataset types): the value IS the record's value, so
+ * matching is exact (case/punctuation-insensitive) — substring semantics
+ * would over-count (e.g. "1–25" is a substring of "101–250").
+ */
+const EXACT_MATCH_DIMENSIONS = new Set<FilterDimension>([
+  "year",
+  "participants",
+  "size",
+  "license",
+  "type",
+]);
+
 export const FILTER_DIMENSION_LABELS: Record<FilterDimension, string> = {
+  repository: "Repository",
   modality: "Modality",
   disease: "Disease / Condition",
   species: "Species",
   ageGroup: "Age Group",
-  task: "Experimental Task",
-  format: "Data Format",
-  repository: "Repository",
+  year: "Publication Year",
+  participants: "Participants",
+  size: "Dataset Size",
+  license: "License",
+  type: "Dataset Type",
+  task: "Advanced Keywords", // `task` renders as the Advanced Keywords group
   availability: "Availability",
   region: "Region",
+  format: "Data Format",
 };
 
 // All dimensions synchronized through URL params — including `region`, which
@@ -86,15 +140,20 @@ export const FILTER_DIMENSION_LABELS: Record<FilterDimension, string> = {
 // backend buildMongoQuery already handles `region`, so region checkboxes must
 // round-trip through the URL exactly like every other group).
 export const URL_DIMENSIONS: FilterDimension[] = [
+  "repository",
   "modality",
   "disease",
   "species",
   "ageGroup",
+  "year",
+  "participants",
+  "size",
+  "license",
+  "type",
   "task",
-  "format",
-  "repository",
   "availability",
   "region",
+  "format",
 ];
 
 /** Parser/UI key → canonical dimension (FR-5). `keywords`/`raw_query` are ignored. */
@@ -106,6 +165,15 @@ const DIMENSION_ALIASES: Record<string, FilterDimension> = {
   ageGroup: "ageGroup",
   age_group: "ageGroup",
   age_range: "ageGroup",
+  year: "year",
+  publication_year: "year",
+  participants: "participants",
+  subject_count: "participants",
+  size: "size",
+  dataset_size: "size",
+  license: "license",
+  type: "type",
+  dataset_type: "type",
   task: "task",
   format: "format",
   repository: "repository",
@@ -209,6 +277,78 @@ function expandStructuredValue(value: unknown): string[] {
     return s.split(/[;|]/).flatMap((part) => expandStructuredValue(part.trim()));
   }
   return [s];
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Fixed-group bucket helpers (v0.4). Values are DERIVED FROM THE CURRENT
+// POOL ONLY — a record contributes a bucket only when its metadata exists
+// (no fabricated options, no zero-count groups; missing metadata hides the
+// group entirely).
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Coerce a subject count (number or numeric string) to a number or null. */
+function toCount(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(String(value).trim().replace(/[,\s]/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Participants bucket for a subject count (null when the count is absent/invalid). */
+export function participantsBucket(count: number): string | null {
+  if (count === null || count < 1) return null;
+  if (count <= 25) return "1–25";
+  if (count <= 50) return "26–50";
+  if (count <= 100) return "51–100";
+  if (count <= 250) return "101–250";
+  return "251+";
+}
+
+const SIZE_UNIT_MULTIPLIER: Record<string, number> = {
+  b: 1,
+  kb: 1024,
+  mb: 1024 ** 2,
+  gb: 1024 ** 3,
+  tb: 1024 ** 4,
+  pb: 1024 ** 5,
+  bytes: 1,
+  kbytes: 1024,
+  mbytes: 1024 ** 2,
+  gbytes: 1024 ** 3,
+  tbytes: 1024 ** 4,
+};
+
+/** Parse a size (byte count or human label like "184 GB") → bytes, or null. */
+function parseSizeBytes(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
+  if (value === null || value === undefined) return null;
+  const s = String(value).trim();
+  if (!s || NONE_LITERALS.has(s.toLowerCase())) return null;
+  const m = s
+    .toLowerCase()
+    .match(/(\d+(?:\.\d+)?)\s*([kmgtp]?b|bytes|kbytes|mbytes|gbytes|tbytes)/);
+  if (!m) return null;
+  const n = parseFloat(m[1]);
+  return Number.isFinite(n) && n > 0 ? n * (SIZE_UNIT_MULTIPLIER[m[2]] ?? 1) : null;
+}
+
+/** Dataset size bucket label for a byte count. */
+export function sizeBucketLabel(bytes: number): string {
+  const gb = bytes / 1024 ** 3;
+  if (gb < 10) return "<10 GB";
+  if (gb <= 100) return "10–100 GB";
+  if (gb <= 500) return "100–500 GB";
+  return "500 GB+";
+}
+
+/** 4-digit year parsed from a publication-date string (null when absent). */
+function yearOf(value: string): string | null {
+  const s = String(value ?? "").trim();
+  if (!s) return null;
+  const m = s.match(/\b(19\d{2}|20\d{2})\b/);
+  if (!m) return null;
+  const y = parseInt(m[1], 10);
+  return y >= 1900 && y <= 2100 ? m[1] : null;
 }
 
 /** Dedupe a value list case-insensitively, keeping first-seen casing. */
@@ -375,12 +515,23 @@ export function dimensionFieldSources(dataset: RawDataset, dimension: FilterDime
     case "modality":
       sources.push(...expandStructuredValue(dataset.modality));
       break;
-    case "disease":
-      sources.push(
-        ...expandStructuredValue(dataset.disease),
-        ...expandStructuredValue(dataset.keywords),
-      );
+    case "disease": {
+      // Disease / Condition (v0.4): shows VOCABULARY-MEMBER conditions only.
+      // The enriched `disease` field is already canonical; keywords qualify
+      // only when they map onto a known disease term. Incidental keywords
+      // ("ICA", "COBRE", "resting state", …) never surface as diseases — they
+      // belong to the Advanced Keywords group, which reads the same array.
+      for (const v of expandStructuredValue(dataset.disease)) {
+        const lower = String(v).trim().toLowerCase().replace(/'/g, "'");
+        sources.push(DISEASE_CANONICAL_TOKENS[lower] ?? String(v).trim());
+      }
+      for (const v of expandStructuredValue(dataset.keywords)) {
+        const lower = String(v).trim().toLowerCase().replace(/'/g, "'");
+        const canonical = DISEASE_CANONICAL_TOKENS[lower];
+        if (canonical) sources.push(canonical);
+      }
       break;
+    }
     case "species":
       sources.push(...expandStructuredValue(dataset.species));
       break;
@@ -391,8 +542,65 @@ export function dimensionFieldSources(dataset: RawDataset, dimension: FilterDime
       );
       break;
     case "task":
-    case "format":
-      sources.push(...expandStructuredValue(dataset.keywords));
+    case "format": {
+      // Advanced Keywords normalization (v0.4, facet layer only): structured
+      // `keywords` entries are sometimes comma-joined blobs ("fMRI, resting
+      // state, adolescents, pilot"). Splitting them yields single concepts
+      // instead of one long facet. Matching is substring-based, so a split
+      // fragment selects exactly the datasets containing it — the count/click
+      // invariant holds by construction (bidirectional substring also keeps
+      // pre-existing blob-shaped `task=` URLs working).
+      const raw = expandStructuredValue(dataset.keywords);
+      for (const k of raw) {
+        for (const part of String(k).split(",")) {
+          const p = part.trim();
+          if (p) sources.push(p);
+        }
+      }
+      break;
+    }
+    case "year": {
+      // Publication year from a genuine publication-date field only. Records
+      // without one contribute nothing (no fabrication, no ingestion-time
+      // proxy) — the group auto-hides when the pool has no publication dates.
+      const raw = [
+        ...expandStructuredValue(dataset.published_at),
+        ...expandStructuredValue(dataset.publication_year),
+        ...expandStructuredValue(dataset.date_published),
+      ];
+      for (const v of raw) {
+        const y = yearOf(v);
+        if (y) sources.push(y);
+      }
+      break;
+    }
+    case "participants": {
+      const count = toCount(dataset.subject_count);
+      if (count !== null) {
+        const bucket = participantsBucket(count);
+        if (bucket) sources.push(bucket);
+      }
+      break;
+    }
+    case "size": {
+      const bytes =
+        parseSizeBytes(dataset.size_bytes) ?? parseSizeBytes(dataset.size_label);
+      if (bytes !== null) sources.push(sizeBucketLabel(bytes));
+      break;
+    }
+    case "license":
+      for (const v of expandStructuredValue(dataset.license)) {
+        const norm = normalizeLicenseValue(v);
+        if (norm) sources.push(norm);
+      }
+      break;
+    case "type":
+      // Not populated by the current metadata model → the group auto-hides
+      // ("hide unsupported groups automatically"). Ready for future metadata.
+      sources.push(
+        ...expandStructuredValue(dataset.dataset_type),
+        ...expandStructuredValue(dataset.data_type),
+      );
       break;
     case "repository":
       sources.push(
@@ -436,6 +644,13 @@ export function valuePairMatches(
     .trim()
     .toLowerCase();
   if (!r || !d) return false;
+  if (EXACT_MATCH_DIMENSIONS.has(dimension)) {
+    // Canonical values (buckets/years/licenses/types): exact match only —
+    // substring would over-count ("1–25" ⊂ "101–250"). Punctuation-insensitive
+    // equality keeps en-dash bucket labels ("1–25") matching ASCII-hyphen URL
+    // values ("1-25").
+    return r === d || normalizeKey(r) === normalizeKey(d);
+  }
   if (r === d) return true;
   if (d.includes(r) || r.includes(d)) return true;
   if (normalizeKey(r) === normalizeKey(d)) return true;
@@ -567,10 +782,31 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
       const count = counts.get(label);
       if (count !== undefined) list.push({ value: label, count });
     }
-    list.sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+    list.sort((a, b) => {
+      // Fixed-order groups (participants/size buckets by lower bound, years
+      // chronologically) keep their natural order; everything else stays
+      // frequency-desc like before.
+      const ra = facetNaturalRank(dimension, a.value);
+      const rb = facetNaturalRank(dimension, b.value);
+      if (Number.isFinite(ra) && Number.isFinite(rb) && ra !== rb) return ra - rb;
+      return b.count - a.count || a.value.localeCompare(b.value);
+    });
     if (list.length > 0) facets[dimension] = list;
   }
   return facets;
+}
+
+/** Natural sort rank for fixed-order facet groups (NaN = not a ranked group). */
+function facetNaturalRank(dimension: FilterDimension, value: string): number {
+  if (dimension === "participants" || dimension === "size") {
+    const m = String(value).match(/(\d+(?:\.\d+)?)/);
+    return m ? parseFloat(m[1]) : Number.MAX_SAFE_INTEGER;
+  }
+  if (dimension === "year") {
+    const y = parseInt(String(value), 10);
+    return Number.isFinite(y) ? y : Number.MAX_SAFE_INTEGER;
+  }
+  return Number.NaN;
 }
 
 /** Map parser/UI filter keys (`condition`, `age_range`, `access_tier`, …) onto canonical dimensions (FR-5). */
@@ -661,6 +897,49 @@ export function facetDisplayLabel(value: string): string {
   const v = String(value || "").trim();
   if (!v) return v;
   return v.charAt(0).toUpperCase() + v.slice(1);
+}
+
+/**
+ * Display label for Advanced Keywords (DISPLAY ONLY): keywords keep their
+ * original casing ("fMRI", "resting state", "ADHD") — first-letter
+ * capitalization would mangle acronyms ("fMRI" → "FMRI").
+ */
+export function keywordDisplayLabel(value: string): string {
+  return String(value ?? "").trim();
+}
+
+/**
+ * License normalization (v0.4, facet layer only — the VALUE both facets and
+ * matching use, so the count/click invariant holds). Common SPDX-ish forms
+ * get professional casing ("cc-by-4.0" → "CC-BY-4.0", "cc-zero"/"cc0" →
+ * "CC0", "mit" → "MIT", "pddl" → "PDDL", sentinels → "Unknown"); long
+ * license PARAGRAPHS are compacted to their first sentence (≤ 64 chars) so a
+ * giant text blob never floods the sidebar. Unknown forms keep their exact
+ * recorded string — values are never fabricated.
+ */
+export function normalizeLicenseValue(value: string): string {
+  const v = String(value ?? "").trim();
+  if (!v) return v;
+  // Facet values round-trip through the URL as comma-joined lists
+  // (parseUrlFilters splits on ","), so a comma inside a license value would
+  // fragment on reload/share — commas are replaced with spaces.
+  const clean = (s: string) => s.replace(/,/g, " ");
+  const lower = v.toLowerCase();
+  if (["unknown", "none", "n/a", "-", "nan", "null"].includes(lower)) return "Unknown";
+  if (["cc0", "cc-0", "cc 0", "cc-zero"].includes(lower)) return "CC0";
+  if (lower === "mit") return "MIT";
+  if (lower === "pddl") return "PDDL";
+  const cc = lower.match(/^cc[- ](by[-a-z0-9.]*)$/);
+  if (cc) return `CC-${cc[1].toUpperCase()}`;
+  if (v.length <= 64) return clean(v);
+  const firstSentence = v.split(/(?<=[.!?])\s+|\n/)[0].trim();
+  if (firstSentence && firstSentence.length <= 64) return clean(firstSentence);
+  return clean(firstSentence ? `${firstSentence.slice(0, 61).trimEnd()}…` : v.slice(0, 64));
+}
+
+/** Display label for a license facet value (delegates to the shared normalizer). */
+export function licenseDisplayLabel(value: string): string {
+  return normalizeLicenseValue(value);
 }
 
 /**

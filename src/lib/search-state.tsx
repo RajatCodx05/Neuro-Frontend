@@ -41,11 +41,33 @@ import {
   valuesOverlap,
   LOW_WATERMARK,
   FILTER_DIMENSIONS,
+  CLIENT_ONLY_FILTER_DIMENSIONS,
   type ActiveFilters,
   type FacetMap,
   type FilterDimension,
   type RawDataset,
 } from "./search-filters";
+
+/**
+ * v0.4: the backend search contract recognizes query-intent filters only
+ * (modality/species/disease/task/format/repository/age_group/region/
+ * access_tier — buildMongoQuery; unknown keys like size/year/license are
+ * ignored by both Node and the Python QueryFilters model). Facet dimensions
+ * derived from record METADATA (year/participants/size/license/type) are
+ * therefore EXCLUDED from `baselineFilters` here, so the baseline-exclusion
+ * never sees them and they ALWAYS filter the cached pool client-side —
+ * including when present in the URL at initial load or after a "Search
+ * entire database". (They are still sent in the request body so the
+ * controller's explicit-filter guard accepts filters-only URLs.)
+ */
+function stripClientOnly(filters: ActiveFilters | null | undefined): ActiveFilters {
+  const out: ActiveFilters = {};
+  for (const [dimension, values] of Object.entries(filters ?? {})) {
+    if (CLIENT_ONLY_FILTER_DIMENSIONS.has(dimension as FilterDimension)) continue;
+    out[dimension as FilterDimension] = values;
+  }
+  return out;
+}
 
 export type SearchMode = "idle" | "searching" | "loaded" | "expanding" | "error";
 
@@ -132,7 +154,13 @@ export function SearchProvider({ children }: { children: ReactNode }) {
     setOriginalQuery(query);
     setPool(response.rawResults ?? []);
     setResultSource(response.source ?? "");
-    setParsedIntent(normalizeDimensions(response.filters));
+    // v0.4: the backend echoes the merged filters — including any client-only
+    // dimensions (year/participants/size/license/type) the UI sent, which are
+    // NOT parser intent. Stripping them here keeps pre-selection honest and
+    // prevents spurious FR-7 conflicts on those dimensions.
+    const intent = normalizeDimensions(response.filters);
+    for (const dim of CLIENT_ONLY_FILTER_DIMENSIONS) delete intent[dim];
+    setParsedIntent(intent);
     setOverrides(new Set()); // fresh baseline → parser pre-selection re-applies
     setMode("loaded");
     setError(null);
@@ -148,11 +176,19 @@ export function SearchProvider({ children }: { children: ReactNode }) {
       setOriginalQuery(query);
       queryRef.current = query;
       try {
+        // Send the FULL selection to the backend: buildMongoQuery and the
+        // Python QueryFilters model ignore unknown keys (year/participants/
+        // size/license/type), while the controller's explicit-filter guard
+        // needs a non-empty payload for filters-only URLs. Client-only
+        // dimensions are excluded from `baselineFilters` so they are ALWAYS
+        // applied locally against the cached pool (the backend never applies
+        // them).
         const response = await api.datasets.search(query, filters);
         if (seq !== requestSeq.current) return; // superseded by a newer request
-        // The backend applied exactly `filters` (plus its parser intent) to
-        // produce this pool — never re-apply them client-side (Issue 1).
-        setBaselineFilters(filters);
+        // The backend applied `filters` (minus client-only keys, plus its
+        // parser intent) to produce this pool — never re-apply those
+        // client-side (Issue 1).
+        setBaselineFilters(stripClientOnly(filters));
         applySearchResponse(query, response);
       } catch (err) {
         if (seq !== requestSeq.current) return;
@@ -169,11 +205,15 @@ export function SearchProvider({ children }: { children: ReactNode }) {
     setMode("expanding");
     setError(null);
     try {
-      const response = await api.datasets.search(queryRef.current, activeFiltersRef.current);
+      const response = await api.datasets.search(
+        queryRef.current,
+        activeFiltersRef.current,
+      );
       if (seq !== requestSeq.current) return; // superseded by a newer request
       // The expanded search ran WITH the current selection, so the new pool
       // already reflects it — no client-side re-application (Issue 1).
-      setBaselineFilters(activeFiltersRef.current);
+      // Client-only dimensions are re-applied locally on the new pool.
+      setBaselineFilters(stripClientOnly(activeFiltersRef.current));
       applySearchResponse(queryRef.current, response);
     } catch (err) {
       if (seq !== requestSeq.current) return;
