@@ -76,12 +76,14 @@ export type AnalyticsChartModalProps = {
   title: string;
   description?: string;
   children: React.ReactNode;
+  /** Optional real-statistics panel rendered below the enlarged chart. */
+  details?: React.ReactNode;
 };
 
 /**
  * Shared modal used by every analytics card. Shows the chart enlarged,
- * above a blurred dark overlay, and leaves room for future detailed
- * statistics. Dismissible via the X button, clicking outside, or ESC.
+ * above a blurred dark overlay, and real statistics below. Dismissible via
+ * the X button, clicking outside, or ESC.
  */
 export function AnalyticsChartModal({
   open,
@@ -89,6 +91,7 @@ export function AnalyticsChartModal({
   title,
   description,
   children,
+  details,
 }: AnalyticsChartModalProps) {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -116,11 +119,9 @@ export function AnalyticsChartModal({
 
           <div className="px-6 pb-6 pt-5">
             {/* Enlarged chart occupies most of the modal */}
-            <div className="h-[55vh] max-h-[560px] min-h-72 w-full">{children}</div>
-            {/* Reserved space for future detailed statistics */}
-            <div className="mt-5 rounded-xl border border-dashed border-border/70 bg-secondary/20 px-4 py-3 text-center text-xs text-muted-foreground/60">
-              Detailed statistics will appear here
-            </div>
+            <div className="h-[45vh] max-h-[460px] min-h-64 w-full">{children}</div>
+            {/* Real statistics from backend data (no placeholder text) */}
+            {details && <div className="mt-5">{details}</div>}
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

@@ -65,6 +65,62 @@ export type DatasetReactionSummary = {
   userReaction: "like" | "dislike" | null;
 };
 
+export type AdminAnalyticsRepository = {
+  source: string;
+  name: string;
+  datasetsIndexed: number;
+  searchesServed: number;
+  datasetCount: number | null;
+  syncStatus: "online" | "syncing" | "offline" | null;
+  lastSyncAt: string | null;
+};
+
+export type AdminAnalyticsPerformanceDay = {
+  day: string;
+  count: number;
+  avgMs: number;
+  medianMs: number | null;
+  minMs: number | null;
+  maxMs: number | null;
+  p95Ms: number | null;
+};
+
+export type AdminAnalyticsStage = { count: number; avgMs: number; errors: number } | null;
+
+export type AdminAnalytics = {
+  series: Array<{ day: string; count: number }>;
+  users: number;
+  saved: number;
+  collections: number;
+  cacheHitRate: number;
+  mergedCount?: number;
+  repositories?: AdminAnalyticsRepository[];
+  searchPerformance?: {
+    daily: AdminAnalyticsPerformanceDay[];
+    overall: {
+      totalOps: number;
+      avgMs: number;
+      medianMs: number | null;
+      minMs: number | null;
+      maxMs: number | null;
+      p95Ms: number | null;
+    };
+    stages: Record<string, AdminAnalyticsStage>;
+  };
+  searchOutcomes?: {
+    total: number;
+    withResults: number;
+    noResults: number;
+    bySource: { cache: number; merged: number; fallback: number };
+    avgResultsPerSearch: number | null;
+    mostCommonQuery: { query: string; count: number } | null;
+    mostCommonEmptyQuery: { query: string; count: number } | null;
+    failedSearchOperations: number;
+    topFailureReason: string | null;
+    topFailedQuery: string | null;
+  };
+};
+
 function getAnonKey(): string {
   if (typeof window === "undefined") return "anon_ssr";
   let key = localStorage.getItem("neuro_anon_key");
@@ -467,13 +523,7 @@ const admin = {
     return request<Record<string, unknown>>("/admin/dashboard");
   },
   async analytics() {
-    return request<{
-      series: Array<{ day: string; count: number }>;
-      users: number;
-      saved: number;
-      collections: number;
-      cacheHitRate: number;
-    }>("/admin/analytics");
+    return request<AdminAnalytics>("/admin/analytics");
   },
   users: {
     async list() {
