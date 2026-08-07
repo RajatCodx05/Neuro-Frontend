@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { AdminPageHeader } from "@/components/app/admin-shell";
-import { Search, Trash2, Shield, Ban, CheckCircle2 } from "lucide-react";
+import { Search, Trash2, Shield, Ban, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/users")({
@@ -14,6 +14,7 @@ export const Route = createFileRoute("/admin/users")({
 function UsersPage() {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
   const { data: users = [] } = useQuery({
     queryKey: ["admin-users"],
     queryFn: () => api.admin.users.list(),
@@ -26,6 +27,21 @@ function UsersPage() {
       [u.full_name, u.email, u.institute].some((x) => x?.toLowerCase().includes(s))
     );
   }, [q, users]);
+
+  // ponytail: client-side pagination to keep the implementation simple and lightweight
+  const itemsPerPage = 10;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+  const currentPage = Math.min(Math.max(1, page), totalPages);
+
+  const paginated = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(startIndex, startIndex + itemsPerPage);
+  }, [filtered, currentPage]);
+
+  const handleSearchChange = (val: string) => {
+    setQ(val);
+    setPage(1);
+  };
 
   // PATCH /admin/users/:id does not exist on the backend — only DELETE is available.
   // Toggle suspend/promote handlers removed as there is no backend route for them.
@@ -40,11 +56,41 @@ function UsersPage() {
 
   return (
     <>
-      <AdminPageHeader title="User management" description={`${users.length} accounts`} />
+      <AdminPageHeader
+        title="User management"
+        description={`${users.length} accounts`}
+        actions={
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-muted-foreground">
+              {filtered.length > 0
+                ? `${(currentPage - 1) * itemsPerPage + 1}–${Math.min(currentPage * itemsPerPage, filtered.length)} of ${filtered.length}`
+                : "0 accounts"}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5 disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed transition-colors"
+                title="Previous Page"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5 disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed transition-colors"
+                title="Next Page"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        }
+      />
       <div className="px-6 py-6 md:px-8">
         <div className="glass mb-4 flex items-center gap-2 rounded-2xl px-4 py-2.5">
           <Search className="h-4 w-4 text-muted-foreground" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email, institute…"
+          <input value={q} onChange={(e) => handleSearchChange(e.target.value)} placeholder="Search name, email, institute…"
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60" />
         </div>
         <div className="glass overflow-hidden rounded-2xl">
@@ -59,7 +105,7 @@ function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 [.light_&]:divide-black/5">
-              {filtered.map((u) => (
+              {paginated.map((u) => (
                 <tr key={u.id} className="hover:bg-white/[0.02] [.light_&]:hover:bg-black/[0.02]">
                   <td className="px-4 py-3">
                     <div className="font-medium">{u.full_name || "—"}</div>

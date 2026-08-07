@@ -73,7 +73,7 @@ function AdminDashboard() {
   const stats = [
     { label: "Total users", value: data?.totalUsers ?? "—", icon: Users, to: "/admin/users" },
     { label: "Repositories", value: data?.repositories?.length ?? "—", icon: Database, to: "/admin/repositories" },
-    { label: "Datasets indexed", value: analyticsData ? growthValue : "—", icon: TrendingUp, to: "/admin/analytics" },
+    { label: "Datasets indexed", value: analyticsData ? analyticsData.repositories?.reduce((a, r) => a + r.datasetsIndexed, 0).toLocaleString() ?? "—" : "—", icon: TrendingUp, to: "/admin/analytics" },
     { label: "Recent audits", value: (data?.recentAudit ?? []).length ?? "—", icon: ShieldCheck, to: "/admin/audit-log" },
   ];
 
