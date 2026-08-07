@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Bookmark, FolderOpen, FolderPlus, Plus, Trash2, ArrowRight, Loader2, ArrowLeft } from "lucide-react";
-import { api, type SavedDataset, type Collection } from "@/lib/api-client";
+import { api, cleanSummaryText, type SavedDataset, type Collection } from "@/lib/api-client";
 import { modalityDisplayLabel } from "@/lib/search-filters";
 import { useAuth } from "@/lib/auth-context";
 import { AppShell } from "@/components/app/app-shell";
@@ -222,7 +222,7 @@ function SavedPage() {
                       <Link to="/dataset/$id" params={{ id: sd.datasetId }} target="_blank" className="mt-0.5 block font-display text-sm font-semibold hover:text-cyan">
                         {snap.name ?? sd.datasetId}
                       </Link>
-                      {snap.description && <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{snap.description}</p>}
+                      {snap.description && <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{cleanSummaryText(snap.description)}</p>}
                     </div>
                     <button onClick={() => removeFromCollection(sd.id)}
                       className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/5 shrink-0">
@@ -254,7 +254,7 @@ function SavedPage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="font-display text-sm font-semibold">{snap.name ?? s.dataset_id}</p>
-                      {snap.description && <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{snap.description}</p>}
+                      {snap.description && <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{cleanSummaryText(snap.description)}</p>}
                     </div>
                     <button onClick={() => addToCollection(s.id)} disabled={adding === s.id}
                       className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-3 py-1.5 text-xs font-medium text-[oklch(0.15_0.03_258)] disabled:opacity-50 shrink-0">
@@ -316,7 +316,7 @@ function SavedPage() {
                     <Link to="/dataset/$id" params={{ id: s.dataset_id }} target="_blank" className="mt-0.5 block font-display text-base font-semibold hover:text-cyan">
                       {snap.name ?? s.dataset_id}
                     </Link>
-                    {snap.description && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{snap.description}</p>}
+                    {snap.description && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{cleanSummaryText(snap.description)}</p>}
                   </div>
                   <div className="flex flex-col gap-2">
                     <Link to="/dataset/$id" params={{ id: s.dataset_id }} target="_blank"

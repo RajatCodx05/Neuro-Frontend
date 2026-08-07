@@ -71,6 +71,18 @@ function cleanDescriptionText(raw: string): string {
   if (!raw) return "";
   let text = raw;
 
+  // 0. Remove raw HTML tags and decode HTML entities
+  text = text
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|h[1-6]|li)>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#39;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+
   // 1. Remove common web scraping footer junk & navigation UI elements
   text = text.replace(/##\s*PERMALINK[\s\S]*$/i, "");
   text = text.replace(/##\s*RESOURCES[\s\S]*$/i, "");

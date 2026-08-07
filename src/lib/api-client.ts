@@ -191,6 +191,40 @@ function mapProfile(data: Record<string, unknown>): UserProfile {
     scheduled_deletion_at: data.scheduledDeletionAt ? String(data.scheduledDeletionAt) : null,
   };
 }
+export function cleanSummaryText(raw: string): string {
+  if (!raw) return "";
+  let text = raw;
+
+  // 1. Remove Git metadata, scraping junk, & README noise
+  text = text.replace(/Git Hash:\s*[a-f0-9]+/gi, "");
+  text = text.replace(/##\s*README/gi, "");
+  text = text.replace(/##\s*Dataset Description/gi, "");
+  text = text.replace(/BranchesTags\s+Open\s+more\s+actions\s+menu/gi, "");
+
+  // 2. Strip HTML tags & decode common HTML entities
+  text = text
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<\/(p|div|h[1-6]|li)>/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#39;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+
+  // 3. Remove Markdown header hashes (#, ##, ###, ####)
+  text = text.replace(/#{1,6}\s*/g, " ");
+
+  // 4. Remove orphan section numbers at sentence starts (e.g., "3.2.", "1.")
+  text = text.replace(/(^\s*|\s+)(?:\d+\.)+\d*\s*/g, " ");
+
+  // 5. Collapse extra spaces
+  return text.replace(/\s+/g, " ").trim();
+}
+
+export const stripHtml = cleanSummaryText;
+
 // ponytail: resultSource='cache' means record already in DB — relabel 'web_search' → 'Database'.
 export function mapDataset(data: Record<string, unknown>, resultSource?: string): SearchResult {
   const list = (value: unknown) => (Array.isArray(value) ? value.join(", ") : String(value ?? ""));
@@ -209,7 +243,7 @@ export function mapDataset(data: Record<string, unknown>, resultSource?: string)
     name: String(data.title ?? "Untitled dataset"),
     repo,
     modality: list(data.modality) || "DS",
-    description: String(data.description ?? ""),
+    description: cleanSummaryText(String(data.description ?? "")),
     subjects: typeof data.subject_count === "number" ? data.subject_count : null,
     size: (data.size_label as string | null) ?? null,
     region: (data.region as string | null) ?? null,
