@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Clock, Trash2, Search, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Trash2, Search } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { AppShell } from "@/components/app/app-shell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/history")({
@@ -108,7 +109,22 @@ function HistoryPage() {
 
         <div className="mt-6 glass card-elevated rounded-2xl">
           {loading ? (
-            <div className="flex justify-center p-10"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+            <div className="divide-y divide-white/5">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-5 py-3">
+                  <Skeleton className="h-4 w-4 rounded-full shrink-0" />
+                  <div className="flex-1">
+                    <Skeleton
+                      className="h-4 rounded"
+                      style={{ width: `${Math.floor(35 + ((i * 19) % 45))}%` }}
+                    />
+                  </div>
+                  <Skeleton className="h-3.5 w-28 shrink-0 rounded" />
+                  <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
+                  <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
+                </div>
+              ))}
+            </div>
           ) : items.length === 0 ? (
             <div className="p-12 text-center">
               <Clock className="mx-auto h-8 w-8 text-muted-foreground" />
@@ -142,3 +158,4 @@ function HistoryPage() {
     </AppShell>
   );
 }
+

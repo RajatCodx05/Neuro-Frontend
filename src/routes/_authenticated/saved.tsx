@@ -5,6 +5,7 @@ import { api, cleanSummaryText, type SavedDataset, type Collection } from "@/lib
 import { modalityDisplayLabel } from "@/lib/search-filters";
 import { useAuth } from "@/lib/auth-context";
 import { AppShell } from "@/components/app/app-shell";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -203,7 +204,20 @@ function SavedPage() {
 
           {/* Items already in collection */}
           {colLoading ? (
-            <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+            <div className="space-y-3 mb-8">
+              <Skeleton className="h-3 w-32 rounded" />
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="glass card-elevated flex items-start gap-4 rounded-2xl p-4">
+                  <Skeleton className="h-10 w-10 shrink-0 rounded-xl" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-3 w-24 rounded" />
+                    <Skeleton className="h-4 w-1/2 rounded" />
+                    <Skeleton className="h-3 w-3/4 rounded" />
+                  </div>
+                  <Skeleton className="h-7 w-20 rounded-full shrink-0" />
+                </div>
+              ))}
+            </div>
           ) : colItems.length === 0 ? (
             <EmptyState icon={FolderOpen} title="Collection is empty" description="Add saved datasets below to organise them here." />
           ) : (
@@ -292,68 +306,128 @@ function SavedPage() {
           </button>
         </div>
 
-        {loading ? (
-          <div className="mt-10 flex justify-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /></div>
-        ) : tab === "saved" ? (
-          <div className="mt-6 space-y-3">
-            {/* Limit indicator */}
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{saved.length} / {LIMIT} saved</span>
-              {saved.length >= LIMIT && <span className="text-amber-400">Limit reached — remove a dataset to save more</span>}
-            </div>
-            {saved.length === 0 ? (
-              <EmptyState icon={Bookmark} title="No saved datasets yet"
-                description="Bookmark datasets from search results and detail pages to find them here." />
-            ) : saved.map((s) => {
-              const snap = s.dataset_snapshot as Snap;
-              return (
-                <div key={s.id} className="glass card-elevated flex items-start gap-4 rounded-2xl p-4">
-                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan/40 to-neural/40 text-xs font-bold text-white">
-                    {modalityDisplayLabel((snap.modality ?? "DS").toString()).slice(0, 4)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{snap.repo ?? "Dataset"} · {s.dataset_id.slice(0, 16)}…</div>
-                    <Link to="/dataset/$id" params={{ id: s.dataset_id }} target="_blank" className="mt-0.5 block font-display text-base font-semibold hover:text-cyan">
-                      {snap.name ?? s.dataset_id}
-                    </Link>
-                    {snap.description && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{cleanSummaryText(snap.description)}</p>}
+        {tab === "saved" ? (
+          loading ? (
+            <div className="mt-6 space-y-3">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <Skeleton className="h-3 w-24 rounded" />
+              </div>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="glass card-elevated flex items-start gap-4 rounded-2xl p-4">
+                  <Skeleton className="h-12 w-12 shrink-0 rounded-xl" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-3 w-36 rounded" />
+                    <Skeleton className="h-5 w-3/5 rounded" />
+                    <Skeleton className="h-3.5 w-11/12 rounded" />
+                    <Skeleton className="h-3.5 w-2/3 rounded" />
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <Link to="/dataset/$id" params={{ id: s.dataset_id }} target="_blank"
-                      className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs hover:bg-white/5">
-                      View <ArrowRight className="h-3 w-3" />
-                    </Link>
-                    <button onClick={() => openAddDialog(s.id)}
-                      className="inline-flex items-center gap-1 rounded-full border border-cyan/20 px-3 py-1.5 text-xs text-cyan hover:bg-cyan/5">
-                      <FolderPlus className="h-3 w-3" /> Add
-                    </button>
-                    <button onClick={() => removeSaved(s.id)}
-                      className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/5">
-                      <Trash2 className="h-3 w-3" /> Remove
-                    </button>
+                  <div className="flex flex-col gap-2 shrink-0">
+                    <Skeleton className="h-7 w-16 rounded-full" />
+                    <Skeleton className="h-7 w-16 rounded-full" />
+                    <Skeleton className="h-7 w-20 rounded-full" />
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          ) : saved.length === 0 ? (
+            <div className="mt-6">
+              <EmptyState icon={Bookmark} title="No saved datasets yet"
+                description="Bookmark datasets from search results and detail pages to find them here." />
+            </div>
+          ) : (
+            <div className="mt-6 space-y-3">
+              {/* Limit indicator */}
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{saved.length} / {LIMIT} saved</span>
+                {saved.length >= LIMIT && <span className="text-amber-400">Limit reached — remove a dataset to save more</span>}
+              </div>
+              {saved.map((s) => {
+                const snap = s.dataset_snapshot as Snap;
+                return (
+                  <div key={s.id} className="glass card-elevated flex items-start gap-4 rounded-2xl p-4">
+                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan/40 to-neural/40 text-xs font-bold text-white">
+                      {modalityDisplayLabel((snap.modality ?? "DS").toString()).slice(0, 4)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{snap.repo ?? "Dataset"} · {s.dataset_id.slice(0, 16)}…</div>
+                      <Link to="/dataset/$id" params={{ id: s.dataset_id }} target="_blank" className="mt-0.5 block font-display text-base font-semibold hover:text-cyan">
+                        {snap.name ?? s.dataset_id}
+                      </Link>
+                      {snap.description && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{cleanSummaryText(snap.description)}</p>}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Link to="/dataset/$id" params={{ id: s.dataset_id }} target="_blank"
+                        className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs hover:bg-white/5">
+                        View <ArrowRight className="h-3 w-3" />
+                      </Link>
+                      <button onClick={() => openAddDialog(s.id)}
+                        className="inline-flex items-center gap-1 rounded-full border border-cyan/20 px-3 py-1.5 text-xs text-cyan hover:bg-cyan/5">
+                        <FolderPlus className="h-3 w-3" /> Add
+                      </button>
+                      <button onClick={() => removeSaved(s.id)}
+                        className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/5">
+                        <Trash2 className="h-3 w-3" /> Remove
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
         ) : (
-          <div className="mt-6 space-y-4">
-            <div className="glass rounded-2xl p-4">
-              <div className="flex items-center gap-2">
-                <input value={newName} onChange={(e) => setNewName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addCollection()}
-                  placeholder="New collection name…"
-                  className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-cyan/50" />
-                <button onClick={addCollection}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-sm font-medium text-[oklch(0.15_0.03_258)]">
-                  <Plus className="h-3.5 w-3.5" /> Create
-                </button>
+          loading ? (
+            <div className="mt-6 space-y-4">
+              <div className="glass rounded-2xl p-4">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-9 flex-1 rounded-xl" />
+                  <Skeleton className="h-9 w-24 rounded-full" />
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="glass card-elevated rounded-2xl p-5 border border-transparent space-y-3">
+                    <div className="flex items-start justify-between">
+                      <Skeleton className="h-5 w-5 rounded" />
+                      <Skeleton className="h-4 w-4 rounded" />
+                    </div>
+                    <Skeleton className="h-5 w-3/4 rounded mt-3" />
+                    <Skeleton className="h-3 w-1/2 rounded mt-1" />
+                    <Skeleton className="h-3 w-24 rounded mt-3" />
+                  </div>
+                ))}
               </div>
             </div>
-            {collections.length === 0 ? (
+          ) : collections.length === 0 ? (
+            <div className="mt-6 space-y-4">
+              <div className="glass rounded-2xl p-4">
+                <div className="flex items-center gap-2">
+                  <input value={newName} onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && addCollection()}
+                    placeholder="New collection name…"
+                    className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-cyan/50" />
+                  <button onClick={addCollection}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-sm font-medium text-[oklch(0.15_0.03_258)]">
+                    <Plus className="h-3.5 w-3.5" /> Create
+                  </button>
+                </div>
+              </div>
               <EmptyState icon={FolderOpen} title="No collections yet"
                 description="Create folders to group your saved datasets by topic or project." />
-            ) : (
+            </div>
+          ) : (
+            <div className="mt-6 space-y-4">
+              <div className="glass rounded-2xl p-4">
+                <div className="flex items-center gap-2">
+                  <input value={newName} onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && addCollection()}
+                    placeholder="New collection name…"
+                    className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-cyan/50" />
+                  <button onClick={addCollection}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-sm font-medium text-[oklch(0.15_0.03_258)]">
+                    <Plus className="h-3.5 w-3.5" /> Create
+                  </button>
+                </div>
+              </div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {collections.map((c) => (
                   <div key={c.id} className="glass card-elevated rounded-2xl p-5 cursor-pointer hover:border-cyan/20 border border-transparent transition-colors"
@@ -373,10 +447,11 @@ function SavedPage() {
                   </div>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )
         )}
       </div>
+
 
       {/* Add to Collection Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={(open) => { if (!open) { setAddDialogOpen(false); setAddDialogDatasetId(null); } }}>
