@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { AdminPageHeader } from "@/components/app/admin-shell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 export const Route = createFileRoute("/admin/tokens")({
@@ -19,7 +20,7 @@ function TokensPage() {
   const [agentFilter, setAgentFilter] = useState<string>("");
   const [page, setPage] = useState(1);
 
-  const { data: events = [] } = useQuery<Array<{ id: string; userId: string; userEmail: string; agent: string; model: string; tokens: number; createdAt: string }>>({
+  const { data: events = [], isLoading } = useQuery<Array<{ id: string; userId: string; userEmail: string; agent: string; model: string; tokens: number; createdAt: string }>>({
     queryKey: ["admin-tokens"],
     queryFn: () => api.admin.infra.tokens() as Promise<Array<{ id: string; userId: string; userEmail: string; agent: string; model: string; tokens: number; createdAt: string }>>,
   });
@@ -58,7 +59,10 @@ function TokensPage() {
 
   return (
     <>
-      <AdminPageHeader title="Token usage" description={`${total.toLocaleString()} tokens across ${filtered.length} events`} />
+      <AdminPageHeader
+        title="Token usage"
+        description={isLoading ? "Loading token usage..." : `${total.toLocaleString()} tokens across ${filtered.length} events`}
+      />
       <div className="space-y-6 px-6 py-6 md:px-8">
         <div className="glass flex flex-wrap items-center gap-3 rounded-2xl p-4">
           <div className="inline-flex rounded-full border border-white/10 bg-white/5 p-1 text-sm">
@@ -84,27 +88,42 @@ function TokensPage() {
 
         <div className="glass rounded-2xl p-5">
           <div className="text-sm font-semibold">Tokens by {dim}</div>
-          <div className="mt-4 h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={bucketed}>
-                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" opacity={0.5} />
-                <XAxis dataKey="label" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} />
-                <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "var(--popover)",
-                    borderColor: "var(--border)",
-                    color: "var(--popover-foreground)",
-                    borderRadius: 12,
-                    boxShadow: "0 10px 30px -10px rgba(0,0,0,0.2)"
-                  }}
-                  itemStyle={{ color: "var(--foreground)" }}
-                  labelStyle={{ color: "var(--muted-foreground)" }}
-                />
-                <Line type="monotone" dataKey="tokens" stroke="var(--cyan)" strokeWidth={2} dot={{ r: 3, fill: "var(--cyan)" }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          {isLoading ? (
+            <div className="mt-4 h-64 flex flex-col justify-between py-2">
+              <div className="flex items-end justify-between gap-2 h-44">
+                {[30, 50, 40, 70, 60, 85, 45, 90, 65, 80, 55, 75].map((h, i) => (
+                  <Skeleton key={i} className="w-full rounded-t-sm" style={{ height: `${h}%` }} />
+                ))}
+              </div>
+              <div className="flex justify-between pt-2">
+                <Skeleton className="h-3 w-16 rounded" />
+                <Skeleton className="h-3 w-16 rounded" />
+                <Skeleton className="h-3 w-16 rounded" />
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={bucketed}>
+                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" opacity={0.5} />
+                  <XAxis dataKey="label" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} />
+                  <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "var(--popover)",
+                      borderColor: "var(--border)",
+                      color: "var(--popover-foreground)",
+                      borderRadius: 12,
+                      boxShadow: "0 10px 30px -10px rgba(0,0,0,0.2)"
+                    }}
+                    itemStyle={{ color: "var(--foreground)" }}
+                    labelStyle={{ color: "var(--muted-foreground)" }}
+                  />
+                  <Line type="monotone" dataKey="tokens" stroke="var(--cyan)" strokeWidth={2} dot={{ r: 3, fill: "var(--cyan)" }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
         <div className="glass overflow-hidden rounded-2xl">
@@ -116,14 +135,14 @@ function TokensPage() {
               </span>
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
+                disabled={page <= 1 || isLoading}
                 className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-white/10 hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
+                disabled={page >= totalPages || isLoading}
                 className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-white/10 hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
               >
                 <ChevronRight className="h-4 w-4" />
@@ -141,15 +160,30 @@ function TokensPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {paged.map((e) => (
-                <tr key={e.id}>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(e.createdAt).toLocaleString()}</td>
-                  <td className="px-4 py-3">{e.userEmail}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-cyan">{e.agent}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{e.model}</td>
-                  <td className="px-4 py-3 text-right">{e.tokens.toLocaleString()}</td>
-                </tr>
-              ))}
+              {isLoading ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={i}>
+                    <td className="px-4 py-3"><Skeleton className="h-3 w-28 rounded" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-36 rounded" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-20 rounded font-mono" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-24 rounded" /></td>
+                    <td className="px-4 py-3"><div className="flex justify-end"><Skeleton className="h-4 w-16 rounded" /></div></td>
+                  </tr>
+                ))
+              ) : (
+                <>
+                  {paged.map((e) => (
+                    <tr key={e.id}>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(e.createdAt).toLocaleString()}</td>
+                      <td className="px-4 py-3">{e.userEmail}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-cyan">{e.agent}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{e.model}</td>
+                      <td className="px-4 py-3 text-right">{e.tokens.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                  {paged.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-sm text-muted-foreground">No token usage recorded yet.</td></tr>}
+                </>
+              )}
             </tbody>
           </table>
         </div>

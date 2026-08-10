@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { AdminPageHeader } from "@/components/app/admin-shell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth-context";
 import { Shield, Mail, Calendar, User, LogOut, Pencil, X, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -27,7 +28,7 @@ function SettingsPage() {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
 
-  const { data: admins = [] } = useQuery({
+  const { data: admins = [], isLoading } = useQuery({
     queryKey: ["admin-admins"],
     queryFn: () => api.admin.getAdmins() as Promise<AdminUser[]>,
   });
@@ -80,23 +81,34 @@ function SettingsPage() {
       <div className="mx-auto max-w-2xl space-y-6 px-6 py-6 md:px-8">
         {/* Admin Profile Card */}
         <div className="glass rounded-2xl p-6">
-          <div className="flex items-center gap-4">
-            <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-cyan/30 to-blue-600/30">
-              <Shield className="h-7 w-7 text-cyan" />
-            </span>
-            <div>
-              <div className="text-xs uppercase tracking-widest text-muted-foreground">Admin Account</div>
-              <div className="mt-1 font-display text-2xl font-semibold">{currentAdmin?.name || user?.email?.split("@")[0] || "Admin"}</div>
-              <div className="mt-0.5 text-sm text-muted-foreground">{user?.email}</div>
+          {isLoading ? (
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-16 w-16 shrink-0 rounded-2xl" />
+              <div className="space-y-2">
+                <Skeleton className="h-3 w-24 rounded" />
+                <Skeleton className="h-6 w-36 rounded" />
+                <Skeleton className="h-4 w-48 rounded" />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center gap-4">
+              <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-cyan/30 to-blue-600/30">
+                <Shield className="h-7 w-7 text-cyan" />
+              </span>
+              <div>
+                <div className="text-xs uppercase tracking-widest text-muted-foreground">Admin Account</div>
+                <div className="mt-1 font-display text-2xl font-semibold">{currentAdmin?.name || user?.email?.split("@")[0] || "Admin"}</div>
+                <div className="mt-0.5 text-sm text-muted-foreground">{user?.email}</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Details Card */}
         <div className="glass rounded-2xl p-6">
           <div className="flex items-center justify-between">
             <div className="text-xs uppercase tracking-widest text-muted-foreground">Account Details</div>
-            {!editing && currentAdmin && (
+            {!editing && currentAdmin && !isLoading && (
               <button
                 onClick={startEditing}
                 className="inline-flex items-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-black/15 px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5 hover:text-foreground transition"
@@ -106,66 +118,92 @@ function SettingsPage() {
               </button>
             )}
           </div>
-          <div className="mt-4 space-y-4">
-            {/* Name - Editable */}
-            <div className="flex items-center gap-3 rounded-xl bg-white/5 [.light_&]:bg-black/[0.04] px-4 py-3">
-              <User className="h-4 w-4 text-cyan shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs text-muted-foreground">Name</div>
-                {editing ? (
-                  <div className="flex items-center gap-2 mt-1">
-                    <input
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") saveEditing();
-                        if (e.key === "Escape") cancelEditing();
-                      }}
-                      placeholder="Enter your name"
-                      autoFocus
-                      className="flex-1 bg-transparent border-b border-cyan/40 px-1 py-0.5 text-sm font-medium outline-none focus:border-cyan transition"
-                    />
-                    <button
-                      onClick={saveEditing}
-                      disabled={updateMutation.isPending}
-                      className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition disabled:opacity-50"
-                    >
-                      {updateMutation.isPending ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Check className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-                    <button
-                      onClick={cancelEditing}
-                      disabled={updateMutation.isPending}
-                      className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-white/10 text-muted-foreground hover:bg-white/20 transition disabled:opacity-50"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="text-sm font-medium">{currentAdmin?.name || "—"}</div>
-                )}
+          {isLoading ? (
+            <div className="mt-4 space-y-4">
+              <div className="flex items-center gap-3 rounded-xl bg-white/5 [.light_&]:bg-black/[0.04] px-4 py-3">
+                <Skeleton className="h-4 w-4 rounded-full shrink-0" />
+                <div className="space-y-1.5 flex-1">
+                  <Skeleton className="h-3 w-12 rounded" />
+                  <Skeleton className="h-4 w-32 rounded" />
+                </div>
+              </div>
+              <div className="flex items-center gap-3 rounded-xl bg-white/5 [.light_&]:bg-black/[0.04] px-4 py-3">
+                <Skeleton className="h-4 w-4 rounded-full shrink-0" />
+                <div className="space-y-1.5 flex-1">
+                  <Skeleton className="h-3 w-12 rounded" />
+                  <Skeleton className="h-4 w-44 rounded" />
+                </div>
+              </div>
+              <div className="flex items-center gap-3 rounded-xl bg-white/5 [.light_&]:bg-black/[0.04] px-4 py-3">
+                <Skeleton className="h-4 w-4 rounded-full shrink-0" />
+                <div className="space-y-1.5 flex-1">
+                  <Skeleton className="h-3 w-12 rounded" />
+                  <Skeleton className="h-4 w-28 rounded" />
+                </div>
               </div>
             </div>
-            {/* Email - Read only */}
-            <div className="flex items-center gap-3 rounded-xl bg-white/5 [.light_&]:bg-black/[0.04] px-4 py-3">
-              <Mail className="h-4 w-4 text-cyan shrink-0" />
-              <div>
-                <div className="text-xs text-muted-foreground">Email</div>
-                <div className="text-sm font-medium">{currentAdmin?.email || user?.email || "—"}</div>
+          ) : (
+            <div className="mt-4 space-y-4">
+              {/* Name - Editable */}
+              <div className="flex items-center gap-3 rounded-xl bg-white/5 [.light_&]:bg-black/[0.04] px-4 py-3">
+                <User className="h-4 w-4 text-cyan shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-muted-foreground">Name</div>
+                  {editing ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveEditing();
+                          if (e.key === "Escape") cancelEditing();
+                        }}
+                        placeholder="Enter your name"
+                        autoFocus
+                        className="flex-1 bg-transparent border-b border-cyan/40 px-1 py-0.5 text-sm font-medium outline-none focus:border-cyan transition"
+                      />
+                      <button
+                        onClick={saveEditing}
+                        disabled={updateMutation.isPending}
+                        className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition disabled:opacity-50"
+                      >
+                        {updateMutation.isPending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Check className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                      <button
+                        onClick={cancelEditing}
+                        disabled={updateMutation.isPending}
+                        className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-white/10 text-muted-foreground hover:bg-white/20 transition disabled:opacity-50"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-sm font-medium">{currentAdmin?.name || "—"}</div>
+                  )}
+                </div>
+              </div>
+              {/* Email - Read only */}
+              <div className="flex items-center gap-3 rounded-xl bg-white/5 [.light_&]:bg-black/[0.04] px-4 py-3">
+                <Mail className="h-4 w-4 text-cyan shrink-0" />
+                <div>
+                  <div className="text-xs text-muted-foreground">Email</div>
+                  <div className="text-sm font-medium">{currentAdmin?.email || user?.email || "—"}</div>
+                </div>
+              </div>
+              {/* Joined - Read only */}
+              <div className="flex items-center gap-3 rounded-xl bg-white/5 [.light_&]:bg-black/[0.04] px-4 py-3">
+                <Calendar className="h-4 w-4 text-cyan shrink-0" />
+                <div>
+                  <div className="text-xs text-muted-foreground">Joined</div>
+                  <div className="text-sm font-medium">{currentAdmin?.createdAt ? new Date(currentAdmin.createdAt).toLocaleDateString() : "—"}</div>
+                </div>
               </div>
             </div>
-            {/* Joined - Read only */}
-            <div className="flex items-center gap-3 rounded-xl bg-white/5 [.light_&]:bg-black/[0.04] px-4 py-3">
-              <Calendar className="h-4 w-4 text-cyan shrink-0" />
-              <div>
-                <div className="text-xs text-muted-foreground">Joined</div>
-                <div className="text-sm font-medium">{currentAdmin?.createdAt ? new Date(currentAdmin.createdAt).toLocaleDateString() : "—"}</div>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Sign Out */}

@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { AdminPageHeader } from "@/components/app/admin-shell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Database, ShieldCheck, ScrollText, TrendingUp, ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/admin/")({
@@ -11,7 +12,7 @@ export const Route = createFileRoute("/admin/")({
 });
 
 function AdminDashboard() {
-  const { data } = useQuery({
+  const { data, isLoading: dashboardLoading } = useQuery({
     queryKey: ["admin-dashboard"],
     queryFn: () => api.admin.dashboard() as Promise<{
       totalUsers: number;
@@ -20,7 +21,7 @@ function AdminDashboard() {
     }>,
   });
 
-  const { data: analyticsData } = useQuery({
+  const { data: analyticsData, isLoading: analyticsLoading } = useQuery({
     queryKey: ["admin-analytics"],
     queryFn: () => api.admin.analytics(),
   });
@@ -38,43 +39,35 @@ function AdminDashboard() {
   const totalActivityPages = Math.max(1, Math.ceil(activities.length / activityPageSize));
   const paginatedActivities = activities.slice((activityPage - 1) * activityPageSize, activityPage * activityPageSize);
 
-  // ponytail: calculate average growth or downfall per day from search activity series
-  let growthPct = 0;
-  if (analyticsData?.series && analyticsData.series.length > 1) {
-    const series = analyticsData.series;
-    let totalPercentageChange = 0;
-    let validDaysCount = 0;
-
-    for (let i = 1; i < series.length; i++) {
-      const prev = series[i - 1].count;
-      const curr = series[i].count;
-      if (prev !== 0) {
-        totalPercentageChange += (curr - prev) / prev;
-        validDaysCount++;
-      } else if (curr !== 0) {
-        totalPercentageChange += 1;
-        validDaysCount++;
-      } else {
-        totalPercentageChange += 0;
-        validDaysCount++;
-      }
-    }
-
-    if (validDaysCount > 0) {
-      growthPct = (totalPercentageChange / validDaysCount) * 100;
-      // Clamp growth/downfall to max ±100%
-      growthPct = Math.max(-100, Math.min(100, growthPct));
-    }
-  }
-  const growthValue = growthPct >= 0 
-    ? `+${growthPct.toFixed(1)}%` 
-    : `${growthPct.toFixed(1)}%`;
-
   const stats = [
-    { label: "Total users", value: data?.totalUsers ?? "—", icon: Users, to: "/admin/users" },
-    { label: "Repositories", value: data?.repositories?.length ?? "—", icon: Database, to: "/admin/repositories" },
-    { label: "Datasets indexed", value: analyticsData ? analyticsData.repositories?.reduce((a, r) => a + r.datasetsIndexed, 0).toLocaleString() ?? "—" : "—", icon: TrendingUp, to: "/admin/analytics" },
-    { label: "Recent audits", value: (data?.recentAudit ?? []).length ?? "—", icon: ShieldCheck, to: "/admin/audit-log" },
+    {
+      label: "Total users",
+      value: data?.totalUsers ?? "—",
+      isLoading: dashboardLoading,
+      icon: Users,
+      to: "/admin/users",
+    },
+    {
+      label: "Repositories",
+      value: data?.repositories?.length ?? "—",
+      isLoading: dashboardLoading,
+      icon: Database,
+      to: "/admin/repositories",
+    },
+    {
+      label: "Datasets indexed",
+      value: analyticsData ? analyticsData.repositories?.reduce((a, r) => a + r.datasetsIndexed, 0).toLocaleString() ?? "—" : "—",
+      isLoading: analyticsLoading,
+      icon: TrendingUp,
+      to: "/admin/analytics",
+    },
+    {
+      label: "Recent audits",
+      value: (data?.recentAudit ?? []).length ?? "—",
+      isLoading: dashboardLoading,
+      icon: ShieldCheck,
+      to: "/admin/audit-log",
+    },
   ];
 
   return (
@@ -88,7 +81,9 @@ function AdminDashboard() {
                 <s.icon className="h-5 w-5 text-cyan" />
                 <ArrowUpRight className="h-4 w-4 text-muted-foreground transition group-hover:text-foreground" />
               </div>
-              <div className="mt-4 font-display text-3xl font-semibold">{s.value}</div>
+              <div className="mt-4 font-display text-3xl font-semibold">
+                {s.isLoading ? <Skeleton className="h-9 w-20 rounded-lg" /> : s.value}
+              </div>
               <div className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">{s.label}</div>
             </Link>
           ))}
@@ -100,7 +95,7 @@ function AdminDashboard() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setRepoPage(prev => Math.max(1, prev - 1))}
-                disabled={repoPage === 1}
+                disabled={repoPage === 1 || dashboardLoading}
                 className="p-1 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none transition text-muted-foreground hover:text-foreground"
                 aria-label="Previous repository page"
               >
@@ -108,7 +103,7 @@ function AdminDashboard() {
               </button>
               <button
                 onClick={() => setRepoPage(prev => Math.min(totalRepoPages, prev + 1))}
-                disabled={repoPage === totalRepoPages}
+                disabled={repoPage === totalRepoPages || dashboardLoading}
                 className="p-1 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none transition text-muted-foreground hover:text-foreground"
                 aria-label="Next repository page"
               >
@@ -119,16 +114,30 @@ function AdminDashboard() {
           </div>
           <div className="glass rounded-2xl">
             <div className="grid grid-cols-1 divide-y divide-white/5 [.light_&]:divide-black/5 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3">
-              {paginatedRepos.map((r) => (
-                <div key={r.id} className="flex items-center gap-3 p-4">
-                  <span className={`h-2 w-2 rounded-full ${r.sync_status === "online" ? "bg-emerald-400" : r.sync_status === "syncing" ? "bg-amber-400" : "bg-rose-400"}`} />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">{r.name}</div>
-                    <div className="text-xs text-muted-foreground">{r.dataset_count.toLocaleString()} datasets · {r.last_sync_at ? new Date(r.last_sync_at).toLocaleString() : "never synced"}</div>
+              {dashboardLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 p-4">
+                    <Skeleton className="h-2 w-2 rounded-full shrink-0" />
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <Skeleton className="h-4 w-28 rounded" />
+                      <Skeleton className="h-3 w-40 rounded" />
+                    </div>
                   </div>
-                </div>
-              ))}
-              {(!repositories.length) && <div className="p-6 text-sm text-muted-foreground">No repositories configured yet.</div>}
+                ))
+              ) : (
+                <>
+                  {paginatedRepos.map((r) => (
+                    <div key={r.id} className="flex items-center gap-3 p-4">
+                      <span className={`h-2 w-2 rounded-full ${r.sync_status === "online" ? "bg-emerald-400" : r.sync_status === "syncing" ? "bg-amber-400" : "bg-rose-400"}`} />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium">{r.name}</div>
+                        <div className="text-xs text-muted-foreground">{r.dataset_count.toLocaleString()} datasets · {r.last_sync_at ? new Date(r.last_sync_at).toLocaleString() : "never synced"}</div>
+                      </div>
+                    </div>
+                  ))}
+                  {(!repositories.length) && <div className="p-6 text-sm text-muted-foreground">No repositories configured yet.</div>}
+                </>
+              )}
             </div>
           </div>
         </section>
@@ -139,7 +148,7 @@ function AdminDashboard() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setActivityPage(prev => Math.max(1, prev - 1))}
-                disabled={activityPage === 1}
+                disabled={activityPage === 1 || dashboardLoading}
                 className="p-1 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none transition text-muted-foreground hover:text-foreground"
                 aria-label="Previous activity page"
               >
@@ -147,7 +156,7 @@ function AdminDashboard() {
               </button>
               <button
                 onClick={() => setActivityPage(prev => Math.min(totalActivityPages, prev + 1))}
-                disabled={activityPage === totalActivityPages}
+                disabled={activityPage === totalActivityPages || dashboardLoading}
                 className="p-1 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none transition text-muted-foreground hover:text-foreground"
                 aria-label="Next activity page"
               >
@@ -160,15 +169,30 @@ function AdminDashboard() {
             </div>
           </div>
           <div className="glass divide-y divide-white/5 [.light_&]:divide-black/5 rounded-2xl">
-            {paginatedActivities.map((row) => (                <div key={row._id} className="flex items-center justify-between px-4 py-3 text-sm">
-                <div className="min-w-0 flex-1">
-                  <span className="font-mono text-xs text-cyan">{row.action}</span>
-                  <span className="ml-2 text-muted-foreground">{row.targetType ?? ""} {row.targetId ?? ""}</span>
+            {dashboardLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between px-4 py-3 text-sm">
+                  <div className="min-w-0 flex-1 flex items-center gap-2">
+                    <Skeleton className="h-4 w-28 rounded font-mono" />
+                    <Skeleton className="h-3 w-48 rounded" />
+                  </div>
+                  <Skeleton className="h-3 w-28 rounded shrink-0" />
                 </div>
-                <div className="shrink-0 text-xs text-muted-foreground">{new Date(row.createdAt).toLocaleString()}</div>
-              </div>
-            ))}
-            {(!activities.length) && <div className="p-6 text-sm text-muted-foreground">No admin actions recorded yet.</div>}
+              ))
+            ) : (
+              <>
+                {paginatedActivities.map((row) => (
+                  <div key={row._id} className="flex items-center justify-between px-4 py-3 text-sm">
+                    <div className="min-w-0 flex-1">
+                      <span className="font-mono text-xs text-cyan">{row.action}</span>
+                      <span className="ml-2 text-muted-foreground">{row.targetType ?? ""} {row.targetId ?? ""}</span>
+                    </div>
+                    <div className="shrink-0 text-xs text-muted-foreground">{new Date(row.createdAt).toLocaleString()}</div>
+                  </div>
+                ))}
+                {(!activities.length) && <div className="p-6 text-sm text-muted-foreground">No admin actions recorded yet.</div>}
+              </>
+            )}
           </div>
         </section>
       </div>

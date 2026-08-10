@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { AdminPageHeader } from "@/components/app/admin-shell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from "recharts";
 import { HardDrive, Activity, AlertTriangle, CheckCircle2, BarChart3 } from "lucide-react";
 
@@ -59,7 +60,9 @@ function InfraPage() {
                     MongoDB Atlas M0 (free) + Redis (free) combined usage
                   </p>
                 </div>
-                {storage.data && (
+                {storage.isLoading ? (
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                ) : storage.data && (
                   <div className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
                     storage.data.totalUsagePercent > 80 ? "bg-red-500/10 text-red-400" :
                     storage.data.totalUsagePercent > 60 ? "bg-amber-500/10 text-amber-400" :
@@ -74,7 +77,18 @@ function InfraPage() {
               </div>
 
               {/* Usage bar */}
-              {storage.data && (
+              {storage.isLoading ? (
+                <div className="mt-5">
+                  <div className="flex items-center justify-between text-xs mb-1.5">
+                    <Skeleton className="h-3 w-20 rounded" />
+                    <Skeleton className="h-3 w-20 rounded" />
+                  </div>
+                  <Skeleton className="h-3 w-full rounded-full" />
+                  <div className="mt-1 flex justify-end">
+                    <Skeleton className="h-3 w-24 rounded" />
+                  </div>
+                </div>
+              ) : storage.data ? (
                 <div className="mt-5">
                   <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
                     <span>{fmtBytes(storage.data.totalUsedBytes)} used</span>
@@ -90,7 +104,7 @@ function InfraPage() {
                     of {fmtBytes(storage.data.totalLimitBytes)} total
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
 
             {/* Per-service breakdown */}
@@ -102,7 +116,39 @@ function InfraPage() {
                   MongoDB Atlas (Free Tier)
                 </div>
                 <div className="mt-4 space-y-3">
-                  {storage.data && (
+                  {storage.isLoading ? (
+                    <>
+                      <div>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <Skeleton className="h-3 w-24 rounded" />
+                          <Skeleton className="h-3 w-10 rounded" />
+                        </div>
+                        <Skeleton className="h-2 w-full rounded-full" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div className="rounded-lg bg-white/5 [.light_&]:bg-black/[0.04] p-3 space-y-1">
+                          <Skeleton className="h-3 w-16 rounded" />
+                          <Skeleton className="h-4 w-20 rounded" />
+                        </div>
+                        <div className="rounded-lg bg-white/5 [.light_&]:bg-black/[0.04] p-3 space-y-1">
+                          <Skeleton className="h-3 w-16 rounded" />
+                          <Skeleton className="h-4 w-20 rounded" />
+                        </div>
+                        <div className="rounded-lg bg-white/5 [.light_&]:bg-black/[0.04] p-3 space-y-1">
+                          <Skeleton className="h-3 w-16 rounded" />
+                          <Skeleton className="h-4 w-16 rounded" />
+                        </div>
+                        <div className="rounded-lg bg-white/5 [.light_&]:bg-black/[0.04] p-3 space-y-1">
+                          <Skeleton className="h-3 w-16 rounded" />
+                          <Skeleton className="h-4 w-16 rounded" />
+                        </div>
+                        <div className="rounded-lg bg-white/5 [.light_&]:bg-black/[0.04] p-3 col-span-2 space-y-1">
+                          <Skeleton className="h-3 w-20 rounded" />
+                          <Skeleton className="h-4 w-24 rounded" />
+                        </div>
+                      </div>
+                    </>
+                  ) : storage.data ? (
                     <>
                       <div>
                         <div className="flex items-center justify-between text-xs mb-1">
@@ -143,10 +189,7 @@ function InfraPage() {
                         </div>
                       </div>
                     </>
-                  )}
-                  {!storage.data && (
-                    <div className="py-4 text-center text-xs text-muted-foreground">Loading storage stats...</div>
-                  )}
+                  ) : null}
                 </div>
               </div>
 
@@ -157,7 +200,31 @@ function InfraPage() {
                   Redis (Free Tier)
                 </div>
                 <div className="mt-4 space-y-3">
-                  {storage.data && (
+                  {storage.isLoading ? (
+                    <>
+                      <div>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <Skeleton className="h-3 w-24 rounded" />
+                          <Skeleton className="h-3 w-10 rounded" />
+                        </div>
+                        <Skeleton className="h-2 w-full rounded-full" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div className="rounded-lg bg-white/5 [.light_&]:bg-black/[0.04] p-3 space-y-1">
+                          <Skeleton className="h-3 w-16 rounded" />
+                          <Skeleton className="h-4 w-20 rounded" />
+                        </div>
+                        <div className="rounded-lg bg-white/5 [.light_&]:bg-black/[0.04] p-3 space-y-1">
+                          <Skeleton className="h-3 w-16 rounded" />
+                          <Skeleton className="h-4 w-20 rounded" />
+                        </div>
+                        <div className="rounded-lg bg-white/5 [.light_&]:bg-black/[0.04] p-3 col-span-2 space-y-1">
+                          <Skeleton className="h-3 w-20 rounded" />
+                          <Skeleton className="h-4 w-24 rounded" />
+                        </div>
+                      </div>
+                    </>
+                  ) : storage.data ? (
                     <>
                       <div>
                         <div className="flex items-center justify-between text-xs mb-1">
@@ -190,21 +257,41 @@ function InfraPage() {
                         </div>
                       </div>
                     </>
-                  )}
-                  {!storage.data && (
-                    <div className="py-4 text-center text-xs text-muted-foreground">Loading storage stats...</div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>
 
             {/* Storage allocation pie chart */}
-            {storage.data && (
-              <div className="glass rounded-2xl p-6">
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <BarChart3 className="h-4 w-4 text-cyan" />
-                  Storage Allocation
+            <div className="glass rounded-2xl p-6">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <BarChart3 className="h-4 w-4 text-cyan" />
+                Storage Allocation
+              </div>
+              {storage.isLoading ? (
+                <div className="mt-4 flex flex-col items-center gap-6 sm:flex-row sm:items-start">
+                  <Skeleton className="h-48 w-48 rounded-full shrink-0" />
+                  <div className="flex-1 space-y-3 self-center sm:self-start w-full">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-3 w-28 rounded" />
+                      <Skeleton className="h-3 w-16 rounded" />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-3 w-28 rounded" />
+                      <Skeleton className="h-3 w-16 rounded" />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-3 w-28 rounded" />
+                      <Skeleton className="h-3 w-16 rounded" />
+                    </div>
+                    <hr className="border-white/5 my-2" />
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-3 w-28 rounded" />
+                      <Skeleton className="h-3 w-20 rounded" />
+                    </div>
+                  </div>
                 </div>
+              ) : storage.data ? (
                 <div className="mt-4 flex flex-col items-center gap-6 sm:flex-row sm:items-start">
                   <div className="h-48 w-48 shrink-0">
                     <ResponsiveContainer width="100%" height="100%">
@@ -268,15 +355,15 @@ function InfraPage() {
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              ) : null}
+            </div>
 
             {/* Quick stats row */}
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-              <Stat icon={HardDrive} label="MongoDB data" value={storage.data ? fmtBytes(storage.data.mongoUsedBytes) : "—"} />
-              <Stat icon={Activity} label="Redis memory" value={storage.data ? fmtBytes(storage.data.redisUsedBytes) : "—"} />
-              <Stat icon={HardDrive} label="Total used" value={storage.data ? fmtBytes(storage.data.totalUsedBytes) : "—"} />
-              <Stat icon={CheckCircle2} label="Free remaining" value={storage.data ? fmtBytes(storage.data.totalRemainingBytes) : "—"} />
+              <Stat icon={HardDrive} label="MongoDB data" value={storage.data ? fmtBytes(storage.data.mongoUsedBytes) : "—"} isLoading={storage.isLoading} />
+              <Stat icon={Activity} label="Redis memory" value={storage.data ? fmtBytes(storage.data.redisUsedBytes) : "—"} isLoading={storage.isLoading} />
+              <Stat icon={HardDrive} label="Total used" value={storage.data ? fmtBytes(storage.data.totalUsedBytes) : "—"} isLoading={storage.isLoading} />
+              <Stat icon={CheckCircle2} label="Free remaining" value={storage.data ? fmtBytes(storage.data.totalRemainingBytes) : "—"} isLoading={storage.isLoading} />
             </div>
           </div>
       </div>
@@ -284,14 +371,16 @@ function InfraPage() {
   );
 }
 
-function Stat({ icon: Icon, label, value }: { icon?: React.ComponentType<{ className?: string }>; label: string; value: React.ReactNode }) {
+function Stat({ icon: Icon, label, value, isLoading }: { icon?: React.ComponentType<{ className?: string }>; label: string; value: React.ReactNode; isLoading?: boolean }) {
   return (
     <div className="glass rounded-2xl p-5">
       <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
         {Icon && <Icon className="h-3.5 w-3.5" />}
         {label}
       </div>
-      <div className="mt-2 font-display text-2xl font-semibold">{value}</div>
+      <div className="mt-2 font-display text-2xl font-semibold">
+        {isLoading ? <Skeleton className="h-7 w-20 rounded-lg" /> : value}
+      </div>
     </div>
   );
 }

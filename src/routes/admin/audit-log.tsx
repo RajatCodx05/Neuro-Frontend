@@ -3,6 +3,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { AdminPageHeader } from "@/components/app/admin-shell";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -42,13 +43,13 @@ function AuditLogPage() {
   const tableRef = useRef<HTMLDivElement>(null);
   const scrollTimer = useRef<number>(0);
 
-  const { data: rows = [] } = useQuery({
+  const { data: rows = [], isLoading: rowsLoading } = useQuery({
     queryKey: ["audit-log"],
     queryFn: () => api.admin.auditLog.list(500) as Promise<AuditRow[]>,
     refetchInterval: paused ? false : POLL_INTERVAL,
   });
 
-  const { data: admins = [] } = useQuery({
+  const { data: admins = [], isLoading: adminsLoading } = useQuery({
     queryKey: ["admin-admins"],
     queryFn: () => api.admin.getAdmins() as Promise<AdminUser[]>,
   });
@@ -100,7 +101,9 @@ function AuditLogPage() {
           </span>
           <div className="flex-1">
             <div className="text-xs uppercase tracking-widest text-muted-foreground">Admin Accounts</div>
-            <div className="mt-1 font-display text-3xl font-semibold">{admins.length}</div>
+            <div className="mt-1 font-display text-3xl font-semibold">
+              {adminsLoading ? <Skeleton className="h-9 w-12 rounded" /> : admins.length}
+            </div>
           </div>
           <span className="text-xs text-cyan/70">Click to view details →</span>
         </button>
@@ -109,10 +112,23 @@ function AuditLogPage() {
         <Dialog open={adminDialogOpen} onOpenChange={setAdminDialogOpen}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle>Admin Accounts ({admins.length})</DialogTitle>
+              <DialogTitle>Admin Accounts ({adminsLoading ? "…" : admins.length})</DialogTitle>
             </DialogHeader>
             <div className="space-y-2 py-2">
-              {admins.length === 0 ? (
+              {adminsLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 rounded-xl border border-white/10 px-4 py-3">
+                    <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <Skeleton className="h-4 w-32 rounded" />
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-3 w-36 rounded" />
+                        <Skeleton className="h-3 w-28 rounded" />
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : admins.length === 0 ? (
                 <div className="py-6 text-center text-sm text-muted-foreground">No admin accounts found.</div>
               ) : (
                 admins.map((a) => (
@@ -140,7 +156,9 @@ function AuditLogPage() {
             <RefreshCw className={`h-3 w-3 ${paused ? "" : "animate-spin"}`} />
             {paused ? "Updates paused — scroll stopped" : "Live"}
           </div>
-          <span className="text-xs text-muted-foreground">{filtered.length} entries</span>
+          <span className="text-xs text-muted-foreground">
+            {rowsLoading ? <Skeleton className="h-3 w-16 rounded inline-block" /> : `${filtered.length} entries`}
+          </span>
         </div>
 
         {/* Search */}
@@ -163,25 +181,44 @@ function AuditLogPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {filtered.map((r) => (
-                <tr key={r._id} className="hover:bg-white/[0.02]">
-                  <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
-                    {new Date(r.createdAt).toLocaleDateString()} {new Date(r.createdAt).toLocaleTimeString()}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-cyan/20 text-[9px] font-semibold text-cyan">
-                        {adminName(r)[0].toUpperCase()}
-                      </span>
-                      <span className="text-sm">{adminName(r)}</span>
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-cyan">{r.action}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.targetType ?? "—"} <span className="font-mono text-xs">{r.targetId ?? ""}</span></td>
-                  <td className="px-4 py-3 font-mono text-[11px] text-muted-foreground">{JSON.stringify(r.metadata)}</td>
-                </tr>
-              ))}
-              {filtered.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-sm text-muted-foreground">No entries.</td></tr>}
+              {rowsLoading ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={i}>
+                    <td className="px-4 py-3"><Skeleton className="h-3 w-28 rounded" /></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5">
+                        <Skeleton className="h-5 w-5 rounded-full shrink-0" />
+                        <Skeleton className="h-4 w-24 rounded" />
+                      </div>
+                    </td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-28 rounded font-mono" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-36 rounded" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-3 w-48 rounded font-mono" /></td>
+                  </tr>
+                ))
+              ) : (
+                <>
+                  {filtered.map((r) => (
+                    <tr key={r._id} className="hover:bg-white/[0.02]">
+                      <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
+                        {new Date(r.createdAt).toLocaleDateString()} {new Date(r.createdAt).toLocaleTimeString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-cyan/20 text-[9px] font-semibold text-cyan">
+                            {adminName(r)[0].toUpperCase()}
+                          </span>
+                          <span className="text-sm">{adminName(r)}</span>
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-cyan">{r.action}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{r.targetType ?? "—"} <span className="font-mono text-xs">{r.targetId ?? ""}</span></td>
+                      <td className="px-4 py-3 font-mono text-[11px] text-muted-foreground">{JSON.stringify(r.metadata)}</td>
+                    </tr>
+                  ))}
+                  {filtered.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-sm text-muted-foreground">No entries.</td></tr>}
+                </>
+              )}
             </tbody>
           </table>
         </div>

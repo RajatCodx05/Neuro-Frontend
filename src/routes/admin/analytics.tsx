@@ -20,6 +20,7 @@ import {
 } from "recharts";
 import { Inbox } from "lucide-react";
 import { AnalyticsChartCard, AnalyticsChartModal } from "@/components/app/analytics-chart-card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/admin/analytics")({
   head: () => ({ meta: [{ title: "Admin · Analytics — NeuroSearch AI" }] }),
@@ -338,7 +339,7 @@ function SearchOutcomeDetails({ data }: { data: AdminAnalytics }) {
 // ---------- Page ----------
 
 function AnalyticsPage() {
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["admin-analytics"],
     queryFn: () => api.admin.analytics(),
   });
@@ -371,7 +372,20 @@ function AnalyticsPage() {
       id: "searches-over-time",
       title: "Searches over time",
       description: "Daily search volume across the platform",
-      content: (
+      content: isLoading ? (
+        <div className="flex h-full w-full flex-col justify-between py-2">
+          <div className="flex items-end justify-between gap-2 h-44">
+            {[40, 65, 30, 80, 50, 75, 60, 90, 45, 70, 85, 95].map((h, i) => (
+              <Skeleton key={i} className="w-full rounded-t-sm" style={{ height: `${h}%` }} />
+            ))}
+          </div>
+          <div className="flex justify-between pt-2">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        </div>
+      ) : (
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={series}>
             <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" opacity={0.5} />
@@ -417,48 +431,56 @@ function AnalyticsPage() {
       id: "repository-usage",
       title: "Repository usage distribution",
       description: "Datasets indexed per repository contributing to searches",
-      content:
-        repos.length === 0 ? (
-          <EmptyState label="No repository or dataset data has been recorded yet." />
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={repos.slice(0, 12)} layout="vertical" margin={{ left: 0, right: 12 }}>
-              <CartesianGrid
-                stroke="var(--border)"
-                strokeDasharray="3 3"
-                opacity={0.5}
-                horizontal={false}
-              />
-              <XAxis
-                type="number"
-                stroke="var(--muted-foreground)"
-                fontSize={11}
-                tickLine={false}
-                allowDecimals={false}
-              />
-              <YAxis
-                type="category"
-                dataKey="name"
-                stroke="var(--muted-foreground)"
-                fontSize={11}
-                tickLine={false}
-                width={96}
-              />
-              <Tooltip
-                contentStyle={chartTooltipStyle}
-                itemStyle={{ color: "var(--foreground)" }}
-                labelStyle={{ color: "var(--muted-foreground)" }}
-                cursor={{ fill: "var(--secondary)", opacity: 0.4 }}
-              />
-              <Bar
-                dataKey="datasetsIndexed"
-                name="Datasets indexed"
-                fill="var(--electric)"
-                radius={[0, 4, 4, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        ),
+      content: isLoading ? (
+        <div className="flex h-full w-full flex-col justify-center gap-3 py-2">
+          {[75, 90, 60, 45, 80].map((w, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <Skeleton className="h-3 w-20 shrink-0" />
+              <Skeleton className="h-4 rounded" style={{ width: `${w}%` }} />
+            </div>
+          ))}
+        </div>
+      ) : repos.length === 0 ? (
+        <EmptyState label="No repository or dataset data has been recorded yet." />
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={repos.slice(0, 12)} layout="vertical" margin={{ left: 0, right: 12 }}>
+            <CartesianGrid
+              stroke="var(--border)"
+              strokeDasharray="3 3"
+              opacity={0.5}
+              horizontal={false}
+            />
+            <XAxis
+              type="number"
+              stroke="var(--muted-foreground)"
+              fontSize={11}
+              tickLine={false}
+              allowDecimals={false}
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              stroke="var(--muted-foreground)"
+              fontSize={11}
+              tickLine={false}
+              width={96}
+            />
+            <Tooltip
+              contentStyle={chartTooltipStyle}
+              itemStyle={{ color: "var(--foreground)" }}
+              labelStyle={{ color: "var(--muted-foreground)" }}
+              cursor={{ fill: "var(--secondary)", opacity: 0.4 }}
+            />
+            <Bar
+              dataKey="datasetsIndexed"
+              name="Datasets indexed"
+              fill="var(--electric)"
+              radius={[0, 4, 4, 0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      ),
       details: data && <RepositoryUsageDetails data={data} />,
     },
     // Widget 3 — real per-day average search-operation durations (AgentLog).
@@ -466,39 +488,51 @@ function AnalyticsPage() {
       id: "search-performance",
       title: "Search performance",
       description: "Average search duration per day from recorded backend timings",
-      content:
-        perfDaily.length === 0 ? (
-          <EmptyState label="No search operation timings have been recorded yet. Durations appear as searches run." />
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={perfDaily}>
-              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" opacity={0.5} />
-              <XAxis
-                dataKey="day"
-                stroke="var(--muted-foreground)"
-                fontSize={11}
-                tickLine={false}
-              />
-              <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} />
-              <Tooltip
-                contentStyle={chartTooltipStyle}
-                itemStyle={{ color: "var(--foreground)" }}
-                labelStyle={{ color: "var(--muted-foreground)" }}
-                formatter={(value: number | string) => [
-                  `${Math.round(Number(value)).toLocaleString()} ms`,
-                  "Avg duration",
-                ]}
-              />
-              <Line
-                type="monotone"
-                dataKey="avgMs"
-                stroke="var(--cyan)"
-                strokeWidth={2}
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        ),
+      content: isLoading ? (
+        <div className="flex h-full w-full flex-col justify-between py-2">
+          <div className="flex items-end justify-between gap-2 h-44">
+            {[50, 40, 70, 55, 65, 45, 80, 60, 75, 50, 60, 70].map((h, i) => (
+              <Skeleton key={i} className="w-full rounded-t-sm" style={{ height: `${h}%` }} />
+            ))}
+          </div>
+          <div className="flex justify-between pt-2">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        </div>
+      ) : perfDaily.length === 0 ? (
+        <EmptyState label="No search operation timings have been recorded yet. Durations appear as searches run." />
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={perfDaily}>
+            <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" opacity={0.5} />
+            <XAxis
+              dataKey="day"
+              stroke="var(--muted-foreground)"
+              fontSize={11}
+              tickLine={false}
+            />
+            <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} />
+            <Tooltip
+              contentStyle={chartTooltipStyle}
+              itemStyle={{ color: "var(--foreground)" }}
+              labelStyle={{ color: "var(--muted-foreground)" }}
+              formatter={(value: number | string) => [
+                `${Math.round(Number(value)).toLocaleString()} ms`,
+                "Avg duration",
+              ]}
+            />
+            <Line
+              type="monotone"
+              dataKey="avgMs"
+              stroke="var(--cyan)"
+              strokeWidth={2}
+              dot={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      ),
       details: data && <SearchPerformanceDetails data={data} />,
     },
     // Widget 4 — real search outcomes (QueryLog result counts) as a donut.
@@ -506,40 +540,53 @@ function AnalyticsPage() {
       id: "search-outcomes",
       title: "Search outcome distribution",
       description: "Overall search quality — results vs. no results",
-      content:
-        donutData.length === 0 ? (
-          <EmptyState label="No search outcomes have been recorded yet." />
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={donutData}
-                dataKey="value"
-                nameKey="name"
-                innerRadius="55%"
-                outerRadius="80%"
-                paddingAngle={3}
-                stroke="none"
-              >
-                {donutData.map((entry) => (
-                  <Cell key={entry.name} fill={entry.fill} />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={chartTooltipStyle}
-                itemStyle={{ color: "var(--foreground)" }}
-                labelStyle={{ color: "var(--muted-foreground)" }}
-              />
-              <Legend
-                iconType="circle"
-                iconSize={8}
-                formatter={(value: string) => (
-                  <span style={{ color: "var(--muted-foreground)", fontSize: 12 }}>{value}</span>
-                )}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        ),
+      content: isLoading ? (
+        <div className="flex h-full w-full items-center justify-center gap-6">
+          <Skeleton className="h-36 w-36 rounded-full" />
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-3 w-3 rounded-full" />
+              <Skeleton className="h-3 w-24 rounded" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-3 w-3 rounded-full" />
+              <Skeleton className="h-3 w-20 rounded" />
+            </div>
+          </div>
+        </div>
+      ) : donutData.length === 0 ? (
+        <EmptyState label="No search outcomes have been recorded yet." />
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={donutData}
+              dataKey="value"
+              nameKey="name"
+              innerRadius="55%"
+              outerRadius="80%"
+              paddingAngle={3}
+              stroke="none"
+            >
+              {donutData.map((entry) => (
+                <Cell key={entry.name} fill={entry.fill} />
+              ))}
+            </Pie>
+            <Tooltip
+              contentStyle={chartTooltipStyle}
+              itemStyle={{ color: "var(--foreground)" }}
+              labelStyle={{ color: "var(--muted-foreground)" }}
+            />
+            <Legend
+              iconType="circle"
+              iconSize={8}
+              formatter={(value: string) => (
+                <span style={{ color: "var(--muted-foreground)", fontSize: 12 }}>{value}</span>
+              )}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      ),
       details: data && <SearchOutcomeDetails data={data} />,
     },
   ];
@@ -557,7 +604,9 @@ function AnalyticsPage() {
               <div className="text-xs uppercase tracking-widest text-muted-foreground">
                 {k.label}
               </div>
-              <div className="mt-2 font-display text-3xl font-semibold">{k.value}</div>
+              <div className="mt-2 font-display text-3xl font-semibold">
+                {isLoading ? <Skeleton className="h-9 w-24 rounded-lg" /> : k.value}
+              </div>
             </div>
           ))}
         </div>

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { AdminPageHeader } from "@/components/app/admin-shell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Check, X, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
@@ -17,11 +18,11 @@ function ModerationPage() {
   const [tab, setTab] = useState<Tab>("queue");
   const qc = useQueryClient();
 
-  const { data: queue = [] } = useQuery({
+  const { data: queue = [], isLoading: queueLoading } = useQuery({
     queryKey: ["mod-queue"],
     queryFn: () => api.admin.moderation.queue() as Promise<Array<{ id: string; dataset_snapshot: Record<string, unknown>; source_query: string; confidence_score: number; discovered_at: string }>>,
   });
-  const { data: published = [] } = useQuery({
+  const { data: published = [], isLoading: publishedLoading } = useQuery({
     queryKey: ["mod-published"],
     queryFn: () => api.admin.moderation.published() as Promise<Array<{ id: string; dataset_id: string; dataset_snapshot: Record<string, unknown>; created_at: string }>>,
   });
@@ -41,7 +42,9 @@ function ModerationPage() {
       <div className="px-6 py-6 md:px-8">
         <div className="mb-4 inline-flex rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] p-1 text-sm">
           <button onClick={() => setTab("queue")} className={`rounded-full px-4 py-1.5 ${tab === "queue" ? "bg-white/10 [.light_&]:bg-black/10 text-foreground font-medium" : "text-muted-foreground"}`}>
-            Review queue <span className="ml-1 rounded-full bg-cyan/20 px-1.5 py-0.5 text-[10px] text-cyan">{queue.length}</span>
+            Review queue <span className="ml-1 rounded-full bg-cyan/20 px-1.5 py-0.5 text-[10px] text-cyan">
+              {queueLoading ? <Skeleton className="h-3 w-3 rounded-full inline-block" /> : queue.length}
+            </span>
           </button>
           <button onClick={() => setTab("published")} className={`rounded-full px-4 py-1.5 ${tab === "published" ? "bg-white/10 [.light_&]:bg-black/10 text-foreground font-medium" : "text-muted-foreground"}`}>
             Published catalog
@@ -50,33 +53,54 @@ function ModerationPage() {
 
         {tab === "queue" && (
           <div className="space-y-3">
-            {queue.map((r) => {
-              const snap = (r.dataset_snapshot ?? {}) as Record<string, unknown>;
-              return (
-                <div key={r.id} className="glass card-elevated rounded-2xl p-5">
+            {queueLoading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="glass card-elevated rounded-2xl p-5">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="font-display text-base font-semibold">{String(snap.title ?? "Untitled dataset")}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        From "{r.source_query ?? "unknown"}" · confidence {r.confidence_score != null ? Number(r.confidence_score).toFixed(2) : "—"} · {new Date(r.discovered_at).toLocaleString()}
-                      </div>
-                      {snap.description ? <p className="mt-3 text-sm text-muted-foreground line-clamp-3">{String(snap.description)}</p> : null}
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <Skeleton className="h-5 w-56 rounded" />
+                      <Skeleton className="h-3 w-72 rounded" />
+                      <Skeleton className="h-4 w-full rounded mt-3" />
+                      <Skeleton className="h-4 w-2/3 rounded" />
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                      <button onClick={() => act(r.id, "approve")}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 [.light_&]:bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 [.light_&]:text-emerald-700 hover:bg-emerald-500/25">
-                        <Check className="h-3.5 w-3.5" /> Approve
-                      </button>
-                      <button onClick={() => { const r2 = prompt("Rejection reason?") || undefined; if (r2 !== undefined) act(r.id, "reject", r2); }}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/15 [.light_&]:bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-400 [.light_&]:text-rose-700 hover:bg-rose-500/25">
-                        <X className="h-3.5 w-3.5" /> Reject
-                      </button>
+                      <Skeleton className="h-7 w-20 rounded-full" />
+                      <Skeleton className="h-7 w-16 rounded-full" />
                     </div>
                   </div>
                 </div>
-              );
-            })}
-            {queue.length === 0 && <div className="glass rounded-2xl p-10 text-center text-sm text-muted-foreground">Nothing to review right now.</div>}
+              ))
+            ) : (
+              <>
+                {queue.map((r) => {
+                  const snap = (r.dataset_snapshot ?? {}) as Record<string, unknown>;
+                  return (
+                    <div key={r.id} className="glass card-elevated rounded-2xl p-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className="font-display text-base font-semibold">{String(snap.title ?? "Untitled dataset")}</div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            From "{r.source_query ?? "unknown"}" · confidence {r.confidence_score != null ? Number(r.confidence_score).toFixed(2) : "—"} · {new Date(r.discovered_at).toLocaleString()}
+                          </div>
+                          {snap.description ? <p className="mt-3 text-sm text-muted-foreground line-clamp-3">{String(snap.description)}</p> : null}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <button onClick={() => act(r.id, "approve")}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 [.light_&]:bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 [.light_&]:text-emerald-700 hover:bg-emerald-500/25">
+                            <Check className="h-3.5 w-3.5" /> Approve
+                          </button>
+                          <button onClick={() => { const r2 = prompt("Rejection reason?") || undefined; if (r2 !== undefined) act(r.id, "reject", r2); }}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/15 [.light_&]:bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-400 [.light_&]:text-rose-700 hover:bg-rose-500/25">
+                            <X className="h-3.5 w-3.5" /> Reject
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {queue.length === 0 && <div className="glass rounded-2xl p-10 text-center text-sm text-muted-foreground">Nothing to review right now.</div>}
+              </>
+            )}
           </div>
         )}
 
@@ -91,20 +115,35 @@ function ModerationPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 [.light_&]:divide-black/5">
-                {published.map((d) => {
-                  const snap = (d.dataset_snapshot ?? {}) as Record<string, unknown>;
-                  return (
-                    <tr key={d.id}>
-                      <td className="px-4 py-3">
-                        <div className="font-medium">{String(snap.title ?? d.dataset_id)}</div>
-                        <div className="text-xs text-muted-foreground">{d.dataset_id}</div>
+                {publishedLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i}>
+                      <td className="px-4 py-3 space-y-1">
+                        <Skeleton className="h-4 w-48 rounded" />
+                        <Skeleton className="h-3 w-28 rounded" />
                       </td>
-                      <td className="px-4 py-3"><ShieldCheck className="h-4 w-4 text-cyan" /></td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(d.created_at).toLocaleDateString()}</td>
+                      <td className="px-4 py-3"><Skeleton className="h-4 w-4 rounded" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-3 w-24 rounded" /></td>
                     </tr>
-                  );
-                })}
-                {published.length === 0 && <tr><td colSpan={3} className="p-8 text-center text-sm text-muted-foreground">No published datasets yet.</td></tr>}
+                  ))
+                ) : (
+                  <>
+                    {published.map((d) => {
+                      const snap = (d.dataset_snapshot ?? {}) as Record<string, unknown>;
+                      return (
+                        <tr key={d.id}>
+                          <td className="px-4 py-3">
+                            <div className="font-medium">{String(snap.title ?? d.dataset_id)}</div>
+                            <div className="text-xs text-muted-foreground">{d.dataset_id}</div>
+                          </td>
+                          <td className="px-4 py-3"><ShieldCheck className="h-4 w-4 text-cyan" /></td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(d.created_at).toLocaleDateString()}</td>
+                        </tr>
+                      );
+                    })}
+                    {published.length === 0 && <tr><td colSpan={3} className="p-8 text-center text-sm text-muted-foreground">No published datasets yet.</td></tr>}
+                  </>
+                )}
               </tbody>
             </table>
           </div>

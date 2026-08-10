@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { AdminPageHeader } from "@/components/app/admin-shell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Trash2, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,7 +23,7 @@ function HelpDeskPage() {
   const [page, setPage] = useState(1);
   const qc = useQueryClient();
 
-  const { data: ticketResp } = useQuery({
+  const { data: ticketResp, isLoading: ticketsLoading } = useQuery({
     queryKey: ["support-tickets", page],
     queryFn: () => api.admin.helpDesk.tickets(page) as Promise<TicketResp>,
   });
@@ -31,7 +32,7 @@ function HelpDeskPage() {
   const totalTickets = ticketResp?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalTickets / PAGE_SIZE));
 
-  const { data: articles = [] } = useQuery({
+  const { data: articles = [], isLoading: articlesLoading } = useQuery({
     queryKey: ["help-articles"],
     queryFn: () => api.admin.helpDesk.articles() as Promise<Array<{ id: string; title: string; slug: string; published: boolean; updated_at: string }>>,
   });
@@ -67,7 +68,9 @@ function HelpDeskPage() {
       <div className="px-6 py-6 md:px-8">
         <div className="mb-4 inline-flex rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] p-1 text-sm">
           <button onClick={() => { setTab("tickets"); setPage(1); }} className={`rounded-full px-4 py-1.5 ${tab === "tickets" ? "bg-white/10 [.light_&]:bg-black/10 text-foreground font-medium" : "text-muted-foreground"}`}>
-            Support tickets <span className="ml-1 rounded-full bg-cyan/20 px-1.5 py-0.5 text-[10px] text-cyan">{tickets.filter((t) => t.status !== "resolved").length}</span>
+            Support tickets <span className="ml-1 rounded-full bg-cyan/20 px-1.5 py-0.5 text-[10px] text-cyan">
+              {ticketsLoading ? <Skeleton className="h-3 w-3 rounded-full inline-block" /> : tickets.filter((t) => t.status !== "resolved").length}
+            </span>
           </button>
           <button onClick={() => setTab("articles")} className={`rounded-full px-4 py-1.5 ${tab === "articles" ? "bg-white/10 [.light_&]:bg-black/10 text-foreground font-medium" : "text-muted-foreground"}`}>
             Help articles
@@ -141,14 +144,14 @@ function HelpDeskPage() {
                 </span>
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page <= 1}
+                  disabled={page <= 1 || ticketsLoading}
                   className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-white/10 [.light_&]:hover:bg-black/10 hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page >= totalPages}
+                  disabled={page >= totalPages || ticketsLoading}
                   className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-white/10 [.light_&]:hover:bg-black/10 hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -166,30 +169,47 @@ function HelpDeskPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 [.light_&]:divide-black/5">
-                {tickets.map((t) => (
-                  <tr key={t.id} onClick={() => setSelectedTicket(t)}
-                    className="cursor-pointer transition hover:bg-white/[0.03] [.light_&]:hover:bg-black/[0.02]">
-                    <td className="px-4 py-3 font-medium">{t.subject}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {t.name ? <span className="font-medium text-foreground">{t.name}</span> : null}
-                      {t.email ? <span className={t.name ? "block opacity-70" : ""}>{t.email}</span> : null}
-                      {!t.name && !t.email ? <span className="italic opacity-50">—</span> : null}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground line-clamp-2 max-w-md">{t.message}</td>
-                    <td className="px-4 py-3">
-                      <span onClick={(e) => e.stopPropagation()}>
-                        <select value={t.status} onChange={(e) => setTicketStatus(t.id, e.target.value as never)}
-                          className="rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-2 py-1 text-xs text-foreground outline-none cursor-pointer">
-                          <option value="open" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">open</option>
-                          <option value="in_progress" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">in progress</option>
-                          <option value="resolved" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">resolved</option>
-                        </select>
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right text-xs text-muted-foreground">{new Date(t.created_at).toLocaleString()}</td>
-                  </tr>
-                ))}
-                {tickets.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-sm text-muted-foreground">No tickets yet.</td></tr>}
+                {ticketsLoading ? (
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <tr key={i}>
+                      <td className="px-4 py-3"><Skeleton className="h-4 w-40 rounded" /></td>
+                      <td className="px-4 py-3 space-y-1">
+                        <Skeleton className="h-3.5 w-24 rounded" />
+                        <Skeleton className="h-3 w-32 rounded" />
+                      </td>
+                      <td className="px-4 py-3"><Skeleton className="h-4 w-64 rounded" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-6 w-20 rounded-full" /></td>
+                      <td className="px-4 py-3"><div className="flex justify-end"><Skeleton className="h-3 w-28 rounded" /></div></td>
+                    </tr>
+                  ))
+                ) : (
+                  <>
+                    {tickets.map((t) => (
+                      <tr key={t.id} onClick={() => setSelectedTicket(t)}
+                        className="cursor-pointer transition hover:bg-white/[0.03] [.light_&]:hover:bg-black/[0.02]">
+                        <td className="px-4 py-3 font-medium">{t.subject}</td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">
+                          {t.name ? <span className="font-medium text-foreground">{t.name}</span> : null}
+                          {t.email ? <span className={t.name ? "block opacity-70" : ""}>{t.email}</span> : null}
+                          {!t.name && !t.email ? <span className="italic opacity-50">—</span> : null}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground line-clamp-2 max-w-md">{t.message}</td>
+                        <td className="px-4 py-3">
+                          <span onClick={(e) => e.stopPropagation()}>
+                            <select value={t.status} onChange={(e) => setTicketStatus(t.id, e.target.value as never)}
+                              className="rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-2 py-1 text-xs text-foreground outline-none cursor-pointer">
+                              <option value="open" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">open</option>
+                              <option value="in_progress" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">in progress</option>
+                              <option value="resolved" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">resolved</option>
+                            </select>
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right text-xs text-muted-foreground">{new Date(t.created_at).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                    {tickets.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-sm text-muted-foreground">No tickets yet.</td></tr>}
+                  </>
+                )}
               </tbody>
             </table>
           </div>
@@ -232,20 +252,34 @@ function HelpDeskPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 [.light_&]:divide-black/5">
-                  {articles.map((a) => (
-                    <tr key={a.id}>
-                      <td className="px-4 py-3 font-medium">{a.title}</td>
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{a.slug}</td>
-                      <td className="px-4 py-3">{a.published ? <span className="text-emerald-400">yes</span> : <span className="text-muted-foreground">draft</span>}</td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(a.updated_at).toLocaleDateString()}</td>
-                      <td className="px-4 py-3 text-right">
-                        <button onClick={() => removeArticle(a.id)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-rose-400">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {articles.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-sm text-muted-foreground">No articles yet.</td></tr>}
+                  {articlesLoading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i}>
+                        <td className="px-4 py-3"><Skeleton className="h-4 w-36 rounded" /></td>
+                        <td className="px-4 py-3"><Skeleton className="h-4 w-28 rounded font-mono" /></td>
+                        <td className="px-4 py-3"><Skeleton className="h-4 w-12 rounded" /></td>
+                        <td className="px-4 py-3"><Skeleton className="h-3 w-20 rounded" /></td>
+                        <td className="px-4 py-3"><div className="flex justify-end"><Skeleton className="h-8 w-8 rounded-lg" /></div></td>
+                      </tr>
+                    ))
+                  ) : (
+                    <>
+                      {articles.map((a) => (
+                        <tr key={a.id}>
+                          <td className="px-4 py-3 font-medium">{a.title}</td>
+                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{a.slug}</td>
+                          <td className="px-4 py-3">{a.published ? <span className="text-emerald-400">yes</span> : <span className="text-muted-foreground">draft</span>}</td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(a.updated_at).toLocaleDateString()}</td>
+                          <td className="px-4 py-3 text-right">
+                            <button onClick={() => removeArticle(a.id)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-rose-400">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {articles.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-sm text-muted-foreground">No articles yet.</td></tr>}
+                    </>
+                  )}
                 </tbody>
               </table>
             </div>

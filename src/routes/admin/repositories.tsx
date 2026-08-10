@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { AdminPageHeader } from "@/components/app/admin-shell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,7 +20,7 @@ function RepositoriesPage() {
   const [tier, setTier] = useState<(typeof TIERS)[number]>("open");
   const [endpoint, setEndpoint] = useState("");
 
-  const { data: repos = [] } = useQuery({
+  const { data: repos = [], isLoading } = useQuery({
     queryKey: ["admin-repos"],
     queryFn: () => api.admin.repositories.list() as Promise<Array<{ id: string; name: string; trust_tier: string; sync_status: string; dataset_count: number; last_sync_at: string }>>,
   });
@@ -65,18 +66,20 @@ function RepositoriesPage() {
         <div className="glass rounded-2xl p-5">
           <div className="flex items-center justify-between text-xs uppercase tracking-widest text-muted-foreground">
             <span>Add repository</span>
-            <span className="font-mono text-cyan font-semibold">{repos.length} / 10</span>
+            <span className="font-mono text-cyan font-semibold">
+              {isLoading ? <Skeleton className="h-4 w-12 rounded inline-block" /> : `${repos.length} / 10`}
+            </span>
           </div>
           <div className="mt-3 grid gap-3 md:grid-cols-[1fr,1fr,180px,auto]">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={isMaxReached ? "Limit reached (10 max)" : "Name (e.g. OpenNeuro)"} disabled={isMaxReached}
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={isMaxReached ? "Limit reached (10 max)" : "Name (e.g. OpenNeuro)"} disabled={isMaxReached || isLoading}
               className="rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50 disabled:opacity-50" />
-            <input value={endpoint} onChange={(e) => setEndpoint(e.target.value)} placeholder={isMaxReached ? "Limit reached" : "Endpoint URL (optional)"} disabled={isMaxReached}
+            <input value={endpoint} onChange={(e) => setEndpoint(e.target.value)} placeholder={isMaxReached ? "Limit reached" : "Endpoint URL (optional)"} disabled={isMaxReached || isLoading}
               className="rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50 disabled:opacity-50" />
-            <select value={tier} onChange={(e) => setTier(e.target.value as never)} disabled={isMaxReached}
+            <select value={tier} onChange={(e) => setTier(e.target.value as never)} disabled={isMaxReached || isLoading}
               className="rounded-xl border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-cyan/50 disabled:opacity-50">
               {TIERS.map((t) => <option key={t} value={t} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t}</option>)}
             </select>
-            <button onClick={add} disabled={isMaxReached}
+            <button onClick={add} disabled={isMaxReached || isLoading}
               className="inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-sm font-medium text-[oklch(0.15_0.03_258)] disabled:opacity-50 disabled:cursor-not-allowed">
               <Plus className="h-4 w-4" /> Add
             </button>
@@ -96,35 +99,55 @@ function RepositoriesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 [.light_&]:divide-black/5">
-              {repos.map((r) => (
-                <tr key={r.id}>
-                  <td className="px-4 py-3 font-medium">{r.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.trust_tier}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1.5 text-xs ${
-                      r.sync_status === "online" ? "text-emerald-500 [.light_&]:text-emerald-600" : r.sync_status === "syncing" ? "text-amber-500 [.light_&]:text-amber-600" : "text-rose-500 [.light_&]:text-rose-600"
-                    }`}>
-                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                      {r.sync_status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.dataset_count.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{r.last_sync_at ? new Date(r.last_sync_at).toLocaleString() : "—"}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <button onClick={() => resync(r.id)} title="Resync now"
-                        className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5 hover:text-cyan">
-                        <RefreshCw className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => remove(r.id)} title="Remove"
-                        className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5 hover:text-rose-400">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {repos.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">No repositories yet.</td></tr>}
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i}>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-28 rounded" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-16 rounded" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-16 rounded-full" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-20 rounded" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-3 w-32 rounded" /></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Skeleton className="h-8 w-8 rounded-lg" />
+                        <Skeleton className="h-8 w-8 rounded-lg" />
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <>
+                  {repos.map((r) => (
+                    <tr key={r.id}>
+                      <td className="px-4 py-3 font-medium">{r.name}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{r.trust_tier}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center gap-1.5 text-xs ${
+                          r.sync_status === "online" ? "text-emerald-500 [.light_&]:text-emerald-600" : r.sync_status === "syncing" ? "text-amber-500 [.light_&]:text-amber-600" : "text-rose-500 [.light_&]:text-rose-600"
+                        }`}>
+                          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                          {r.sync_status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{r.dataset_count.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{r.last_sync_at ? new Date(r.last_sync_at).toLocaleString() : "—"}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button onClick={() => resync(r.id)} title="Resync now"
+                            className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5 hover:text-cyan">
+                            <RefreshCw className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => remove(r.id)} title="Remove"
+                            className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5 hover:text-rose-400">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {repos.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">No repositories yet.</td></tr>}
+                </>
+              )}
             </tbody>
           </table>
         </div>

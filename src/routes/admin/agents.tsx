@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { AdminPageHeader } from "@/components/app/admin-shell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/admin/agents")({
@@ -16,7 +17,7 @@ type AgentEvent = { id: string; agent: string; query: string; durationMs: number
 
 function AgentsPage() {
   const [page, setPage] = useState(1);
-  const { data = [] } = useQuery({
+  const { data = [], isLoading } = useQuery({
     queryKey: ["admin-agents"],
     queryFn: () => api.admin.infra.agents() as Promise<AgentEvent[]>,
   });
@@ -37,14 +38,14 @@ function AgentsPage() {
               </span>
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
+                disabled={page <= 1 || isLoading}
                 className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-white/10 [.light_&]:hover:bg-black/10 hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
+                disabled={page >= totalPages || isLoading}
                 className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-white/10 [.light_&]:hover:bg-black/10 hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
               >
                 <ChevronRight className="h-4 w-4" />
@@ -63,17 +64,32 @@ function AgentsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 [.light_&]:divide-black/5">
-              {paged.map((e: AgentEvent) => (
-                <tr key={e.id}>
-                  <td className="px-4 py-3 font-mono text-xs text-cyan">{e.agent}</td>
-                  <td className="px-4 py-3 truncate max-w-xs">{e.query}</td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">{e.durationMs}ms</td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">{e.resultCount}</td>
-                  <td className={`px-4 py-3 ${e.status === "success" ? "text-emerald-500 [.light_&]:text-emerald-600" : "text-rose-500 [.light_&]:text-rose-600"}`}>{e.status}</td>
-                  <td className="px-4 py-3 text-right text-xs text-muted-foreground whitespace-nowrap">{new Date(e.createdAt).toLocaleString()}</td>
-                </tr>
-              ))}
-              {paged.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">No agent activity yet.</td></tr>}
+              {isLoading ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={i}>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-20 rounded font-mono" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-48 rounded" /></td>
+                    <td className="px-4 py-3"><div className="flex justify-end"><Skeleton className="h-4 w-12 rounded" /></div></td>
+                    <td className="px-4 py-3"><div className="flex justify-end"><Skeleton className="h-4 w-8 rounded" /></div></td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-16 rounded" /></td>
+                    <td className="px-4 py-3"><div className="flex justify-end"><Skeleton className="h-3 w-28 rounded" /></div></td>
+                  </tr>
+                ))
+              ) : (
+                <>
+                  {paged.map((e: AgentEvent) => (
+                    <tr key={e.id}>
+                      <td className="px-4 py-3 font-mono text-xs text-cyan">{e.agent}</td>
+                      <td className="px-4 py-3 truncate max-w-xs">{e.query}</td>
+                      <td className="px-4 py-3 text-right text-muted-foreground">{e.durationMs}ms</td>
+                      <td className="px-4 py-3 text-right text-muted-foreground">{e.resultCount}</td>
+                      <td className={`px-4 py-3 ${e.status === "success" ? "text-emerald-500 [.light_&]:text-emerald-600" : "text-rose-500 [.light_&]:text-rose-600"}`}>{e.status}</td>
+                      <td className="px-4 py-3 text-right text-xs text-muted-foreground whitespace-nowrap">{new Date(e.createdAt).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                  {paged.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">No agent activity yet.</td></tr>}
+                </>
+              )}
             </tbody>
           </table>
         </div>

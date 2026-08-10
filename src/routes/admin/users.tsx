@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { AdminPageHeader } from "@/components/app/admin-shell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Trash2, Shield, Ban, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
@@ -15,7 +16,7 @@ function UsersPage() {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
-  const { data: users = [] } = useQuery({
+  const { data: users = [], isLoading } = useQuery({
     queryKey: ["admin-users"],
     queryFn: () => api.admin.users.list(),
   });
@@ -58,18 +59,22 @@ function UsersPage() {
     <>
       <AdminPageHeader
         title="User management"
-        description={`${users.length} accounts`}
+        description={isLoading ? "Loading accounts..." : `${users.length} accounts`}
         actions={
           <div className="flex items-center gap-3 text-sm">
             <span className="text-muted-foreground">
-              {filtered.length > 0
-                ? `${(currentPage - 1) * itemsPerPage + 1}–${Math.min(currentPage * itemsPerPage, filtered.length)} of ${filtered.length}`
-                : "0 accounts"}
+              {isLoading ? (
+                <Skeleton className="h-4 w-20 rounded" />
+              ) : filtered.length > 0 ? (
+                `${(currentPage - 1) * itemsPerPage + 1}–${Math.min(currentPage * itemsPerPage, filtered.length)} of ${filtered.length}`
+              ) : (
+                "0 accounts"
+              )}
             </span>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage <= 1}
+                disabled={currentPage <= 1 || isLoading}
                 className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5 disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed transition-colors"
                 title="Previous Page"
               >
@@ -77,7 +82,7 @@ function UsersPage() {
               </button>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage >= totalPages}
+                disabled={currentPage >= totalPages || isLoading}
                 className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5 disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed transition-colors"
                 title="Next Page"
               >
@@ -105,40 +110,63 @@ function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 [.light_&]:divide-black/5">
-              {paginated.map((u) => (
-                <tr key={u.id} className="hover:bg-white/[0.02] [.light_&]:hover:bg-black/[0.02]">
-                  <td className="px-4 py-3">
-                    <div className="font-medium">{u.full_name || "—"}</div>
-                    <div className="text-xs text-muted-foreground">{u.email}</div>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{u.role ?? "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{u.institute ?? "—"}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1.5">
-                      {u.is_admin && <span className="rounded-full bg-cyan/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-cyan">Admin</span>}
-                      {u.suspended && <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-rose-400">Suspended</span>}
-                      {!u.is_admin && !u.suspended && <span className="text-xs text-muted-foreground">Active</span>}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <span title={u.is_admin ? "Is admin" : "Not admin"}
-                        className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground cursor-default">
-                        <Shield className={`h-4 w-4 ${u.is_admin ? "text-cyan" : ""}`} />
-                      </span>
-                      <span title={u.suspended ? "Suspended" : "Active"}
-                        className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground cursor-default">
-                        {u.suspended ? <Ban className="h-4 w-4 text-amber-400" /> : <CheckCircle2 className="h-4 w-4 text-emerald-400" />}
-                      </span>
-                      <button onClick={() => remove(u.id)} title="Delete"
-                        className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5 hover:text-rose-400">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-sm text-muted-foreground">No users match.</td></tr>}
+              {isLoading ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={i}>
+                    <td className="px-4 py-3 space-y-1.5">
+                      <Skeleton className="h-4 w-32 rounded" />
+                      <Skeleton className="h-3 w-48 rounded" />
+                    </td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-16 rounded" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-28 rounded" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Skeleton className="h-8 w-8 rounded-lg" />
+                        <Skeleton className="h-8 w-8 rounded-lg" />
+                        <Skeleton className="h-8 w-8 rounded-lg" />
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <>
+                  {paginated.map((u) => (
+                    <tr key={u.id} className="hover:bg-white/[0.02] [.light_&]:hover:bg-black/[0.02]">
+                      <td className="px-4 py-3">
+                        <div className="font-medium">{u.full_name || "—"}</div>
+                        <div className="text-xs text-muted-foreground">{u.email}</div>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{u.role ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{u.institute ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          {u.is_admin && <span className="rounded-full bg-cyan/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-cyan">Admin</span>}
+                          {u.suspended && <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-rose-400">Suspended</span>}
+                          {!u.is_admin && !u.suspended && <span className="text-xs text-muted-foreground">Active</span>}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <span title={u.is_admin ? "Is admin" : "Not admin"}
+                            className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground cursor-default">
+                            <Shield className={`h-4 w-4 ${u.is_admin ? "text-cyan" : ""}`} />
+                          </span>
+                          <span title={u.suspended ? "Suspended" : "Active"}
+                            className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground cursor-default">
+                            {u.suspended ? <Ban className="h-4 w-4 text-amber-400" /> : <CheckCircle2 className="h-4 w-4 text-emerald-400" />}
+                          </span>
+                          <button onClick={() => remove(u.id)} title="Delete"
+                            className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 [.light_&]:hover:bg-black/5 hover:text-rose-400">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {filtered.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-sm text-muted-foreground">No users match.</td></tr>}
+                </>
+              )}
             </tbody>
           </table>
         </div>
