@@ -3,7 +3,7 @@ import { useState, type ReactNode } from "react";
 import {
   Brain, LayoutDashboard, Bookmark, History, Settings as SettingsIcon,
   LogOut, User as UserIcon, PanelLeft, PanelLeftClose, X, HelpCircle, ChevronsUpDown,
-  Sun, Moon,
+  Sun, Moon, PenLine,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
@@ -16,6 +16,7 @@ const nav = [
   { icon: LayoutDashboard, label: "Dashboard", to: "/" },
   { icon: Bookmark, label: "Saved & Collections", to: "/saved" },
   { icon: History, label: "History", to: "/history" },
+  { icon: PenLine, label: "Paper Formatter", to: "/format" },
   { icon: SettingsIcon, label: "Settings", to: "/settings" },
 ] as const;
 

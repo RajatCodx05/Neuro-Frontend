@@ -34,6 +34,7 @@ import { Route as AuthenticatedSavedRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
 import { Route as AuthenticatedHelpRouteImport } from './routes/_authenticated/help'
+import { Route as AuthenticatedFormatRouteImport } from './routes/_authenticated/format'
 
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
@@ -159,6 +160,11 @@ const AuthenticatedHelpRoute = AuthenticatedHelpRouteImport.update({
   path: '/help',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedFormatRoute = AuthenticatedFormatRouteImport.update({
+  id: '/format',
+  path: '/format',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/403': typeof R403Route
   '/auth': typeof AuthRoute
   '/search': typeof SearchRoute
+  '/format': typeof AuthenticatedFormatRoute
   '/help': typeof AuthenticatedHelpRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -191,6 +198,7 @@ export interface FileRoutesByTo {
   '/403': typeof R403Route
   '/auth': typeof AuthRoute
   '/search': typeof SearchRoute
+  '/format': typeof AuthenticatedFormatRoute
   '/help': typeof AuthenticatedHelpRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -219,6 +227,7 @@ export interface FileRoutesById {
   '/403': typeof R403Route
   '/auth': typeof AuthRoute
   '/search': typeof SearchRoute
+  '/_authenticated/format': typeof AuthenticatedFormatRoute
   '/_authenticated/help': typeof AuthenticatedHelpRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
@@ -247,6 +256,7 @@ export interface FileRouteTypes {
     | '/403'
     | '/auth'
     | '/search'
+    | '/format'
     | '/help'
     | '/history'
     | '/onboarding'
@@ -272,6 +282,7 @@ export interface FileRouteTypes {
     | '/403'
     | '/auth'
     | '/search'
+    | '/format'
     | '/help'
     | '/history'
     | '/onboarding'
@@ -299,6 +310,7 @@ export interface FileRouteTypes {
     | '/403'
     | '/auth'
     | '/search'
+    | '/_authenticated/format'
     | '/_authenticated/help'
     | '/_authenticated/history'
     | '/_authenticated/onboarding'
@@ -507,10 +519,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHelpRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/format': {
+      id: '/_authenticated/format'
+      path: '/format'
+      fullPath: '/format'
+      preLoaderRoute: typeof AuthenticatedFormatRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedFormatRoute: typeof AuthenticatedFormatRoute
   AuthenticatedHelpRoute: typeof AuthenticatedHelpRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
@@ -519,6 +539,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedFormatRoute: AuthenticatedFormatRoute,
   AuthenticatedHelpRoute: AuthenticatedHelpRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
