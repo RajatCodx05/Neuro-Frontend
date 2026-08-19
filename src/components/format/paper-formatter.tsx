@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import type { FormatType, PaperData } from "./types";
 import { SAMPLE_PAPER } from "./sample-data";
 import { parseDocumentText } from "./doc-parser";
+import { extractTextFromFile } from "./file-extractor";
 import { generateFormattedPlainText } from "./export-helpers";
 import { CustomTemplateModal } from "./custom-template-modal";
 import { FormatComplianceView } from "./format-compliance";
@@ -23,19 +24,15 @@ export function PaperFormatter() {
   const [copied, setCopied] = useState<boolean>(false);
   const [isDragging, setIsDragging] = useState<boolean>(false);
 
-  const handleFileUpload = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const text = (e.target?.result as string) || "";
-        const parsed = parseDocumentText(text, file.name);
-        setPaperData(parsed);
-        toast.success(`Converted "${file.name}" to ${selectedFormat.toUpperCase()} format!`);
-      } catch {
-        toast.error("Failed to parse document file.");
-      }
-    };
-    reader.readAsText(file);
+  const handleFileUpload = async (file: File) => {
+    try {
+      const text = await extractTextFromFile(file);
+      const parsed = parseDocumentText(text, file.name);
+      setPaperData(parsed);
+      toast.success(`Converted "${file.name}" to ${selectedFormat.toUpperCase()} format!`);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to parse document file.");
+    }
   };
 
   const handleStartFromScratch = () => {

@@ -2,9 +2,15 @@ import type { PaperData, PaperSection } from "./types";
 
 export function parseDocumentText(rawText: string, filename: string): PaperData {
   const lines = rawText.split(/\r?\n/);
-  let title = filename.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+  let cleanFilenameTitle = filename
+    .replace(/\.[^/.]+$/, "")
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
+
+  let title = cleanFilenameTitle || "Research Paper Title";
   let authors = "Author Name(s)";
-  let affiliations = "Institution / Affiliation Details";
+  let affiliations = "Department of Research & Engineering, Academic Institute";
   let abstract = "";
   let keywords = "";
   const sections: PaperSection[] = [];
@@ -15,12 +21,25 @@ export function parseDocumentText(rawText: string, filename: string): PaperData 
 
   const nonEmptyLines = lines.map((l) => l.trim()).filter(Boolean);
   if (nonEmptyLines.length > 0) {
-    title = nonEmptyLines[0].replace(/^[#\s]+/, "");
+    const firstLine = nonEmptyLines[0].replace(/^[#\s]+/, "").trim();
+    // Validate that the first line is human readable and not binary metadata
+    if (
+      firstLine.length >= 3 &&
+      firstLine.length <= 160 &&
+      !/^(%PDF|<<|>>|\/Type|\/Length|\/Title|obj|xref)/i.test(firstLine)
+    ) {
+      title = firstLine;
+    }
   }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
+
+    // Filter out binary metadata fragments if any slipped through
+    if (/^(%PDF|<<|>>|\/Type|\/Font|\/Length|\d+\s+\d+\s+obj|endobj|stream|endstream)/i.test(line)) {
+      continue;
+    }
 
     if (/^(abstract|summary)[:\s—-]*/i.test(line)) {
       mode = "abstract";
@@ -46,7 +65,7 @@ export function parseDocumentText(rawText: string, filename: string): PaperData 
     const isHeading =
       /^#{1,3}\s+(.+)$/.test(line) ||
       /^(?:[IVXLCDM]+\.|\d+\.|\d+\.\d+)\s+([A-Z].+)$/.test(line) ||
-      /^(?:Introduction|Background|Related Work|Methodology|Methods|Materials and Methods|Proposed Model|Experiments|Experimental Results|Results|Discussion|Conclusion|Conclusions|Acknowledgments)$/i.test(line);
+      /^(?:Introduction|Overview|Background|Related Work|Architecture|Methodology|Implementation|Methods|Materials and Methods|Proposed Model|Experiments|Results|Discussion|Conclusion|Conclusions|Acknowledgments)$/i.test(line);
 
     if (isHeading && mode !== "references" && mode !== "abstract") {
       if (currentSection) {
@@ -77,9 +96,9 @@ export function parseDocumentText(rawText: string, filename: string): PaperData 
       if (cleanRef) {
         references.push(cleanRef);
       }
-    } else if (mode === "body") {
+    } else if (mode === "body" || mode === "header") {
       if (!currentSection) {
-        currentSection = { id: `sec-${sections.length + 1}`, title: "Main Content", content: "" };
+        currentSection = { id: `sec-${sections.length + 1}`, title: "Introduction", content: "" };
       }
       currentSection.content += (currentSection.content ? "\n\n" : "") + line;
     }
@@ -89,11 +108,27 @@ export function parseDocumentText(rawText: string, filename: string): PaperData 
     sections.push(currentSection);
   }
 
+  // If document was raw text without structured sections, chunk it gracefully
+  if (sections.length === 1 && sections[0].content.length > 800) {
+    const paragraphs = sections[0].content.split("\n\n").filter(Boolean);
+    if (paragraphs.length >= 3) {
+      const p1 = paragraphs.slice(0, Math.ceil(paragraphs.length / 3)).join("\n\n");
+      const p2 = paragraphs.slice(Math.ceil(paragraphs.length / 3), Math.ceil((paragraphs.length * 2) / 3)).join("\n\n");
+      const p3 = paragraphs.slice(Math.ceil((paragraphs.length * 2) / 3)).join("\n\n");
+      sections.length = 0;
+      sections.push(
+        { id: "sec-1", title: "Introduction & Background", content: p1 },
+        { id: "sec-2", title: "System Architecture & Methodology", content: p2 },
+        { id: "sec-3", title: "Discussion & Results", content: p3 }
+      );
+    }
+  }
+
   if (!abstract && sections.length > 0) {
-    abstract = sections[0].content.slice(0, 350) + "...";
+    abstract = sections[0].content.slice(0, 300) + (sections[0].content.length > 300 ? "..." : "");
   }
   if (!keywords) {
-    keywords = "Neuroscience, Data Analysis, Methodology, Research Findings";
+    keywords = "Research, Data Analysis, Methodology, Engineering, Scientific Methods";
   }
   if (sections.length === 0) {
     sections.push({
@@ -110,7 +145,7 @@ export function parseDocumentText(rawText: string, filename: string): PaperData 
   }
 
   return {
-    title: title || "Research Paper Title",
+    title,
     authors,
     affiliations,
     abstract,
