@@ -782,22 +782,34 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
       const count = counts.get(label);
       if (count !== undefined) list.push({ value: label, count });
     }
-    list.sort((a, b) => {
-      // Fixed-order groups (participants/size buckets by lower bound, years
-      // chronologically) keep their natural order; everything else stays
-      // frequency-desc like before.
-      const ra = facetNaturalRank(dimension, a.value);
-      const rb = facetNaturalRank(dimension, b.value);
-      if (Number.isFinite(ra) && Number.isFinite(rb) && ra !== rb) return ra - rb;
-      return b.count - a.count || a.value.localeCompare(b.value);
-    });
+    sortFacetValues(dimension, list);
     if (list.length > 0) facets[dimension] = list;
   }
   return facets;
 }
 
+/** Get the user-visible display label for sorting a facet value alphabetically. */
+export function getFacetSortLabel(dimension: FilterDimension, value: string): string {
+  if (dimension === "modality") return modalityDisplayLabel(value);
+  if (dimension === "license") return licenseDisplayLabel(value);
+  if (dimension === "task") return keywordDisplayLabel(value);
+  return facetDisplayLabel(value);
+}
+
+/** Sort facet values alphabetically by their user-visible display label (preserving numeric rank for buckets/years). */
+export function sortFacetValues(dimension: FilterDimension, list: FacetValue[]): FacetValue[] {
+  return list.sort((a, b) => {
+    const ra = facetNaturalRank(dimension, a.value);
+    const rb = facetNaturalRank(dimension, b.value);
+    if (Number.isFinite(ra) && Number.isFinite(rb) && ra !== rb) return ra - rb;
+    const labelA = getFacetSortLabel(dimension, a.value);
+    const labelB = getFacetSortLabel(dimension, b.value);
+    return labelA.localeCompare(labelB, undefined, { numeric: true, sensitivity: "base" });
+  });
+}
+
 /** Natural sort rank for fixed-order facet groups (NaN = not a ranked group). */
-function facetNaturalRank(dimension: FilterDimension, value: string): number {
+export function facetNaturalRank(dimension: FilterDimension, value: string): number {
   if (dimension === "participants" || dimension === "size") {
     const m = String(value).match(/(\d+(?:\.\d+)?)/);
     return m ? parseFloat(m[1]) : Number.MAX_SAFE_INTEGER;
