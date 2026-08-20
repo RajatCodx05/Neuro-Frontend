@@ -394,7 +394,6 @@ function DatasetPage() {
                   ["Disease / Condition", d.disease],
                   ["Subject Count", d.subjects ? `${d.subjects.toLocaleString()} subjects` : null],
                   ["Brain Region", d.region],
-                  ["License", d.license],
                   ["Access Tier", d.access],
                   ["Data Size", d.size],
                   ["Repository", d.repo],
