@@ -405,11 +405,9 @@ function SearchResults() {
                 <AnimatedDots />
               </span>
             ) : filteredResults.length > 0 ? (
-              <>
-                <span className="font-medium text-foreground">{filteredResults.length} datasets</span> found
-              </>
+              <span className="font-medium text-foreground">{filteredResults.length} datasets found</span>
             ) : search.q || hasActiveFilters ? (
-              <span className="font-medium text-foreground">0</span> datasets found
+              <span><span className="font-medium text-foreground">0</span> datasets found</span>
             ) : null}
           </div>
 
@@ -586,7 +584,7 @@ function SearchResults() {
               </div>
             )}
 
-            {!streaming && filteredResults.length === 0 && (search.q || hasActiveFilters) && (
+            {!streaming && filteredResults.length === 0 && (
               <NoResultsEmptyState query={search.q || ""} />
             )}
             {pageItems.map((d, i) => (
@@ -741,25 +739,212 @@ function LottieSearchLoader({ className = "h-4 w-4" }: { className?: string }) {
   );
 }
 
+function NoResultsIllustration() {
+  return (
+    <div className="relative flex items-center justify-center w-full max-w-sm h-60 mx-auto select-none pointer-events-none">
+      {/* Background ambient radial glow */}
+      <div className="absolute inset-0 bg-cyan-500/10 blur-3xl rounded-full scale-75" />
+
+      <svg
+        viewBox="0 0 320 240"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-full h-full relative z-10"
+      >
+        <defs>
+          {/* Magnifying Glass Outer Ring Gradient */}
+          <linearGradient id="ringGrad" x1="60" y1="30" x2="200" y2="170" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#38bdf8" />
+            <stop offset="45%" stopColor="#2563eb" />
+            <stop offset="100%" stopColor="#4f46e5" />
+          </linearGradient>
+
+          {/* Lens Background Gradient */}
+          <linearGradient id="lensBgGrad" x1="90" y1="50" x2="180" y2="140" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#0b1329" />
+            <stop offset="100%" stopColor="#1e293b" />
+          </linearGradient>
+
+          {/* Handle Gradient */}
+          <linearGradient id="handleGrad" x1="172" y1="126" x2="230" y2="184" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="60%" stopColor="#2563eb" />
+            <stop offset="100%" stopColor="#4338ca" />
+          </linearGradient>
+
+          {/* Floor Oval Glow */}
+          <radialGradient id="floorGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.7" />
+            <stop offset="50%" stopColor="#0284c7" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#020617" stopOpacity="0" />
+          </radialGradient>
+
+          {/* Cloud Fill Gradient */}
+          <linearGradient id="cloudGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#1e293b" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#0f172a" stopOpacity="0.5" />
+          </linearGradient>
+
+          {/* Sparkle Star Gradient */}
+          <linearGradient id="starGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#e0f2fe" />
+            <stop offset="50%" stopColor="#38bdf8" />
+            <stop offset="100%" stopColor="#818cf8" />
+          </linearGradient>
+
+          {/* Subtle Outer Drop Glow */}
+          <filter id="glowFilter" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+
+        {/* 1. Floor Ellipse Glow */}
+        <ellipse cx="160" cy="205" rx="90" ry="14" fill="url(#floorGlow)" />
+
+        {/* 2. Background Clouds */}
+        {/* Left Cloud */}
+        <g opacity="0.65">
+          <path
+            d="M 50 125 C 50 110, 68 98, 85 105 C 93 92, 115 92, 125 104 C 136 102, 148 113, 144 125 Z"
+            fill="url(#cloudGrad)"
+          />
+        </g>
+
+        {/* Right Cloud */}
+        <g opacity="0.65">
+          <path
+            d="M 185 138 C 185 124, 202 115, 218 122 C 227 110, 245 110, 255 122 C 266 120, 278 130, 275 138 Z"
+            fill="url(#cloudGrad)"
+          />
+        </g>
+
+        {/* 3. Floating Sparkle Stars & Dots */}
+        {/* Top-Right Large Sparkle */}
+        <g transform="translate(225, 48)">
+          <path
+            d="M 0 -12 Q 0 0 12 0 Q 0 0 0 12 Q 0 0 -12 0 Q 0 0 0 -12 Z"
+            fill="url(#starGrad)"
+          />
+        </g>
+
+        {/* Middle-Left Medium Sparkle */}
+        <g transform="translate(68, 92) scale(0.7)">
+          <path
+            d="M 0 -12 Q 0 0 12 0 Q 0 0 0 12 Q 0 0 -12 0 Q 0 0 0 -12 Z"
+            fill="url(#starGrad)"
+          />
+        </g>
+
+        {/* Bottom-Left Small Sparkle */}
+        <g transform="translate(98, 178) scale(0.5)">
+          <path
+            d="M 0 -12 Q 0 0 12 0 Q 0 0 0 12 Q 0 0 -12 0 Q 0 0 0 -12 Z"
+            fill="url(#starGrad)"
+          />
+        </g>
+
+        {/* Scattered Star Dots */}
+        <circle cx="118" cy="48" r="1.5" fill="#a5f3fc" opacity="0.85" />
+        <circle cx="262" cy="118" r="1.5" fill="#a5f3fc" opacity="0.7" />
+        <circle cx="178" cy="32" r="1.2" fill="#cbd5e1" opacity="0.7" />
+        <circle cx="82" cy="158" r="1.2" fill="#38bdf8" opacity="0.7" />
+        <circle cx="242" cy="168" r="1.5" fill="#818cf8" opacity="0.85" />
+
+        {/* 4. Main Magnifying Glass Structure */}
+        <g filter="url(#glowFilter)">
+          {/* Handle (Rotated Capsule at bottom-right) */}
+          <rect
+            x="172"
+            y="126"
+            width="22"
+            height="68"
+            rx="11"
+            transform="rotate(-45 172 126)"
+            fill="url(#handleGrad)"
+            stroke="rgba(255, 255, 255, 0.3)"
+            strokeWidth="1.5"
+          />
+
+          {/* Handle Top Highlight Line */}
+          <path
+            d="M 183 134 L 216 167"
+            stroke="rgba(255, 255, 255, 0.45)"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+
+          {/* Outer Ring Backing Shadow */}
+          <circle cx="135" cy="95" r="48" fill="none" stroke="#1e3a8a" strokeWidth="12" opacity="0.4" />
+
+          {/* Lens Glass Base */}
+          <circle cx="135" cy="95" r="44" fill="url(#lensBgGrad)" />
+
+          {/* Outer Ring Frame */}
+          <circle
+            cx="135"
+            cy="95"
+            r="44"
+            fill="none"
+            stroke="url(#ringGrad)"
+            strokeWidth="9"
+          />
+
+          {/* Outer Rim Highlight Rim */}
+          <circle
+            cx="135"
+            cy="95"
+            r="48.5"
+            fill="none"
+            stroke="rgba(255, 255, 255, 0.25)"
+            strokeWidth="1"
+          />
+
+          {/* Upper Glass Glare/Reflection Arc */}
+          <path
+            d="M 100 70 A 42 42 0 0 1 162 64"
+            fill="none"
+            stroke="rgba(255, 255, 255, 0.3)"
+            strokeWidth="3.5"
+            strokeLinecap="round"
+          />
+
+          {/* The 'X' Mark inside the Lens */}
+          {/* Outer Glowing Stroke */}
+          <g stroke="#38bdf8" strokeWidth="7.5" strokeLinecap="round">
+            <line x1="120" y1="80" x2="150" y2="110" />
+            <line x1="150" y1="80" x2="120" y2="110" />
+          </g>
+          {/* Inner Bright Stroke */}
+          <g stroke="#f0f9ff" strokeWidth="3" strokeLinecap="round">
+            <line x1="120" y1="80" x2="150" y2="110" />
+            <line x1="150" y1="80" x2="120" y2="110" />
+          </g>
+        </g>
+      </svg>
+    </div>
+  );
+}
+
 function NoResultsEmptyState({ query }: { query: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="relative mb-8">
-        {/* Glow effect behind the icon */}
-        <div className="absolute inset-0 scale-150 rounded-full bg-cyan/20 blur-3xl" />
-        <div className="relative grid h-32 w-32 place-items-center rounded-full bg-gradient-to-br from-cyan/20 to-purple/20 ring-1 ring-white/10 shadow-[0_0_50px_rgba(0,255,255,0.15)]">
-          <SearchX className="h-16 w-16 text-cyan drop-shadow-[0_0_15px_rgba(0,255,255,0.5)]" />
-        </div>
-      </div>
-      
-      <h2 className="text-3xl font-bold text-white sm:text-4xl font-display">
+    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+      <NoResultsIllustration />
+
+      <h2 className="mt-6 font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
         No results found
       </h2>
-      
-      <p className="mt-4 max-w-md text-muted-foreground">
-        We couldn't find any neuroscience datasets matching your query{" "}
-        <span className="font-medium text-cyan">"{query}"</span>.
-        Try refining your search or explore other neuroscience topics and datasets.
+
+      <p className="mt-3 max-w-lg text-sm sm:text-base leading-relaxed text-slate-300">
+        We couldn’t find any neuroscience datasets matching{" "}
+        {query ? (
+          <>
+            your query <span className="font-medium text-cyan">“{query}”</span>.
+          </>
+        ) : (
+          "your search criteria."
+        )}{" "}
+        Try refining your search or explore popular neuroscience topics and datasets.
       </p>
     </div>
   );
