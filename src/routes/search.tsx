@@ -18,6 +18,7 @@ import {
   licenseDisplayLabel,
   modalityDisplayLabel,
   parseUrlFilters,
+  sortFacetValues,
   type FilterDimension,
 } from "@/lib/search-filters";
 import {
@@ -485,6 +486,7 @@ function SearchResults() {
                   for (const v of selected) {
                     if (!options.some((o) => o.value === v)) options.push({ value: v, count: 0 });
                   }
+                  sortFacetValues(dim, options);
                   if (options.length === 0) return null;
                   const isOpen = open.includes(dim);
                   // v0.4 Show More / Show Less: long groups (Advanced Keywords

@@ -10,7 +10,7 @@ interface Props {
 export function PaperEditor({ paperData, setPaperData }: Props) {
   return (
     <div className="space-y-5">
-      <div className="glass card-elevated rounded-2xl p-6 border border-white/10 space-y-4">
+      <div className="glass card-elevated rounded-2xl p-6 border border-border space-y-4">
         <h3 className="font-display text-sm font-semibold text-foreground flex items-center gap-2">
           <SlidersHorizontal className="h-4 w-4 text-cyan" />
           Paper Metadata & Authors
@@ -130,7 +130,7 @@ export function PaperEditor({ paperData, setPaperData }: Props) {
         ))}
       </div>
 
-      <div className="glass card-elevated rounded-2xl p-6 border border-white/10 space-y-4">
+      <div className="glass card-elevated rounded-2xl p-6 border border-border space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-sm font-semibold text-foreground">
             Bibliography & References ({paperData.references.length})

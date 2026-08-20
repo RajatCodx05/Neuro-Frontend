@@ -38,16 +38,16 @@ export function PaperToolbar({
   copied,
 }: Props) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between glass card-elevated rounded-2xl p-4 border border-white/10">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between glass card-elevated rounded-2xl p-4 border border-border">
       <div className="flex items-center gap-3">
         <button
           onClick={onResetDocument}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-card hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           <span>New Document</span>
         </button>
-        <div className="h-4 w-px bg-white/10 hidden sm:block" />
+        <div className="h-4 w-px bg-border hidden sm:block" />
         <div>
           <div className="flex items-center gap-2">
             <span className="font-display text-sm font-semibold truncate max-w-xs sm:max-w-md">
@@ -84,7 +84,7 @@ export function PaperToolbar({
             className={`grid h-9 w-9 place-items-center rounded-xl border transition-colors ${
               twoColumn
                 ? "bg-cyan/15 text-cyan border-cyan/30"
-                : "border-white/10 text-muted-foreground hover:bg-white/5"
+                : "border-border text-muted-foreground hover:bg-card"
             }`}
             title={twoColumn ? "Switch to single column" : "Switch to two-column format"}
           >
@@ -94,7 +94,7 @@ export function PaperToolbar({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors">
+            <button className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-card hover:text-foreground transition-colors">
               <Sparkles className="h-3.5 w-3.5 text-cyan" />
               <span>AI Assist</span>
               <ChevronDown className="h-3 w-3 opacity-60" />
