@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, SlidersHorizontal, Bookmark, ArrowRight, ChevronDown, Loader2, Check, ExternalLink, RotateCcw, ThumbsUp, ThumbsDown, Info } from "lucide-react";
+import { Sparkles, SlidersHorizontal, Bookmark, ArrowRight, ChevronDown, Loader2, Check, ExternalLink, RotateCcw, ThumbsUp, ThumbsDown, Info, SearchX } from "lucide-react";
 import Lottie from "lottie-react";
 import lottieLoadingData from "@/assets/lottieflow-loading-07-000000-easey.json";
 import { AppShell } from "@/components/app/app-shell";
@@ -396,9 +396,7 @@ function SearchResults() {
           <span>
             AI can make mistakes. Please double-check the datasets before use.
           </span>
-        </div>
-
-        <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+        </div>          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
           <div>
             {streaming ? (
               <span className="inline-flex items-center gap-1.5">
@@ -410,7 +408,7 @@ function SearchResults() {
                 <span className="font-medium text-foreground">{filteredResults.length} datasets</span> found
               </>
             ) : search.q || hasActiveFilters ? (
-              "No results found for current query and active filters"
+              <span className="font-medium text-foreground">0</span> datasets found
             ) : null}
           </div>
 
@@ -585,6 +583,10 @@ function SearchResults() {
                 </span>
               </div>
             )}
+
+            {!streaming && filteredResults.length === 0 && (search.q || hasActiveFilters) && (
+              <NoResultsEmptyState query={search.q || ""} />
+            )}
             {pageItems.map((d, i) => (
               <motion.article
                 key={`${d.id}-${i}`}
@@ -733,6 +735,30 @@ function LottieSearchLoader({ className = "h-4 w-4" }: { className?: string }) {
   return (
     <div className={`inline-flex items-center justify-center shrink-0 brightness-0 invert [.light_&]:invert-0 ${className}`}>
       <Lottie animationData={lottieLoadingData} loop={true} autoplay={true} />
+    </div>
+  );
+}
+
+function NoResultsEmptyState({ query }: { query: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="relative mb-8">
+        {/* Glow effect behind the icon */}
+        <div className="absolute inset-0 scale-150 rounded-full bg-cyan/20 blur-3xl" />
+        <div className="relative grid h-32 w-32 place-items-center rounded-full bg-gradient-to-br from-cyan/20 to-purple/20 ring-1 ring-white/10 shadow-[0_0_50px_rgba(0,255,255,0.15)]">
+          <SearchX className="h-16 w-16 text-cyan drop-shadow-[0_0_15px_rgba(0,255,255,0.5)]" />
+        </div>
+      </div>
+      
+      <h2 className="text-3xl font-bold text-white sm:text-4xl font-display">
+        No results found
+      </h2>
+      
+      <p className="mt-4 max-w-md text-muted-foreground">
+        We couldn't find any neuroscience datasets matching your query{" "}
+        <span className="font-medium text-cyan">"{query}"</span>.
+        Try refining your search or explore other neuroscience topics and datasets.
+      </p>
     </div>
   );
 }
