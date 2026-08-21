@@ -403,7 +403,7 @@ function DatasetPage() {
                   ["Age Group",          val(d.ageGroup),                    false],
                   ["Participants",       d.subjects != null ? `${d.subjects.toLocaleString()}` : "N/A", false],
                   ["Dataset Size",       val(d.size),                        false],
-                  ["License",            val(d.license),                     false],
+                  ["Publication Year",   val((d as Record<string, unknown>).publicationYear), false],
                 ];
                 return (
                   <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 lg:grid-cols-5">
