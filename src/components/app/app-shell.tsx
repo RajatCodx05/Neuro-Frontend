@@ -16,7 +16,7 @@ const nav = [
   { icon: LayoutDashboard, label: "Dashboard", to: "/" },
   { icon: Bookmark, label: "Saved & Collections", to: "/saved" },
   { icon: History, label: "History", to: "/history" },
-  { icon: PenLine, label: "Paper Formatter", to: "/format" },
+  { icon: PenLine, label: "Research Studio", to: "/format" },
   { icon: SettingsIcon, label: "Settings", to: "/settings" },
 ] as const;
 
