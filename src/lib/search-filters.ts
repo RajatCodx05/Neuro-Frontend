@@ -55,10 +55,8 @@
 // array — `format` reads the identical array and is kept only so pre-existing
 // `format=` URLs keep filtering) is collapsed by default in the UI.
 export const FILTER_DIMENSIONS = [
-  "task", // rendered as "Advanced Keywords"
   "ageGroup", // Age Group
   "availability", // Availability
-  "format", // Data Format (hidden from sidebar; URL backward compatibility)
   "size", // Dataset Size
   "type", // Dataset Type
   "disease", // Disease / Condition
@@ -69,6 +67,8 @@ export const FILTER_DIMENSIONS = [
   "region", // Region
   "repository", // Repository
   "species", // Species
+  "task", // rendered as "Advanced Keywords" (exception: positioned at the end of filter dimensions)
+  "format", // Data Format (hidden from sidebar; URL backward compatibility)
 ] as const;
 
 export type FilterDimension = (typeof FILTER_DIMENSIONS)[number];
