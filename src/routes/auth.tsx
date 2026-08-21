@@ -66,7 +66,7 @@ function loadGoogleIdentity(): Promise<GoogleIdentity> {
 function AuthPage() {
   const search = Route.useSearch(); const navigate = useNavigate();
   const [mode, setMode] = useState<"login" | "signup">(search.mode);
-  const [loading, setLoading] = useState(false); const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false); const [googleLoading, setGoogleLoading] = useState(false); const [showPw, setShowPw] = useState(false);
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
   const [isAdminMode, setIsAdminMode] = useState(search.redirect?.startsWith("/admin") || false);
   // ponytail: reuse existing mode state — forgotStep adds reset flow without a new route
@@ -241,7 +241,11 @@ const handleVerifyOtp = async (e: FormEvent<HTMLFormElement>) => {
   const handleGoogleSignIn = async () => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     if (!clientId) { toast.error("Google Sign-In is not configured."); return; }
-    setLoading(true);
+    setGoogleLoading(true);
+    const onFocus = () => {
+      setTimeout(() => setGoogleLoading(false), 500);
+    };
+    window.addEventListener("focus", onFocus, { once: true });
     try {
       const google = await loadGoogleIdentity();
 
@@ -299,7 +303,10 @@ const handleVerifyOtp = async (e: FormEvent<HTMLFormElement>) => {
         toast.error(msg);
       }
     }
-    finally { setLoading(false); }
+    finally {
+      window.removeEventListener("focus", onFocus);
+      setGoogleLoading(false);
+    }
   };
 
   return <div className="relative flex min-h-screen items-center justify-center px-4 py-12"><div className="pointer-events-none absolute inset-0 hero-bg" /><div className="relative w-full max-w-md">
@@ -344,7 +351,7 @@ const handleVerifyOtp = async (e: FormEvent<HTMLFormElement>) => {
       {pendingVerificationEmail ? (
         <form key="verify-otp" onSubmit={handleVerifyOtp} className="mt-6 space-y-3">
           <Field key="verify-otp-input" label="Verification code" name="otp" inputMode="numeric" maxLength={6} placeholder="Enter your 6-digit otp here...." autoComplete="one-time-code" required onPaste={handleOtpPaste} />
-          <Submit loading={loading}>{isAdminMode ? "Verify & sign in" : "Verify email"}</Submit>
+          <Submit loading={loading}>{isAdminMode ? "Verify & sign In" : "Verify email"}</Submit>
           <div className="flex items-center justify-between text-xs text-foreground/70 dark:text-muted-foreground">
             {timeRemaining > 0 ? (
               <span>Code expires in {Math.floor(timeRemaining / 60)}:{String(timeRemaining % 60).padStart(2, '0')}</span>
@@ -413,8 +420,8 @@ const handleVerifyOtp = async (e: FormEvent<HTMLFormElement>) => {
             <span className="h-px flex-1 bg-black/15 dark:bg-white/10" />
           </div>
           {!isAdminMode && (
-            <button onClick={handleGoogleSignIn} disabled={loading} className="mb-4 flex w-full items-center justify-center gap-2 rounded-full border border-black/15 bg-black/[0.03] text-foreground font-medium py-2.5 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10 disabled:opacity-50 transition">
-              <GoogleIcon /> Continue with Google
+            <button onClick={handleGoogleSignIn} disabled={loading || googleLoading} className="mb-4 flex w-full items-center justify-center gap-2 rounded-full border border-black/15 bg-black/[0.03] text-foreground font-medium py-2.5 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10 disabled:opacity-50 transition">
+              {googleLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleIcon />} Continue with Google
             </button>
           )}
           <p className="mt-6 text-center text-xs text-foreground/70 dark:text-muted-foreground">
