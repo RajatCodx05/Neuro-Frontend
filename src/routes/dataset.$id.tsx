@@ -385,39 +385,44 @@ function DatasetPage() {
         <div className="mt-8 grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
             {/* Systematic Dataset Metadata Table */}
+            {/* ponytail: fixed 2×5 spec grid — always shows all 10 fields, N/A for missing */}
             <Section title="Dataset Specifications">
-              <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">
-                {[
-                  ["Modality", d.modality],
-                  ["Species", d.species],
-                  ["Age Group", d.ageGroup],
-                  ["Disease / Condition", d.disease],
-                  ["Subject Count", d.subjects ? `${d.subjects.toLocaleString()} subjects` : null],
-                  ["Brain Region", d.region],
-                  ["Access Tier", d.access],
-                  ["Data Size", d.size],
-                  ["Repository", d.repo],
-                ]
-                  .filter(([, v]) => v != null && v !== "" && v !== "null" && v !== "DS")
-                  .map(([k, v]) => (
-                    <div
-                      key={k}
-                      className="rounded-xl border border-white/5 bg-white/[0.02] p-3 transition-colors hover:border-white/10"
-                    >
-                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">
-                        {k}
-                      </div>
-                      {/* Issue 1: modality uses the canonical display label
-                          (and skips CSS `capitalize`, which would mangle
-                          "fMRI" → "FMRI"). All other cells keep title-casing. */}
+              {(() => {
+                const val = (v: unknown): string => {
+                  if (v == null || v === "" || v === "null" || v === "DS") return "N/A";
+                  if (Array.isArray(v)) return v.length === 0 ? "N/A" : v.join(", ");
+                  return String(v);
+                };
+                const specs: [string, string, boolean][] = [
+                  ["Modality",           val(d.modality),                    true],
+                  ["Species",            val(d.species),                     false],
+                  ["Access Tier",        val(d.access ?? d.access_tier),     false],
+                  ["Repository",         val(d.repo),                        false],
+                  ["Disease / Condition",val(d.disease),                     false],
+                  ["Brain Region",       val(d.region),                      false],
+                  ["Age Group",          val(d.ageGroup),                    false],
+                  ["Participants",       d.subjects != null ? `${d.subjects.toLocaleString()}` : "N/A", false],
+                  ["Dataset Size",       val(d.size),                        false],
+                  ["License",            val(d.license),                     false],
+                ];
+                return (
+                  <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 lg:grid-cols-5">
+                    {specs.map(([label, value, isModality]) => (
                       <div
-                        className={`mt-1 font-medium text-foreground break-words ${k === "Modality" ? "" : "capitalize"}`}
+                        key={label}
+                        className="rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2.5 transition-colors hover:border-white/10 min-w-0"
                       >
-                        {k === "Modality" ? modalityDisplayLabel(String(v)) : v}
+                        <div className="text-[9px] uppercase tracking-widest text-muted-foreground font-mono truncate">
+                          {label}
+                        </div>
+                        <div className={`mt-1 text-[11px] font-medium text-foreground break-words leading-snug ${isModality || value === "N/A" ? "" : "capitalize"}`}>
+                          {isModality && value !== "N/A" ? modalityDisplayLabel(value) : value}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-              </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </Section>
 
             {/* Structured Overview & Description Section */}
