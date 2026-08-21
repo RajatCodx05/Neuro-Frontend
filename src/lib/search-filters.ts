@@ -55,10 +55,8 @@
 // array — `format` reads the identical array and is kept only so pre-existing
 // `format=` URLs keep filtering) is collapsed by default in the UI.
 export const FILTER_DIMENSIONS = [
-  "task", // rendered as "Advanced Keywords"
   "ageGroup", // Age Group
   "availability", // Availability
-  "format", // Data Format (hidden from sidebar; URL backward compatibility)
   "size", // Dataset Size
   "type", // Dataset Type
   "disease", // Disease / Condition
@@ -69,6 +67,8 @@ export const FILTER_DIMENSIONS = [
   "region", // Region
   "repository", // Repository
   "species", // Species
+  "task", // rendered as "Advanced Keywords" (exception: positioned at the end of filter dimensions)
+  "format", // Data Format (hidden from sidebar; URL backward compatibility)
 ] as const;
 
 export type FilterDimension = (typeof FILTER_DIMENSIONS)[number];
@@ -404,6 +404,33 @@ const MODALITY_CANONICAL_TOKENS: Record<string, string> = {
   fnirs: "fnirs",
   "functional near-infrared spectroscopy": "fnirs",
 };
+
+export const MASTER_DISEASE_KEY_VALUES: string[] = [
+  "ADHD",
+  "Alzheimer's",
+  "Amyotrophic lateral sclerosis",
+  "Anxiety",
+  "Autism",
+  "Bipolar",
+  "Chronic pain",
+  "COVID-19",
+  "Dementia",
+  "Depression",
+  "Diabetes",
+  "Epilepsy",
+  "Healthy",
+  "Huntington's",
+  "Insomnia",
+  "Migraine",
+  "Mild cognitive impairment",
+  "Multiple sclerosis",
+  "Obesity",
+  "Parkinson's",
+  "Schizophrenia",
+  "Stroke",
+  "Tinnitus",
+  "Traumatic brain injury",
+];
 
 /**
  * Issue 4 — canonical disease label for a raw value (token -> "alzheimer",
@@ -749,6 +776,14 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
     // per dataset, whether it satisfies every OTHER selected group.
     const candidates = new Map<string, string>();
     const eligible = new Array<boolean>(pool.length).fill(false);
+
+    if (dimension === "disease") {
+      for (const masterVal of MASTER_DISEASE_KEY_VALUES) {
+        const key = masterVal.trim().toLowerCase();
+        if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
+      }
+    }
+
     for (let i = 0; i < pool.length; i++) {
       eligible[i] = matchesAllOtherGroups(pool[i], filters, dimension);
       const values = datasetValues[i][di];
@@ -778,9 +813,12 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
 
     const list: FacetValue[] = [];
     for (const label of labels) {
-      // counts only ever stores positive values (labels with zero matches are absent).
       const count = counts.get(label);
-      if (count !== undefined) list.push({ value: label, count });
+      if (dimension === "disease") {
+        list.push({ value: label, count: count ?? 0 });
+      } else {
+        if (count !== undefined) list.push({ value: label, count });
+      }
     }
     sortFacetValues(dimension, list);
     if (list.length > 0) facets[dimension] = list;
