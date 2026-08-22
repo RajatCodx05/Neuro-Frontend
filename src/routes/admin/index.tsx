@@ -110,9 +110,9 @@ function AdminDashboard() {
                 </div>
               </Link>
 
-              {/* Hover Pop-up with Backdrop Blur */}
+              {/* Hover Pop-up with Backdrop Blur (Opens downward below the card) */}
               {s.breakdown && (
-                <div className="pointer-events-none absolute bottom-full left-0 right-0 z-50 mb-2.5 invisible opacity-0 translate-y-2 transition-all duration-300 delay-75 ease-out group-hover:pointer-events-auto group-hover:visible group-hover:opacity-100 group-hover:translate-y-0">
+                <div className="pointer-events-none absolute top-full left-0 right-0 z-50 mt-2.5 invisible opacity-0 -translate-y-2 transition-all duration-300 delay-75 ease-out group-hover:pointer-events-auto group-hover:visible group-hover:opacity-100 group-hover:translate-y-0">
                   <div className="rounded-2xl border border-white/20 [.light_&]:border-black/20 bg-slate-950/85 [.light_&]:bg-white/90 p-4 shadow-2xl backdrop-blur-xl space-y-3">
                     <div className="flex items-center justify-between border-b border-white/10 [.light_&]:border-black/10 pb-2">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
