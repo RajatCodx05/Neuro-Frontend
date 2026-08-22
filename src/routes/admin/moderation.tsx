@@ -22,6 +22,8 @@ import {
   MessageSquare,
   RefreshCw,
   ExternalLink,
+  Plus,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DISLIKE_REASONS } from "@/components/app/DislikeFeedbackModal";
@@ -50,6 +52,9 @@ function ModerationPage() {
 
   // Hard Delete Modal target
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+  // Manual Add Featured Modal
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const qc = useQueryClient();
 
@@ -141,12 +146,21 @@ function ModerationPage() {
             </button>
           </div>
 
-          <button
-            onClick={refreshAll}
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/10 hover:text-foreground transition-colors"
-          >
-            <RefreshCw className="h-3.5 w-3.5" /> Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-cyan/20 border border-cyan/40 px-3.5 py-1.5 text-xs font-medium text-cyan hover:bg-cyan/30 transition-colors shadow-sm"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add Featured Dataset
+            </button>
+
+            <button
+              onClick={refreshAll}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/10 hover:text-foreground transition-colors"
+            >
+              <RefreshCw className="h-3.5 w-3.5" /> Refresh
+            </button>
+          </div>
         </div>
 
         {/* ── TAB 1: POPULAR CANDIDATES ──────────────────────────────────── */}
@@ -429,6 +443,14 @@ function ModerationPage() {
             setDeleteTargetId(null);
             refreshAll();
           }}
+        />
+      )}
+
+      {/* ── MODAL: Manual Add Featured Dataset ──────────────────────────────────── */}
+      {isAddModalOpen && (
+        <AddFeaturedDatasetModal
+          onClose={() => setIsAddModalOpen(false)}
+          onRefresh={refreshAll}
         />
       )}
     </>
@@ -837,6 +859,287 @@ function LoadingSkeletonRows() {
           <Skeleton className="h-4 w-1/3 rounded" />
         </div>
       ))}
+    </div>
+  );
+}
+
+// ── SUBCOMPONENT: Add Featured Dataset Modal ─────────────────────────────
+
+function AddFeaturedDatasetModal({
+  onClose,
+  onRefresh,
+}: {
+  onClose: () => void;
+  onRefresh: () => void;
+}) {
+  const [step, setStep] = useState<"search" | "review">("search");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [page, setPage] = useState(1);
+  const [selectedDataset, setSelectedDataset] = useState<any | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form states for overrides
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [disease, setDisease] = useState("");
+  const [region, setRegion] = useState("");
+  const [ageGroup, setAgeGroup] = useState("");
+  const [modality, setModality] = useState("");
+  const [species, setSpecies] = useState("");
+  const [tasks, setTasks] = useState("");
+  const [subjects, setSubjects] = useState("");
+  const [size, setSize] = useState("");
+  const [publicationYear, setPublicationYear] = useState("");
+  const [studyDesign, setStudyDesign] = useState("");
+
+  // Curation fields
+  const [displayOrder, setDisplayOrder] = useState<number>(1);
+  const [featuredTitleOverride, setFeaturedTitleOverride] = useState("");
+
+  const { data: searchData, isLoading: isSearchLoading } = useQuery({
+    queryKey: ["mod-admin-search", searchQuery, page],
+    queryFn: () => api.admin.moderation.searchDatasets({ q: searchQuery || undefined, page, limit: 10 }),
+    enabled: step === "search",
+  });
+
+  const handleSelectDataset = (item: any) => {
+    if (item.isPublished) return;
+    setSelectedDataset(item);
+    setTitle(item.title || "");
+    setDescription(item.description || "");
+    setDisease(item.disease || "");
+    setRegion(item.region || "");
+    setAgeGroup(item.ageGroup || "");
+    setModality(Array.isArray(item.modality) ? item.modality.join(", ") : "");
+    setSpecies(Array.isArray(item.species) ? item.species.join(", ") : "");
+    setTasks(Array.isArray(item.tasks) ? item.tasks.join(", ") : "");
+    setSubjects(item.subjects != null ? String(item.subjects) : "");
+    setSize(item.size || "");
+    setPublicationYear(item.publicationYear != null ? String(item.publicationYear) : "");
+    setStudyDesign(item.studyDesign || "");
+    setStep("review");
+  };
+
+  const handlePublish = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDataset) return;
+    setIsSubmitting(true);
+    try {
+      const parseList = (str: string) => str.split(",").map((s) => s.trim()).filter(Boolean);
+
+      // Save metadata override
+      await api.admin.moderation.updateOverride(selectedDataset.datasetId, {
+        title: title.trim() || undefined,
+        description: description.trim() || undefined,
+        disease: disease.trim() || undefined,
+        region: region.trim() || undefined,
+        ageGroup: ageGroup.trim() || undefined,
+        modality: modality ? parseList(modality) : undefined,
+        species: species ? parseList(species) : undefined,
+        tasks: tasks ? parseList(tasks) : undefined,
+        subjects: subjects ? Number(subjects) : undefined,
+        size: size.trim() || undefined,
+        publicationYear: publicationYear ? Number(publicationYear) : undefined,
+        studyDesign: studyDesign.trim() || undefined,
+      });
+
+      // Publish to Popular / Featured
+      await api.admin.moderation.publishPopular(selectedDataset.datasetId, {
+        displayOrder,
+        featuredTitleOverride: featuredTitleOverride.trim() || undefined,
+      });
+
+      toast.success(`Dataset "${title || selectedDataset.title}" published to Featured!`);
+      onRefresh();
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to publish dataset");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearchQuery(searchInput.trim());
+    setPage(1);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)" }}>
+      <div className="glass card-elevated flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl shadow-2xl">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between border-b border-white/10 p-5">
+          <div>
+            <h2 className="font-display text-base font-bold text-foreground">
+              {step === "search" ? "Add Featured Dataset — Select Canonical Dataset" : "Review & Publish Featured Dataset"}
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              {step === "search"
+                ? "Search active canonical datasets from the database to publish directly as Featured."
+                : `Dataset ID: ${selectedDataset?.datasetId}`}
+            </p>
+          </div>
+          <button onClick={onClose} className="rounded-full p-1.5 text-muted-foreground hover:bg-white/10 hover:text-foreground">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* STEP 1: Search Canonical Datasets */}
+        {step === "search" && (
+          <div className="flex flex-1 flex-col overflow-y-auto p-6 space-y-4">
+            <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <input
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Search by title, disease, modality, species, repository, or ID..."
+                  className="w-full rounded-xl border border-white/10 bg-white/5 pl-9 pr-3 py-2 text-xs text-foreground focus:outline-none focus:border-cyan/40"
+                />
+              </div>
+              <button type="submit" className="rounded-xl bg-cyan/20 border border-cyan/40 px-4 py-2 text-xs font-medium text-cyan hover:bg-cyan/30">
+                Search
+              </button>
+            </form>
+
+            {isSearchLoading ? (
+              <LoadingSkeletonRows />
+            ) : !searchData?.items?.length ? (
+              <EmptyState title="No datasets found" message="Try searching with a broader title, repository name, or disease query." />
+            ) : (
+              <div className="space-y-3">
+                {searchData.items.map((item) => (
+                  <div key={item.datasetId} className="glass rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border border-white/5 hover:border-white/15 transition-all">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="font-semibold text-foreground text-xs line-clamp-1">{item.title}</h4>
+                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
+                          {item.datasetId}
+                        </span>
+                        <span className="rounded-full bg-cyan/15 px-2 py-0.5 text-[10px] font-mono text-cyan uppercase">
+                          {item.repository}
+                        </span>
+                      </div>
+
+                      {item.description && (
+                        <p className="mt-1 text-[11px] text-muted-foreground line-clamp-2">{item.description}</p>
+                      )}
+
+                      <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] font-mono text-muted-foreground">
+                        {item.modality.length > 0 && <span>Modality: {item.modality.join(", ")}</span>}
+                        {item.species.length > 0 && <span>Species: {item.species.join(", ")}</span>}
+                        {item.disease && <span>Disease: {item.disease}</span>}
+                        {item.subjects != null && <span>Subjects: {item.subjects}</span>}
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2">
+                      {item.isPublished ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/30 px-3 py-1 text-[11px] font-medium text-amber-300">
+                          <ShieldCheck className="h-3 w-3" /> Already Featured
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleSelectDataset(item)}
+                          className="inline-flex items-center gap-1 rounded-full bg-cyan/20 border border-cyan/40 px-3.5 py-1.5 text-xs font-medium text-cyan hover:bg-cyan/30 transition-colors"
+                        >
+                          Select & Edit <ChevronRight className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                <PaginationBar
+                  page={page}
+                  totalPages={searchData.pagination.totalPages}
+                  onPageChange={setPage}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* STEP 2: Review Metadata & Publish */}
+        {step === "review" && selectedDataset && (
+          <form onSubmit={handlePublish} className="flex flex-1 flex-col overflow-y-auto p-6 space-y-4 text-xs">
+            {/* Header info */}
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3 space-y-1 font-mono text-[11px] text-muted-foreground">
+              <div><span className="text-foreground">Source Repository:</span> {selectedDataset.repository}</div>
+              <div><span className="text-foreground">Canonical Title:</span> {selectedDataset.title}</div>
+            </div>
+
+            {/* Editable metadata fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block font-mono text-[11px] text-muted-foreground">Title Override</label>
+                <input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-foreground focus:outline-none" />
+              </div>
+              <div>
+                <label className="mb-1 block font-mono text-[11px] text-muted-foreground">Disease / Condition</label>
+                <input value={disease} onChange={(e) => setDisease(e.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-foreground focus:outline-none" />
+              </div>
+              <div>
+                <label className="mb-1 block font-mono text-[11px] text-muted-foreground">Modality (comma-separated)</label>
+                <input value={modality} onChange={(e) => setModality(e.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-foreground focus:outline-none" />
+              </div>
+              <div>
+                <label className="mb-1 block font-mono text-[11px] text-muted-foreground">Species (comma-separated)</label>
+                <input value={species} onChange={(e) => setSpecies(e.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-foreground focus:outline-none" />
+              </div>
+              <div>
+                <label className="mb-1 block font-mono text-[11px] text-muted-foreground">Tasks (comma-separated)</label>
+                <input value={tasks} onChange={(e) => setTasks(e.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-foreground focus:outline-none" />
+              </div>
+              <div>
+                <label className="mb-1 block font-mono text-[11px] text-muted-foreground">Brain Region</label>
+                <input value={region} onChange={(e) => setRegion(e.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-foreground focus:outline-none" />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block font-mono text-[11px] text-muted-foreground">Description Override</label>
+              <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-foreground focus:outline-none" />
+            </div>
+
+            {/* Curation fields */}
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/[0.04] p-4 space-y-3">
+              <h4 className="font-semibold text-amber-300">Featured Curation Settings</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block font-mono text-[10px] text-muted-foreground">Display Order Position</label>
+                  <input type="number" value={displayOrder} onChange={(e) => setDisplayOrder(Number(e.target.value))} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-foreground" />
+                </div>
+                <div>
+                  <label className="mb-1 block font-mono text-[10px] text-muted-foreground">Featured Card Title (optional)</label>
+                  <input value={featuredTitleOverride} onChange={(e) => setFeaturedTitleOverride(e.target.value)} placeholder="Custom card headline…" className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-foreground" />
+                </div>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex items-center justify-between pt-2 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setStep("search")}
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-4 py-2 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" /> Back to Search
+              </button>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="rounded-full bg-cyan/20 border border-cyan/40 px-5 py-2 font-medium text-cyan hover:bg-cyan/30 disabled:opacity-50 transition-colors"
+              >
+                {isSubmitting ? "Publishing…" : "Publish to Featured"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 }

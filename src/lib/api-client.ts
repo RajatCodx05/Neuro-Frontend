@@ -699,6 +699,36 @@ const admin = {
         pagination: { page: number; limit: number; total: number; totalPages: number };
       }>(`/admin/moderation/published?page=${params?.page || 1}&limit=${params?.limit || 30}`),
 
+    searchDatasets: (params?: { q?: string; page?: number; limit?: number }) => {
+      const qParams = new URLSearchParams();
+      if (params?.q) qParams.set("q", params.q);
+      if (params?.page) qParams.set("page", String(params.page));
+      if (params?.limit) qParams.set("limit", String(params.limit));
+      const queryStr = qParams.toString() ? `?${qParams.toString()}` : "";
+      return request<{
+        items: Array<{
+          datasetId: string;
+          title: string;
+          repository: string;
+          source: string;
+          source_id: string | null;
+          description: string | null;
+          modality: string[];
+          species: string[];
+          disease: string | null;
+          tasks: string[];
+          region: string | null;
+          ageGroup: string | null;
+          subjects: number | null;
+          size: string | null;
+          publicationYear: number | null;
+          studyDesign: string | null;
+          isPublished: boolean;
+        }>;
+        pagination: { page: number; limit: number; total: number; totalPages: number };
+      }>(`/admin/moderation/datasets/search${queryStr}`);
+    },
+
     // Phase 1 / pre-existing stubs (preserved for backward compatibility)
     queue: () => Promise.resolve([]) as Promise<Array<Record<string, unknown>>>,
     published: () => request<{ items: Array<Record<string, unknown>> }>("/admin/moderation/published").then((res) => res.items || []),
