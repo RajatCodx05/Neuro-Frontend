@@ -396,14 +396,14 @@ function DatasetPage() {
                 const specs: [string, string, boolean][] = [
                   ["Modality",           val(d.modality),                    true],
                   ["Species",            val(d.species),                     false],
-                  ["Access Tier",        val(d.access ?? d.access_tier),     false],
-                  ["Repository",         val(d.repo),                        false],
                   ["Disease / Condition",val(d.disease),                     false],
+                  ["Tasks",              val((d as Record<string, unknown>).tasks), false],
                   ["Brain Region",       val(d.region),                      false],
                   ["Age Group",          val(d.ageGroup),                    false],
                   ["Participants",       d.subjects != null ? `${d.subjects.toLocaleString()}` : "N/A", false],
                   ["Dataset Size",       val(d.size),                        false],
                   ["Publication Year",   val((d as Record<string, unknown>).publicationYear), false],
+                  ["Study Design",       val((d as Record<string, unknown>).studyDesign), false],
                 ];
                 return (
                   <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 lg:grid-cols-5">
@@ -486,7 +486,7 @@ function DatasetPage() {
                   <div className="text-sm font-medium text-foreground">{d.repo}</div>
                   {d.verified ? (
                     <div className="text-[11px] text-cyan flex items-center gap-1 mt-0.5 font-medium">
-                      <CheckCircle2 className="h-3 w-3" /> Verified {d.verified}
+                      <CheckCircle2 className="h-3 w-3" /> Verified
                     </div>
                   ) : (
                     <div className="text-[11px] text-muted-foreground">Community Catalog</div>

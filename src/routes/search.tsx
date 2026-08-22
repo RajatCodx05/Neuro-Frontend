@@ -632,7 +632,7 @@ function SearchResults() {
                     {d.license && <><span>·</span><span>{d.license}</span></>}
                     {(d.access || d.access_tier) && <><span>·</span><span>{d.access || d.access_tier}</span></>}
                   </div>
-                  <Link to="/dataset/$id" params={{ id: d.id }} target="_blank" className="mt-1 block font-display text-lg font-semibold hover:text-cyan">
+                  <Link to="/dataset/$id" params={{ id: d.id }} target="_blank" className="mt-1 block break-words font-display text-lg font-semibold hover:text-cyan">
                     {d.name ?? d.id}
                   </Link>
                   {d.description && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{d.description}</p>}
@@ -645,7 +645,7 @@ function SearchResults() {
                     {d.disease && <Chip>{d.disease}</Chip>}
                   </div>
                 </div>
-                <div className="flex flex-row gap-2 sm:flex-col">
+                <div className="flex flex-row gap-2 sm:flex-col sm:shrink-0">
                   {d.url ? (
                     <a
                       href={d.url}
