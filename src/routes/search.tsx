@@ -7,6 +7,7 @@ import lottieLoadingData from "@/assets/lottieflow-loading-07-000000-easey.json"
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
 import { api, type DatasetReactionSummary, type SearchResult } from "@/lib/api-client";
+import { DislikeFeedbackModal, type DislikeReasonId } from "@/components/app/DislikeFeedbackModal";
 import { useSearchState } from "@/lib/search-state";
 import {
   FILTER_DIMENSIONS,
@@ -106,6 +107,8 @@ function SearchResults() {
   const [showMore, setShowMore] = useState<Set<string>>(new Set());
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [reactions, setReactions] = useState<Record<string, DatasetReactionSummary>>({});
+  // dislikeTarget: dataset the user clicked thumbs-down on; null = modal closed
+  const [dislikeTarget, setDislikeTarget] = useState<{ id: string; name: string } | null>(null);
   const [msgIndex, setMsgIndex] = useState(0);
   const loadingMessages = [
     "Searching Datasets for You",
@@ -299,31 +302,25 @@ function SearchResults() {
     }
   };
 
-  const handleReaction = async (datasetId: string, reaction: "like" | "dislike") => {
+  // handleLikeOrNone: handles Like click and toggle-off of any reaction.
+  // Dislike is intercepted separately — see handleDislikeClick.
+  const handleLikeOrNone = async (datasetId: string, reaction: "like" | null) => {
     const current = reactions[datasetId] || { datasetId, likes: 0, dislikes: 0, userReaction: null };
     const prevReaction = current.userReaction;
-
-    let newReaction: "like" | "dislike" | null = reaction;
+    let newReaction: "like" | null = reaction;
     let newLikes = current.likes;
     let newDislikes = current.dislikes;
 
     if (prevReaction === reaction) {
       newReaction = null;
       if (reaction === "like") newLikes = Math.max(0, newLikes - 1);
-      if (reaction === "dislike") newDislikes = Math.max(0, newDislikes - 1);
     } else {
       if (prevReaction === "like") newLikes = Math.max(0, newLikes - 1);
       if (prevReaction === "dislike") newDislikes = Math.max(0, newDislikes - 1);
-
       if (reaction === "like") newLikes += 1;
-      if (reaction === "dislike") newDislikes += 1;
     }
 
-    setReactions((prev) => ({
-      ...prev,
-      [datasetId]: { datasetId, likes: newLikes, dislikes: newDislikes, userReaction: newReaction },
-    }));
-
+    setReactions((prev) => ({ ...prev, [datasetId]: { datasetId, likes: newLikes, dislikes: newDislikes, userReaction: newReaction } }));
     try {
       const updated = await api.datasets.reactions.toggle(datasetId, newReaction);
       setReactions((prev) => ({ ...prev, [datasetId]: updated }));
@@ -333,6 +330,38 @@ function SearchResults() {
     }
   };
 
+  // handleDislikeClick: opens the feedback modal instead of immediately toggling.
+  // If user already has an active dislike, toggle it off directly (no modal needed).
+  const handleDislikeClick = (datasetId: string, datasetName: string) => {
+    const current = reactions[datasetId];
+    if (current?.userReaction === "dislike") {
+      // Toggle off existing dislike — no feedback collection needed
+      handleLikeOrNone(datasetId, null);
+      return;
+    }
+    setDislikeTarget({ id: datasetId, name: datasetName });
+  };
+
+  // handleDislikeFeedbackSubmit: called by the modal on confirmed submission.
+  const handleDislikeFeedbackSubmit = async (reason: DislikeReasonId, comment: string | null) => {
+    if (!dislikeTarget) return;
+    const { id: datasetId } = dislikeTarget;
+    const current = reactions[datasetId] || { datasetId, likes: 0, dislikes: 0, userReaction: null };
+
+    // Optimistic update
+    const prevReaction = current.userReaction;
+    let newLikes = current.likes;
+    let newDislikes = current.dislikes;
+    if (prevReaction === "like") newLikes = Math.max(0, newLikes - 1);
+    newDislikes += 1;
+    setReactions((prev) => ({ ...prev, [datasetId]: { datasetId, likes: newLikes, dislikes: newDislikes, userReaction: "dislike" } }));
+
+    const updated = await api.datasets.reactions.toggle(datasetId, "dislike", reason, comment ?? undefined);
+    setReactions((prev) => ({ ...prev, [datasetId]: updated }));
+    setDislikeTarget(null);
+    toast.success("Feedback submitted. Thank you!");
+  };
+
   const goToPage = (p: number) => {
     const clamped = Math.min(Math.max(p, 1), totalPages);
     if (clamped === page) return;
@@ -340,6 +369,7 @@ function SearchResults() {
   };
 
   return (
+    <>
     <AppShell>
       <div className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6">
         {/* Search bar */}
@@ -602,7 +632,7 @@ function SearchResults() {
                   {/* Like & Dislike buttons positioned on the left under modality avatar */}
                   <div className="flex w-16 items-center justify-between gap-1">
                     <button
-                      onClick={() => handleReaction(d.id, "like")}
+                      onClick={() => handleLikeOrNone(d.id, "like")}
                       className={`flex-1 inline-flex items-center justify-center gap-0.5 rounded-full border px-1 py-0.5 text-[10px] font-medium transition-colors ${
                         reactions[d.id]?.userReaction === "like"
                           ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-400"
@@ -614,13 +644,13 @@ function SearchResults() {
                       <span>{reactions[d.id]?.likes || 0}</span>
                     </button>
                     <button
-                      onClick={() => handleReaction(d.id, "dislike")}
+                      onClick={() => handleDislikeClick(d.id, d.name ?? d.id)}
                       className={`flex-1 inline-flex items-center justify-center gap-0.5 rounded-full border px-1 py-0.5 text-[10px] font-medium transition-colors ${
                         reactions[d.id]?.userReaction === "dislike"
                           ? "border-rose-500/50 bg-rose-500/15 text-rose-400"
                           : "border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] text-muted-foreground hover:bg-white/10 hover:text-foreground"
                       }`}
-                      title="Dislike dataset"
+                      title="Report an issue with this dataset"
                     >
                       <ThumbsDown className="h-3 w-3" />
                       <span>{reactions[d.id]?.dislikes || 0}</span>
@@ -710,6 +740,16 @@ function SearchResults() {
         </div>
       </div>
     </AppShell>
+
+      {/* Phase 1: Dislike Feedback Modal — rendered at root level to avoid z-index issues */}
+      {dislikeTarget && (
+        <DislikeFeedbackModal
+          datasetName={dislikeTarget.name}
+          onSubmit={handleDislikeFeedbackSubmit}
+          onCancel={() => setDislikeTarget(null)}
+        />
+      )}
+    </>
   );
 }
 

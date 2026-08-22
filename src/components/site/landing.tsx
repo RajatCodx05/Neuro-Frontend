@@ -6,9 +6,10 @@ import {
   CheckCircle2, Shield, Zap, Database, Activity, Bookmark, Share2,
   MessageSquare, Wand2, Search, BrainCircuit, Waves, Download,
   Rocket, Bell, BellRing, LogIn, UserPlus, LogOut, Settings, ShieldCheck,
-  Megaphone, Volume2, VolumeX, X
+  Megaphone, Volume2, VolumeX, X, ThumbsUp, ThumbsDown
 } from "lucide-react";
 import { NeuralBackground } from "@/components/site/neural-background";
+import { DislikeFeedbackModal, type DislikeReasonId } from "@/components/app/DislikeFeedbackModal";
 import { SiteFooter } from "@/components/site/site-footer";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
@@ -115,6 +116,52 @@ export default function Landing() {
   const [togglingNotifs, setTogglingNotifs] = useState(false);
   const [announcements, setAnnouncements] = useState<Array<{ id: string; title: string; body: string; created_at: string }>>([]);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<{ id: string; title: string; body: string; created_at: string } | null>(null);
+  const [dislikeTarget, setDislikeTarget] = useState<{ datasetId: string; title: string } | null>(null);
+
+  // Phase 5: Fetch public popular/featured datasets (≤6 curated by admin)
+  const { data: popularDatasets = [], isLoading: popularLoading } = useQuery({
+    queryKey: ["popular-datasets-public"],
+    queryFn: () => api.datasets.popular(),
+  });
+
+  const popularIds = popularDatasets.map((d) => d.datasetId);
+
+  const { data: popularReactions = {}, refetch: refetchReactions } = useQuery({
+    queryKey: ["popular-reactions-batch", popularIds],
+    queryFn: () => api.datasets.reactions.getBatch(popularIds),
+    enabled: popularIds.length > 0,
+  });
+
+  const handleLike = async (datasetId: string, currentReaction: string | null) => {
+    const nextReaction = currentReaction === "like" ? null : "like";
+    try {
+      await api.datasets.reactions.toggle(datasetId, nextReaction);
+      refetchReactions();
+    } catch {
+      toast.error("Failed to update reaction");
+    }
+  };
+
+  const handleDislikeClick = (datasetId: string, title: string, currentReaction: string | null) => {
+    if (currentReaction === "dislike") {
+      api.datasets.reactions.toggle(datasetId, null).then(() => refetchReactions()).catch(() => toast.error("Failed to update reaction"));
+    } else {
+      setDislikeTarget({ datasetId, title });
+    }
+  };
+
+  const handleDislikeSubmit = async (reason: DislikeReasonId, comment: string | null) => {
+    if (!dislikeTarget) return;
+    try {
+      await api.datasets.reactions.toggle(dislikeTarget.datasetId, "dislike", reason, comment);
+      toast.success("Feedback submitted");
+      refetchReactions();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to submit feedback");
+    } finally {
+      setDislikeTarget(null);
+    }
+  };
 
   const notificationsEnabled = profile?.notifications_enabled ?? true;
 
@@ -496,62 +543,109 @@ export default function Landing() {
               title={<>Handpicked, <span className="gradient-text">verified</span> and citation-ready</>}
               subtitle="Every dataset is validated with DOI resolution, license extraction and metadata normalization."
             />
-            <div className="mx-auto mt-6 max-w-xl rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-center text-sm text-yellow-200 backdrop-blur">
-              Featured datasets are currently under development and will be available soon.
-            </div>
-            <div className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {datasets.map((d, i) => (
-                <motion.article
-                  key={d.id}
-                  initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-60px" }} transition={{ duration: 0.5, delay: (i % 3) * 0.06 }}
-                  whileHover={{ y: -4 }}
-                  className="glass card-elevated group flex h-full flex-col overflow-hidden rounded-2xl"
-                >
-                  <div className="relative h-48 overflow-hidden bg-black">
-                    <img
-                      src={brainCardImg}
-                      alt="Neuroscience brain visualization"
-                      loading="lazy"
-                      width={800}
-                      height={512}
-                      className="absolute inset-0 h-full w-full object-cover opacity-90 transition duration-500 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                    <div className="absolute left-3 top-3 flex gap-1.5">
-                      <Badge>{modalityDisplayLabel(d.modality)}</Badge>
-                      <Badge variant="cyan">{d.access}</Badge>
-                    </div>
-                    <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-[10px] text-white backdrop-blur">
-                      <CheckCircle2 className="h-3 w-3 text-cyan" /> Verified {d.verified}
-                    </div>
+
+            {popularLoading ? (
+              <div className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="glass card-elevated h-72 rounded-2xl p-5 space-y-4 animate-pulse">
+                    <div className="h-32 bg-white/5 rounded-xl" />
+                    <div className="h-5 bg-white/10 rounded w-3/4" />
+                    <div className="h-4 bg-white/5 rounded w-1/2" />
                   </div>
-                  <div className="flex flex-1 flex-col p-5">
-                    <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{d.repo} · {d.id}</div>
-                    <h3 className="mt-1 font-display text-lg font-semibold leading-snug">{d.name}</h3>
-                    <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{d.description}</p>
-                    <dl className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                      <Meta k="Region" v={d.region} />
-                      <Meta k="Species" v={d.species} />
-                      <Meta k="Age" v={d.ageGroup} />
-                      <Meta k="Disease" v={d.disease} />
-                      <Meta k="Subjects" v={d.subjects.toString()} />
-                      <Meta k="License" v={d.license} />
-                    </dl>
-                    <div className="mt-5 flex items-center gap-2 border-t border-white/5 pt-4">
-                      <Link to="/dataset/$id" params={{ id: d.id }} target="_blank" className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium hover:bg-white/10">
-                        <Rocket className="h-3 w-3" /> Visit
-                      </Link>
-                      <Link to="/dataset/$id" params={{ id: d.id }} target="_blank" className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">
-                        Details <ArrowRight className="h-3 w-3" />
-                      </Link>
-                      <button className="ml-auto grid h-8 w-8 place-items-center rounded-full hover:bg-white/5"><Bookmark className="h-3.5 w-3.5" /></button>
-                      <button className="grid h-8 w-8 place-items-center rounded-full hover:bg-white/5"><Share2 className="h-3.5 w-3.5" /></button>
-                    </div>
-                  </div>
-                </motion.article>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : popularDatasets.length === 0 ? (
+              <div className="mx-auto mt-10 max-w-xl rounded-2xl glass p-8 text-center border border-white/10">
+                <h4 className="font-display text-base font-semibold text-foreground">Featured Datasets</h4>
+                <p className="mt-2 text-xs text-muted-foreground">No featured datasets are currently available.</p>
+              </div>
+            ) : (
+              <div className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+                {popularDatasets.map((d, i) => {
+                  const rxn = popularReactions[d.datasetId] || { likes: 0, dislikes: 0, userReaction: null };
+                  const modalityLabel = Array.isArray(d.modality) && d.modality.length > 0 ? d.modality.join(", ") : "Neuroimaging";
+                  const speciesStr = Array.isArray(d.species) && d.species.length > 0 ? d.species.join(", ") : "N/A";
+                  return (
+                    <motion.article
+                      key={d.datasetId}
+                      initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true, margin: "-60px" }} transition={{ duration: 0.5, delay: (i % 3) * 0.06 }}
+                      whileHover={{ y: -4 }}
+                      className="glass card-elevated group flex h-full flex-col overflow-hidden rounded-2xl"
+                    >
+                      <div className="relative h-48 overflow-hidden bg-black">
+                        <img
+                          src={brainCardImg}
+                          alt="Neuroscience brain visualization"
+                          loading="lazy"
+                          width={800}
+                          height={512}
+                          className="absolute inset-0 h-full w-full object-cover opacity-90 transition duration-500 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                        <div className="absolute left-3 top-3 flex gap-1.5">
+                          <Badge>{modalityDisplayLabel(modalityLabel)}</Badge>
+                          <Badge variant="cyan">{d.source}</Badge>
+                        </div>
+                        <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-[10px] text-white backdrop-blur">
+                          <CheckCircle2 className="h-3 w-3 text-cyan" /> Verified
+                        </div>
+                      </div>
+                      <div className="flex flex-1 flex-col p-5">
+                        <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{d.source} · {d.datasetId}</div>
+                        <h3 className="mt-1 font-display text-lg font-semibold leading-snug text-foreground">{d.title}</h3>
+                        <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{d.description || "No description available."}</p>
+                        <dl className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                          <Meta k="Region" v={d.region || "N/A"} />
+                          <Meta k="Species" v={speciesStr} />
+                          <Meta k="Age" v={d.ageGroup || "N/A"} />
+                          <Meta k="Disease" v={d.disease || "N/A"} />
+                          <Meta k="Subjects" v={d.subjects != null ? String(d.subjects) : "N/A"} />
+                          <Meta k="Study Design" v={d.studyDesign || "N/A"} />
+                        </dl>
+                        <div className="mt-5 flex items-center gap-2 border-t border-white/5 pt-4">
+                          <Link to="/dataset/$id" params={{ id: d.datasetId }} target="_blank" className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium hover:bg-white/10">
+                            <Rocket className="h-3 w-3" /> Visit
+                          </Link>
+                          <Link to="/dataset/$id" params={{ id: d.datasetId }} target="_blank" className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">
+                            Details <ArrowRight className="h-3 w-3" />
+                          </Link>
+
+                          {/* Reaction buttons */}
+                          <div className="ml-auto flex items-center gap-1">
+                            <button
+                              onClick={() => handleLike(d.datasetId, rxn.userReaction)}
+                              className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition ${
+                                rxn.userReaction === "like"
+                                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                                  : "bg-white/5 text-muted-foreground hover:text-foreground"
+                              }`}
+                              title="Like dataset"
+                            >
+                              <ThumbsUp className="h-3 w-3" />
+                              <span>{rxn.likes}</span>
+                            </button>
+
+                            <button
+                              onClick={() => handleDislikeClick(d.datasetId, d.title, rxn.userReaction)}
+                              className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition ${
+                                rxn.userReaction === "dislike"
+                                  ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
+                                  : "bg-white/5 text-muted-foreground hover:text-foreground"
+                              }`}
+                              title="Dislike dataset"
+                            >
+                              <ThumbsDown className="h-3 w-3" />
+                              <span>{rxn.dislikes}</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.article>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
 
@@ -605,6 +699,15 @@ export default function Landing() {
 
         <SiteFooter />
       </div>
+
+      {/* Dislike Feedback Modal */}
+      {dislikeTarget && (
+        <DislikeFeedbackModal
+          datasetName={dislikeTarget.title}
+          onSubmit={handleDislikeSubmit}
+          onCancel={() => setDislikeTarget(null)}
+        />
+      )}
 
       {/* Notification Detail Modal View */}
       {selectedAnnouncement && (

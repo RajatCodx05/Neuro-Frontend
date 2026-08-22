@@ -567,8 +567,141 @@ const admin = {
     delete: (id: string) => request<null>(`/admin/repositories/${id}`, { method: "DELETE" }),
   },
   moderation: {
+    // Phase 2 GET APIs
+    popularCandidates: (params?: { page?: number; limit?: number }) =>
+      request<{
+        items: Array<{
+          datasetId: string;
+          canonicalTitle: string;
+          repository: string;
+          modality: string[];
+          likes: number;
+          dislikes: number;
+          netScore: number;
+          description: string | null;
+          subjects: number | null;
+          region: string | null;
+          species: string[];
+          ageGroup: string | null;
+          disease: string | null;
+        }>;
+        pagination: { page: number; limit: number; total: number; totalPages: number };
+      }>(`/admin/moderation/popular-candidates?page=${params?.page || 1}&limit=${params?.limit || 30}`),
+
+    dislikeQueue: (params?: { reason?: string; minDislikes?: number; page?: number; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.reason) q.set("reason", params.reason);
+      if (params?.minDislikes) q.set("minDislikes", String(params.minDislikes));
+      if (params?.page) q.set("page", String(params.page));
+      if (params?.limit) q.set("limit", String(params.limit));
+      const queryStr = q.toString() ? `?${q.toString()}` : "";
+      return request<{
+        items: Array<{
+          datasetId: string;
+          canonicalTitle: string;
+          likes: number;
+          dislikes: number;
+          totalReactions: number;
+          dislikeRatio: number;
+          netScore: number;
+          topReasons: Array<{ reason: string; count: number; percentage: number }>;
+          pendingFeedbackCount: number;
+        }>;
+        pagination: { page: number; limit: number; total: number; totalPages: number };
+      }>(`/admin/moderation/dislike-queue${queryStr}`);
+    },
+
+    dislikeDetails: (datasetId: string) =>
+      request<{
+        dataset: {
+          datasetId: string;
+          title: string;
+          source: string;
+          modality: string[];
+          species: string[];
+          description: string | null;
+          region: string | null;
+          disease: string | null;
+          ageGroup: string | null;
+          subjectCount: number | null;
+        };
+        override: Record<string, unknown> | null;
+        reactionSummary: {
+          likes: number;
+          dislikes: number;
+          totalReactions: number;
+          dislikeRatio: number;
+          netScore: number;
+        };
+        feedbackList: Array<{
+          id: string;
+          reason: string;
+          comment: string | null;
+          status: string;
+          isAnonymous: boolean;
+          createdAt: string;
+        }>;
+      }>(`/admin/moderation/dislike-queue/${encodeURIComponent(datasetId)}`),
+
+    // Phase 3 curation API client methods
+    publishPopular: (datasetId: string, data?: { displayOrder?: number; featuredTitleOverride?: string }) =>
+      request<Record<string, unknown>>(`/admin/moderation/popular/${encodeURIComponent(datasetId)}/publish`, {
+        method: "POST",
+        body: JSON.stringify(data || {}),
+      }),
+    unpublishPopular: (datasetId: string) =>
+      request<Record<string, unknown>>(`/admin/moderation/popular/${encodeURIComponent(datasetId)}/unpublish`, {
+        method: "POST",
+      }),
+    reorderPopular: (items: Array<{ datasetId: string; displayOrder: number }>) =>
+      request<null>("/admin/moderation/popular/reorder", {
+        method: "PUT",
+        body: JSON.stringify({ items }),
+      }),
+    updateOverride: (datasetId: string, data: Record<string, unknown>) =>
+      request<Record<string, unknown>>(`/admin/datasets/${encodeURIComponent(datasetId)}/override`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+    deleteOverride: (datasetId: string) =>
+      request<null>(`/admin/datasets/${encodeURIComponent(datasetId)}/override`, {
+        method: "DELETE",
+      }),
+    archiveDataset: (datasetId: string) =>
+      request<null>(`/admin/datasets/${encodeURIComponent(datasetId)}/archive`, {
+        method: "POST",
+      }),
+    restoreDataset: (datasetId: string) =>
+      request<null>(`/admin/datasets/${encodeURIComponent(datasetId)}/restore`, {
+        method: "POST",
+      }),
+    hardDeleteDataset: (datasetId: string, confirmationId: string) =>
+      request<null>(`/admin/datasets/${encodeURIComponent(datasetId)}`, {
+        method: "DELETE",
+        body: JSON.stringify({ confirmationId }),
+      }),
+
+    publishedCatalog: (params?: { page?: number; limit?: number }) =>
+      request<{
+        items: Array<{
+          datasetId: string;
+          canonicalTitle: string;
+          featuredTitleOverride: string | null;
+          repository: string;
+          status: string;
+          displayOrder: number;
+          publishedAt: string | null;
+          publishedBy: string | null;
+          likes: number;
+          dislikes: number;
+          isActive: boolean;
+        }>;
+        pagination: { page: number; limit: number; total: number; totalPages: number };
+      }>(`/admin/moderation/published?page=${params?.page || 1}&limit=${params?.limit || 30}`),
+
+    // Phase 1 / pre-existing stubs (preserved for backward compatibility)
     queue: () => Promise.resolve([]) as Promise<Array<Record<string, unknown>>>,
-    published: () => Promise.resolve([]) as Promise<Array<Record<string, unknown>>>,
+    published: () => request<{ items: Array<Record<string, unknown>> }>("/admin/moderation/published").then((res) => res.items || []),
     approve: (_id: string) => Promise.resolve(null),
     reject: (_id: string, _reason?: string) => Promise.resolve(null),
   },
@@ -723,10 +856,24 @@ export const api = {
       return mapDataset(data);
     },
     reactions: {
-      async toggle(datasetId: string, reaction: "like" | "dislike" | null): Promise<DatasetReactionSummary> {
+      // Phase 1: toggle now accepts optional dislike feedback fields.
+      // When reaction === "like" | null, reason/comment are ignored by the backend.
+      // Existing callers that pass only (datasetId, reaction) remain fully compatible.
+      async toggle(
+        datasetId: string,
+        reaction: "like" | "dislike" | null,
+        reason?: string,
+        comment?: string | null,
+      ): Promise<DatasetReactionSummary> {
         return request<DatasetReactionSummary>("/datasets/reactions", {
           method: "POST",
-          body: JSON.stringify({ datasetId, reaction, anonKey: getAnonKey() }),
+          body: JSON.stringify({
+            datasetId,
+            reaction,
+            anonKey: getAnonKey(),
+            ...(reason !== undefined ? { reason } : {}),
+            ...(comment !== undefined && comment !== null ? { comment } : {}),
+          }),
         });
       },
       async getBatch(datasetIds: string[]): Promise<Record<string, DatasetReactionSummary>> {
@@ -736,6 +883,30 @@ export const api = {
           body: JSON.stringify({ datasetIds, anonKey: getAnonKey() }),
         });
       },
+    },
+    // Phase 5: public popular/featured datasets (≤6 curated by admin)
+    async popular(): Promise<Array<{
+      datasetId: string;
+      displayOrder: number;
+      title: string;
+      description: string | null;
+      source: string;
+      source_id: string | null;
+      url: string | null;
+      doi: string | null;
+      modality: string[];
+      species: string[];
+      disease: string | null;
+      tasks: string[];
+      region: string | null;
+      ageGroup: string | null;
+      subjects: number | null;
+      size: string | null;
+      publicationYear: number | null;
+      studyDesign: string | null;
+    }>> {
+      const data = await request<{ items: unknown[] }>("/datasets/popular", {}, false);
+      return (data.items ?? []) as ReturnType<typeof this.popular> extends Promise<infer T> ? T : never;
     },
   },
   streamUrl: (queryId: string) => `${BASE_URL}/stream/${encodeURIComponent(queryId)}`,
