@@ -116,6 +116,7 @@ export default function Landing() {
   const [togglingNotifs, setTogglingNotifs] = useState(false);
   const [announcements, setAnnouncements] = useState<Array<{ id: string; title: string; body: string; created_at: string }>>([]);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<{ id: string; title: string; body: string; created_at: string } | null>(null);
+  const [notificationOpen, setNotificationOpen] = useState(false);
   const [dislikeTarget, setDislikeTarget] = useState<{ datasetId: string; title: string } | null>(null);
 
   // Phase 5: Fetch public popular/featured datasets (≤6 curated by admin)
@@ -293,7 +294,7 @@ export default function Landing() {
           </a>
 
           {/* Notification Option */}
-          <Popover>
+          <Popover open={notificationOpen} onOpenChange={setNotificationOpen}>
             <PopoverTrigger asChild>
               <button
                 className="relative grid h-10 w-10 place-items-center rounded-full glass border border-white/10 [.light_&]:border-black/15 text-foreground/80 hover:bg-white/10 hover:text-foreground transition-all shadow-md backdrop-blur-xl"
@@ -324,7 +325,10 @@ export default function Landing() {
                   announcements.map((a) => (
                     <div
                       key={a.id}
-                      onClick={() => setSelectedAnnouncement(a)}
+                      onClick={() => {
+                        setSelectedAnnouncement(a);
+                        setNotificationOpen(false);
+                      }}
                       className="group cursor-pointer rounded-xl border border-white/5 [.light_&]:border-black/10 bg-white/5 [.light_&]:bg-black/[0.03] p-3 text-xs transition hover:bg-white/10 [.light_&]:hover:bg-black/5 hover:border-cyan/30 active:scale-[0.99]"
                     >
                       <div className="font-medium text-foreground group-hover:text-cyan transition-colors">{a.title}</div>
