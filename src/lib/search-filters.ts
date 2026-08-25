@@ -914,6 +914,11 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
         const key = masterVal.trim().toLowerCase();
         if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
       }
+    } else if (dimension === "ageGroup") {
+      for (const masterVal of MASTER_AGE_GROUP_KEY_VALUES) {
+        const key = masterVal.trim().toLowerCase();
+        if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
+      }
     }
 
     for (let i = 0; i < pool.length; i++) {
@@ -947,7 +952,12 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
     const list: FacetValue[] = [];
     for (const label of labels) {
       const count = counts.get(label);
-      if (dimension === "disease" || dimension === "participants" || dimension === "size") {
+      if (
+        dimension === "disease" ||
+        dimension === "participants" ||
+        dimension === "size" ||
+        dimension === "ageGroup"
+      ) {
         list.push({ value: label, count: count ?? 0 });
       } else {
         if (count !== undefined) list.push({ value: label, count });
