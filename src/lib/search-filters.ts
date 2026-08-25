@@ -405,6 +405,60 @@ const MODALITY_CANONICAL_TOKENS: Record<string, string> = {
   "functional near-infrared spectroscopy": "fnirs",
 };
 
+/**
+ * Issue 4 — canonical age-group label for a raw value. Mirrors AGE_TERMS
+ * (Neuro-Agents/app/data/vocab.py) — the controlled vocabulary the ingestion
+ * pipeline already writes into dataset age_group metadata — so query-intent
+ * values ("pediatric", legacy parser output) and facet values ("Child") both
+ * collapse onto ONE concept and never falsely conflict (FR-7).
+ */
+const AGE_GROUP_CANONICAL_TOKENS: Record<string, string> = {
+  infant: "infant",
+  infants: "infant",
+  newborn: "infant",
+  newborns: "infant",
+  neonatal: "infant",
+  neonates: "infant",
+  child: "child",
+  children: "child",
+  kid: "child",
+  kids: "child",
+  pediatric: "child",
+  pediatrics: "child",
+  paediatric: "child",
+  "school-age": "child",
+  adolescent: "adolescent",
+  adolescents: "adolescent",
+  teen: "adolescent",
+  teens: "adolescent",
+  teenager: "adolescent",
+  teenagers: "adolescent",
+  youth: "adolescent",
+  adult: "adult",
+  adults: "adult",
+  elderly: "elderly",
+  geriatric: "elderly",
+  "older adult": "elderly",
+  "older adults": "elderly",
+};
+
+/** Do two raw age-group values denote the same canonical concept? */
+function ageGroupOverlap(requested: string, declared: string): boolean {
+  const r = String(requested || "")
+    .trim()
+    .toLowerCase();
+  const d = String(declared || "")
+    .trim()
+    .toLowerCase();
+  if (!r || !d) return false;
+  const cr = AGE_GROUP_CANONICAL_TOKENS[r] ?? r;
+  const cd = AGE_GROUP_CANONICAL_TOKENS[d] ?? d;
+  if (cr === cd) return true;
+  // Canonical labels are never substrings of one another; containment only
+  // guards against uncanonicalized variants sharing a prefix.
+  return cr.includes(cd) || cd.includes(cr);
+}
+
 export const MASTER_DISEASE_KEY_VALUES: string[] = [
   "ADHD",
   "Alzheimer's",
@@ -525,6 +579,7 @@ function canonicalizeDimensionValue(dimension: FilterDimension, value: string): 
   if (!v) return value;
   if (dimension === "modality") return MODALITY_CANONICAL_TOKENS[v] ?? value;
   if (dimension === "disease") return DISEASE_CANONICAL_TOKENS[v] ?? value;
+  if (dimension === "ageGroup") return AGE_GROUP_CANONICAL_TOKENS[v] ?? value;
   return value;
 }
 
@@ -682,6 +737,7 @@ export function valuePairMatches(
   if (d.includes(r) || r.includes(d)) return true;
   if (normalizeKey(r) === normalizeKey(d)) return true;
   if (dimension === "modality" && modalityOverlap(r, d)) return true;
+  if (dimension === "ageGroup" && ageGroupOverlap(r, d)) return true;
   return false;
 }
 
