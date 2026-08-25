@@ -486,7 +486,8 @@ function SearchResults() {
 
         <div className={`mt-8 grid grid-cols-1 gap-6 ${showFilters ? "lg:grid-cols-[260px_1fr]" : ""}`}>
           {/* Filters Sidebar — dynamic facets (G4): options are derived from the
-              cached pool; zero-count options are never rendered. */}
+              cached pool, EXCEPT Age Group whose five canonical options are
+              static (MASTER_AGE_GROUP_KEY_VALUES); only its counts are dynamic. */}
           {showFilters && (
             <aside className="glass rounded-2xl p-4 lg:sticky lg:top-24 lg:self-start">
               <div className="flex items-center justify-between pb-2 border-b border-white/5 [.light_&]:border-black/10">

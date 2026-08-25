@@ -500,6 +500,21 @@ export const MASTER_DISEASE_KEY_VALUES: string[] = [
 ];
 
 /**
+ * Static Age Group facet vocabulary — the canonical AGE_TERMS labels
+ * (Neuro-Agents/app/data/vocab.py), alphabetically ordered. The Age Group
+ * filter ALWAYS renders exactly these five options in this order regardless
+ * of the current result set; only their counts are dynamic. Kept in sync
+ * with AGE_GROUP_CANONICAL_TOKENS above (same five concepts).
+ */
+export const MASTER_AGE_GROUP_KEY_VALUES: string[] = [
+  "Adolescent",
+  "Adult",
+  "Child",
+  "Elderly",
+  "Infant",
+];
+
+/**
  * Issue 4 — canonical disease label for a raw value (token -> "alzheimer",
  * "parkinson", …). Mirrors DISEASE_TERMS (Neuro-Agents/app/data/vocab.py) so
  * "Alzheimer", "Alzheimer's", "Alzheimer's disease" all collapse onto one
@@ -861,11 +876,20 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
         const key = masterVal.trim().toLowerCase();
         if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
       }
+    } else if (dimension === "ageGroup") {
+      // Static Age Group vocabulary: the five canonical options are seeded up
+      // front and pool-derived age values NEVER extend the candidate set, so
+      // the filter shows the same list for every query (counts stay dynamic).
+      for (const masterVal of MASTER_AGE_GROUP_KEY_VALUES) {
+        const key = masterVal.trim().toLowerCase();
+        if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
+      }
     }
 
     for (let i = 0; i < pool.length; i++) {
       eligible[i] = matchesAllOtherGroups(pool[i], filters, dimension);
       const values = datasetValues[i][di];
+      if (dimension === "ageGroup") continue; // fixed vocabulary — never extended by result data
       for (const value of values) {
         const key = String(value).trim().toLowerCase();
         if (key && !candidates.has(key)) candidates.set(key, String(value).trim());
@@ -893,7 +917,8 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
     const list: FacetValue[] = [];
     for (const label of labels) {
       const count = counts.get(label);
-      if (dimension === "disease" || dimension === "participants" || dimension === "size") {
+      if (dimension === "disease" || dimension === "participants" || dimension === "size" ||
+          dimension === "ageGroup") {
         list.push({ value: label, count: count ?? 0 });
       } else {
         if (count !== undefined) list.push({ value: label, count });
