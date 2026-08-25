@@ -294,14 +294,20 @@ function toCount(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+export const MASTER_PARTICIPANTS_KEY_VALUES: string[] = [
+  "1–25",
+  "26–50",
+  "50–100",
+  "100+",
+];
+
 /** Participants bucket for a subject count (null when the count is absent/invalid). */
 export function participantsBucket(count: number): string | null {
   if (count === null || count < 1) return null;
   if (count <= 25) return "1–25";
-  if (count <= 50) return "26–50";
-  if (count <= 100) return "51–100";
-  if (count <= 250) return "101–250";
-  return "251+";
+  if (count < 50) return "26–50";
+  if (count <= 100) return "50–100";
+  return "100+";
 }
 
 const SIZE_UNIT_MULTIPLIER: Record<string, number> = {
@@ -331,6 +337,13 @@ function parseSizeBytes(value: unknown): number | null {
   const n = parseFloat(m[1]);
   return Number.isFinite(n) && n > 0 ? n * (SIZE_UNIT_MULTIPLIER[m[2]] ?? 1) : null;
 }
+
+export const MASTER_SIZE_KEY_VALUES: string[] = [
+  "<10 GB",
+  "10–100 GB",
+  "100–500 GB",
+  "500 GB+",
+];
 
 /** Dataset size bucket label for a byte count. */
 export function sizeBucketLabel(bytes: number): string {
@@ -838,6 +851,16 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
         const key = masterVal.trim().toLowerCase();
         if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
       }
+    } else if (dimension === "participants") {
+      for (const masterVal of MASTER_PARTICIPANTS_KEY_VALUES) {
+        const key = masterVal.trim().toLowerCase();
+        if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
+      }
+    } else if (dimension === "size") {
+      for (const masterVal of MASTER_SIZE_KEY_VALUES) {
+        const key = masterVal.trim().toLowerCase();
+        if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
+      }
     }
 
     for (let i = 0; i < pool.length; i++) {
@@ -870,7 +893,7 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
     const list: FacetValue[] = [];
     for (const label of labels) {
       const count = counts.get(label);
-      if (dimension === "disease") {
+      if (dimension === "disease" || dimension === "participants" || dimension === "size") {
         list.push({ value: label, count: count ?? 0 });
       } else {
         if (count !== undefined) list.push({ value: label, count });
@@ -905,8 +928,11 @@ export function sortFacetValues(dimension: FilterDimension, list: FacetValue[]):
 /** Natural sort rank for fixed-order facet groups (NaN = not a ranked group). */
 export function facetNaturalRank(dimension: FilterDimension, value: string): number {
   if (dimension === "participants" || dimension === "size") {
+    const isLessThan = String(value).startsWith("<");
     const m = String(value).match(/(\d+(?:\.\d+)?)/);
-    return m ? parseFloat(m[1]) : Number.MAX_SAFE_INTEGER;
+    if (!m) return Number.MAX_SAFE_INTEGER;
+    const num = parseFloat(m[1]);
+    return isLessThan ? num - 0.5 : num;
   }
   if (dimension === "year") {
     const y = parseInt(String(value), 10);
