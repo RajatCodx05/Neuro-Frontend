@@ -338,6 +338,13 @@ function parseSizeBytes(value: unknown): number | null {
   return Number.isFinite(n) && n > 0 ? n * (SIZE_UNIT_MULTIPLIER[m[2]] ?? 1) : null;
 }
 
+export const MASTER_SIZE_KEY_VALUES: string[] = [
+  "<10 GB",
+  "10–100 GB",
+  "100–500 GB",
+  "500 GB+",
+];
+
 /** Dataset size bucket label for a byte count. */
 export function sizeBucketLabel(bytes: number): string {
   const gb = bytes / 1024 ** 3;
@@ -793,6 +800,11 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
         const key = masterVal.trim().toLowerCase();
         if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
       }
+    } else if (dimension === "size") {
+      for (const masterVal of MASTER_SIZE_KEY_VALUES) {
+        const key = masterVal.trim().toLowerCase();
+        if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
+      }
     }
 
     for (let i = 0; i < pool.length; i++) {
@@ -825,7 +837,7 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
     const list: FacetValue[] = [];
     for (const label of labels) {
       const count = counts.get(label);
-      if (dimension === "disease" || dimension === "participants") {
+      if (dimension === "disease" || dimension === "participants" || dimension === "size") {
         list.push({ value: label, count: count ?? 0 });
       } else {
         if (count !== undefined) list.push({ value: label, count });
@@ -860,8 +872,11 @@ export function sortFacetValues(dimension: FilterDimension, list: FacetValue[]):
 /** Natural sort rank for fixed-order facet groups (NaN = not a ranked group). */
 export function facetNaturalRank(dimension: FilterDimension, value: string): number {
   if (dimension === "participants" || dimension === "size") {
+    const isLessThan = String(value).startsWith("<");
     const m = String(value).match(/(\d+(?:\.\d+)?)/);
-    return m ? parseFloat(m[1]) : Number.MAX_SAFE_INTEGER;
+    if (!m) return Number.MAX_SAFE_INTEGER;
+    const num = parseFloat(m[1]);
+    return isLessThan ? num - 0.5 : num;
   }
   if (dimension === "year") {
     const y = parseInt(String(value), 10);
