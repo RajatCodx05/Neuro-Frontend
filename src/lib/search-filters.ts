@@ -60,6 +60,7 @@ export const FILTER_DIMENSIONS = [
   "size", // Dataset Size
   "type", // Dataset Type
   "disease", // Disease / Condition
+  "gender", // Gender
   "license", // License
   "modality", // Modality
   "participants", // Participants
@@ -102,6 +103,7 @@ export const CLIENT_ONLY_FILTER_DIMENSIONS = new Set<FilterDimension>([
   "size",
   "license",
   "type",
+  "gender",
 ]);
 
 /**
@@ -116,6 +118,7 @@ const EXACT_MATCH_DIMENSIONS = new Set<FilterDimension>([
   "size",
   "license",
   "type",
+  "gender",
 ]);
 
 export const FILTER_DIMENSION_LABELS: Record<FilterDimension, string> = {
@@ -129,6 +132,7 @@ export const FILTER_DIMENSION_LABELS: Record<FilterDimension, string> = {
   size: "Dataset Size",
   license: "License",
   type: "Dataset Type",
+  gender: "Gender",
   task: "Advanced Keywords", // `task` renders as the Advanced Keywords group
   availability: "Availability",
   region: "Region",
@@ -150,6 +154,7 @@ export const URL_DIMENSIONS: FilterDimension[] = [
   "size",
   "license",
   "type",
+  "gender",
   "task",
   "availability",
   "region",
@@ -174,6 +179,8 @@ const DIMENSION_ALIASES: Record<string, FilterDimension> = {
   license: "license",
   type: "type",
   dataset_type: "type",
+  gender: "gender",
+  sex: "gender",
   task: "task",
   format: "format",
   repository: "repository",
@@ -352,6 +359,24 @@ export function sizeBucketLabel(bytes: number): string {
   if (gb <= 100) return "10–100 GB";
   if (gb <= 500) return "100–500 GB";
   return "500 GB+";
+}
+
+export const MASTER_GENDER_KEY_VALUES: string[] = [
+  "Female",
+  "Male",
+  "NA",
+  "Other",
+];
+
+export function normalizeGenderValue(value: unknown): string | null {
+  if (!value) return null;
+  const s = String(value).trim().toLowerCase();
+  if (!s || NONE_LITERALS.has(s)) return null;
+  if (/^(female|f|women|woman|girls|girl)$/i.test(s)) return "Female";
+  if (/^(male|m|men|man|boys|boy)$/i.test(s)) return "Male";
+  if (/^(other|non-binary|nonbinary|transgender|intersex|diverse)$/i.test(s)) return "Other";
+  if (/^(na|n\/a|none|unspecified|unknown|not specified|not reported|not applicable)$/i.test(s)) return "NA";
+  return null;
 }
 
 /** 4-digit year parsed from a publication-date string (null when absent). */
@@ -692,6 +717,19 @@ export function dimensionFieldSources(dataset: RawDataset, dimension: FilterDime
       }
       break;
     }
+    case "gender": {
+      const raw = [
+        ...expandStructuredValue(dataset.gender),
+        ...expandStructuredValue(dataset.sex),
+        ...expandStructuredValue((dataset.demographics as any)?.gender),
+        ...expandStructuredValue((dataset.demographics as any)?.sex),
+      ];
+      for (const v of raw) {
+        const norm = normalizeGenderValue(v);
+        if (norm) sources.push(norm);
+      }
+      break;
+    }
     case "size": {
       const bytes =
         parseSizeBytes(dataset.size_bytes) ?? parseSizeBytes(dataset.size_label);
@@ -876,14 +914,6 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
         const key = masterVal.trim().toLowerCase();
         if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
       }
-    } else if (dimension === "ageGroup") {
-      // Static Age Group vocabulary: the five canonical options are seeded up
-      // front and pool-derived age values NEVER extend the candidate set, so
-      // the filter shows the same list for every query (counts stay dynamic).
-      for (const masterVal of MASTER_AGE_GROUP_KEY_VALUES) {
-        const key = masterVal.trim().toLowerCase();
-        if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
-      }
     }
 
     for (let i = 0; i < pool.length; i++) {
@@ -917,8 +947,7 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
     const list: FacetValue[] = [];
     for (const label of labels) {
       const count = counts.get(label);
-      if (dimension === "disease" || dimension === "participants" || dimension === "size" ||
-          dimension === "ageGroup") {
+      if (dimension === "disease" || dimension === "participants" || dimension === "size") {
         list.push({ value: label, count: count ?? 0 });
       } else {
         if (count !== undefined) list.push({ value: label, count });
