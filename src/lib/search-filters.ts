@@ -294,14 +294,20 @@ function toCount(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+export const MASTER_PARTICIPANTS_KEY_VALUES: string[] = [
+  "1–25",
+  "26–50",
+  "50–100",
+  "100+",
+];
+
 /** Participants bucket for a subject count (null when the count is absent/invalid). */
 export function participantsBucket(count: number): string | null {
   if (count === null || count < 1) return null;
   if (count <= 25) return "1–25";
-  if (count <= 50) return "26–50";
-  if (count <= 100) return "51–100";
-  if (count <= 250) return "101–250";
-  return "251+";
+  if (count < 50) return "26–50";
+  if (count <= 100) return "50–100";
+  return "100+";
 }
 
 const SIZE_UNIT_MULTIPLIER: Record<string, number> = {
@@ -782,6 +788,11 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
         const key = masterVal.trim().toLowerCase();
         if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
       }
+    } else if (dimension === "participants") {
+      for (const masterVal of MASTER_PARTICIPANTS_KEY_VALUES) {
+        const key = masterVal.trim().toLowerCase();
+        if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
+      }
     }
 
     for (let i = 0; i < pool.length; i++) {
@@ -814,7 +825,7 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
     const list: FacetValue[] = [];
     for (const label of labels) {
       const count = counts.get(label);
-      if (dimension === "disease") {
+      if (dimension === "disease" || dimension === "participants") {
         list.push({ value: label, count: count ?? 0 });
       } else {
         if (count !== undefined) list.push({ value: label, count });
