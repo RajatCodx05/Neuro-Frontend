@@ -295,10 +295,10 @@ function toCount(value: unknown): number | null {
 }
 
 export const MASTER_AGE_GROUP_KEY_VALUES: string[] = [
-  "Pediatric",
-  "Child",
   "Adolescent",
   "Adult",
+  "Child",
+  "Pediatric",
   "Senior",
 ];
 
