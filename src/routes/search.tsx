@@ -13,6 +13,7 @@ import {
   FILTER_DIMENSIONS,
   FILTER_DIMENSION_LABELS,
   PAGE_SIZE,
+  canonicalizeDimensionValue,
   facetDisplayLabel,
   hasAnySelection,
   keywordDisplayLabel,
@@ -510,10 +511,13 @@ function SearchResults() {
                   // even when another group's selection drops their count to zero. `displayFilters`
                   // (user selection + parser pre-selection, minus user overrides) drives the
                   // checkbox state — parser intent is display-only (Issue 1/3).
-                  const selected = displayFilters[dim] ?? [];
+                  const selectedRaw = displayFilters[dim] ?? [];
+                  const selected = selectedRaw.map((v) => canonicalizeDimensionValue(dim, v));
                   const options = [...groupFacets];
                   for (const v of selected) {
-                    if (!options.some((o) => o.value === v)) options.push({ value: v, count: 0 });
+                    if (!options.some((o) => o.value.toLowerCase() === v.toLowerCase())) {
+                      options.push({ value: v, count: 0 });
+                    }
                   }
                   sortFacetValues(dim, options);
                   if (options.length === 0) return null;
@@ -527,7 +531,7 @@ function SearchResults() {
                   if (!expanded) {
                     visible = options.slice(0, limit);
                     // Selected values must always be visible so they can be unticked.
-                    const extras = options.slice(limit).filter((o) => selected.includes(o.value));
+                    const extras = options.slice(limit).filter((o) => selected.some((s) => s.toLowerCase() === o.value.toLowerCase()));
                     if (extras.length > 0) visible = [...visible, ...extras];
                   }
                   const hasMore = options.length > limit;
@@ -553,7 +557,7 @@ function SearchResults() {
                       {isOpen && (
                         <div className="space-y-1 px-2 pb-2 pt-1">
                           {visible.map((f) => {
-                            const isChecked = selected.includes(f.value);
+                            const isChecked = selected.some((s) => s.toLowerCase() === f.value.toLowerCase());
                             return (
                               <label
                                 key={f.value}
