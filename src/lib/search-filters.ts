@@ -294,6 +294,14 @@ function toCount(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+export const MASTER_AGE_GROUP_KEY_VALUES: string[] = [
+  "Pediatric",
+  "Child",
+  "Adolescent",
+  "Adult",
+  "Senior",
+];
+
 export const MASTER_PARTICIPANTS_KEY_VALUES: string[] = [
   "1–25",
   "26–50",
@@ -527,6 +535,31 @@ const DISEASE_CANONICAL_TOKENS: Record<string, string> = {
   fibromyalgia: "Chronic pain",
 };
 
+const AGE_GROUP_CANONICAL_TOKENS: Record<string, string> = {
+  pediatric: "Pediatric",
+  infant: "Pediatric",
+  infants: "Pediatric",
+  baby: "Pediatric",
+  babies: "Pediatric",
+  child: "Child",
+  children: "Child",
+  kid: "Child",
+  kids: "Child",
+  adolescent: "Adolescent",
+  adolescents: "Adolescent",
+  teen: "Adolescent",
+  teens: "Adolescent",
+  teenager: "Adolescent",
+  teenagers: "Adolescent",
+  adult: "Adult",
+  adults: "Adult",
+  senior: "Senior",
+  seniors: "Senior",
+  elderly: "Senior",
+  aging: "Senior",
+  aged: "Senior",
+};
+
 /**
  * Issue 4 — canonicalize a single structured value onto its dimension's
  * canonical label when it matches a vocabulary token; otherwise unchanged.
@@ -541,6 +574,11 @@ export function canonicalizeDimensionValue(dimension: FilterDimension, value: st
     const masterMatch = MASTER_DISEASE_KEY_VALUES.find((m) => m.toLowerCase() === v);
     if (masterMatch) return masterMatch;
     return DISEASE_CANONICAL_TOKENS[v] ?? value;
+  }
+  if (dimension === "ageGroup") {
+    const masterMatch = MASTER_AGE_GROUP_KEY_VALUES.find((m) => m.toLowerCase() === v);
+    if (masterMatch) return masterMatch;
+    return AGE_GROUP_CANONICAL_TOKENS[v] ?? value;
   }
   return value;
 }
@@ -579,12 +617,17 @@ export function dimensionFieldSources(dataset: RawDataset, dimension: FilterDime
     case "species":
       sources.push(...expandStructuredValue(dataset.species));
       break;
-    case "ageGroup":
-      sources.push(
+    case "ageGroup": {
+      const raw = [
         ...expandStructuredValue(dataset.age_group),
         ...expandStructuredValue(dataset.age_range),
-      );
+      ];
+      for (const v of raw) {
+        const norm = canonicalizeDimensionValue("ageGroup", v);
+        if (norm) sources.push(norm);
+      }
       break;
+    }
     case "task":
     case "format": {
       // Advanced Keywords normalization (v0.4, facet layer only): structured
@@ -794,7 +837,12 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
     const candidates = new Map<string, string>();
     const eligible = new Array<boolean>(pool.length).fill(false);
 
-    if (dimension === "disease") {
+    if (dimension === "ageGroup") {
+      for (const masterVal of MASTER_AGE_GROUP_KEY_VALUES) {
+        const key = masterVal.trim().toLowerCase();
+        if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
+      }
+    } else if (dimension === "disease") {
       for (const masterVal of MASTER_DISEASE_KEY_VALUES) {
         const key = masterVal.trim().toLowerCase();
         if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
@@ -841,7 +889,12 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
     const list: FacetValue[] = [];
     for (const label of labels) {
       const count = counts.get(label);
-      if (dimension === "disease" || dimension === "participants" || dimension === "size") {
+      if (
+        dimension === "ageGroup" ||
+        dimension === "disease" ||
+        dimension === "participants" ||
+        dimension === "size"
+      ) {
         list.push({ value: label, count: count ?? 0 });
       } else {
         if (count !== undefined) list.push({ value: label, count });
@@ -875,6 +928,10 @@ export function sortFacetValues(dimension: FilterDimension, list: FacetValue[]):
 
 /** Natural sort rank for fixed-order facet groups (NaN = not a ranked group). */
 export function facetNaturalRank(dimension: FilterDimension, value: string): number {
+  if (dimension === "ageGroup") {
+    const idx = MASTER_AGE_GROUP_KEY_VALUES.indexOf(value);
+    return idx >= 0 ? idx : Number.MAX_SAFE_INTEGER;
+  }
   if (dimension === "participants" || dimension === "size") {
     const isLessThan = String(value).startsWith("<");
     const m = String(value).match(/(\d+(?:\.\d+)?)/);
