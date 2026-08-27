@@ -99,9 +99,9 @@ function Counter({ value, suffix = "" }: { value: number; suffix?: string }) {
 }
 
 const suggestions = [
-  "Resting-state fMRI in children with ADHD",
-  "Longitudinal Alzheimer's MRI cohorts",
-  "EEG datasets for epilepsy localization",
+  "fMRI datasets for Alzheimer's disease",
+  "EEG datasets in epilepsy and seizure disorders",
+  "Resting-state fMRI in healthy adults",
 ];
 
 const trending = [
@@ -447,7 +447,7 @@ export default function Landing() {
                     onChange={(e) => setQ(e.target.value)}
                     onFocus={() => { if (!user) guard(); }}
                     className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground sm:text-base"
-                    placeholder="Find resting-state fMRI datasets for children under 12 with ADHD..."
+                    placeholder="Find fMRI datasets for Alzheimer's disease..."
                   />
                   <button type="button" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl hover:bg-white/5" title="voice is currently not available">
                     <Mic className="h-4 w-4 opacity-25" />
