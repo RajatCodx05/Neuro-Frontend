@@ -591,9 +591,6 @@ export default function Landing() {
                           <Badge>{modalityDisplayLabel(modalityLabel)}</Badge>
                           <Badge variant="cyan">{d.source}</Badge>
                         </div>
-                        <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-[10px] text-white backdrop-blur">
-                          <CheckCircle2 className="h-3 w-3 text-cyan" /> Verified
-                        </div>
                       </div>
                       <div className="flex flex-1 flex-col p-5">
                         <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{d.source} · {d.datasetId}</div>

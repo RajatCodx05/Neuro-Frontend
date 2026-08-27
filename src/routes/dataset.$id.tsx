@@ -484,13 +484,6 @@ function DatasetPage() {
                 </div>
                 <div>
                   <div className="text-sm font-medium text-foreground">{d.repo}</div>
-                  {d.verified ? (
-                    <div className="text-[11px] text-cyan flex items-center gap-1 mt-0.5 font-medium">
-                      <CheckCircle2 className="h-3 w-3" /> Verified
-                    </div>
-                  ) : (
-                    <div className="text-[11px] text-muted-foreground">Community Catalog</div>
-                  )}
                 </div>
               </div>
             </Section>
