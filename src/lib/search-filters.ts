@@ -60,7 +60,6 @@ export const FILTER_DIMENSIONS = [
   "size", // Dataset Size
   "type", // Dataset Type
   "disease", // Disease / Condition
-  "gender", // Gender
   "license", // License
   "modality", // Modality
   "participants", // Participants
@@ -103,7 +102,6 @@ export const CLIENT_ONLY_FILTER_DIMENSIONS = new Set<FilterDimension>([
   "size",
   "license",
   "type",
-  "gender",
 ]);
 
 /**
@@ -118,7 +116,6 @@ const EXACT_MATCH_DIMENSIONS = new Set<FilterDimension>([
   "size",
   "license",
   "type",
-  "gender",
 ]);
 
 export const FILTER_DIMENSION_LABELS: Record<FilterDimension, string> = {
@@ -132,7 +129,6 @@ export const FILTER_DIMENSION_LABELS: Record<FilterDimension, string> = {
   size: "Dataset Size",
   license: "License",
   type: "Dataset Type",
-  gender: "Gender",
   task: "Advanced Keywords", // `task` renders as the Advanced Keywords group
   availability: "Availability",
   region: "Region",
@@ -154,7 +150,6 @@ export const URL_DIMENSIONS: FilterDimension[] = [
   "size",
   "license",
   "type",
-  "gender",
   "task",
   "availability",
   "region",
@@ -179,8 +174,6 @@ const DIMENSION_ALIASES: Record<string, FilterDimension> = {
   license: "license",
   type: "type",
   dataset_type: "type",
-  gender: "gender",
-  sex: "gender",
   task: "task",
   format: "format",
   repository: "repository",
@@ -301,11 +294,12 @@ function toCount(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-export const MASTER_PARTICIPANTS_KEY_VALUES: string[] = [
-  "1–25",
-  "26–50",
-  "50–100",
-  "100+",
+export const MASTER_AGE_GROUP_KEY_VALUES: string[] = [
+  "Adolescent",
+  "Adult",
+  "Child",
+  "Pediatric",
+  "Senior",
 ];
 
 /** Participants bucket for a subject count (null when the count is absent/invalid). */
@@ -345,12 +339,102 @@ function parseSizeBytes(value: unknown): number | null {
   return Number.isFinite(n) && n > 0 ? n * (SIZE_UNIT_MULTIPLIER[m[2]] ?? 1) : null;
 }
 
+export const MASTER_AVAILABILITY_KEY_VALUES: string[] = [
+  "Controlled",
+  "On Request",
+  "Open",
+  "Registered",
+  "Restricted",
+];
+
 export const MASTER_SIZE_KEY_VALUES: string[] = [
   "<10 GB",
   "10–100 GB",
   "100–500 GB",
   "500 GB+",
 ];
+
+export const MASTER_TYPE_KEY_VALUES: string[] = [
+  "Clinical Data",
+  "Code & Analysis",
+  "Derived Data",
+  "Processed Data",
+  "Raw Data",
+];
+
+export const MASTER_LICENSE_KEY_VALUES: string[] = [
+  "CC0",
+  "CC-BY-4.0",
+  "CC-BY-NC-4.0",
+  "CC-BY-NC-SA-4.0",
+  "CC-BY-SA-4.0",
+  "Open Data",
+  "PDDL",
+];
+
+export const MASTER_MODALITY_KEY_VALUES: string[] = [
+  "EEG",
+  "fMRI",
+  "fNIRS",
+  "iEEG",
+  "MEG",
+  "MRI",
+  "PET",
+  "sMRI",
+];
+
+export const MASTER_PARTICIPANTS_KEY_VALUES: string[] = [
+  "1–25",
+  "26–50",
+  "50–100",
+  "100+",
+];
+
+export const MASTER_YEAR_KEY_VALUES: string[] = [
+  "2024",
+  "2023",
+  "2022",
+  "2021",
+  "2020",
+  "2019",
+  "2018",
+  "2017",
+  "2016",
+  "2015 & Earlier",
+];
+
+export const MASTER_REGION_KEY_VALUES: string[] = [
+  "Amygdala",
+  "Basal Ganglia",
+  "Brainstem",
+  "Cerebellum",
+  "Cortex",
+  "Hippocampus",
+  "Prefrontal Cortex",
+  "Whole Brain",
+];
+
+export const MASTER_SPECIES_KEY_VALUES: string[] = [
+  "Human",
+  "Mouse",
+  "Non-Human Primate",
+  "Other",
+  "Rat",
+];
+
+/** Map of static filter dimensions to their pre-seeded master options. Disease and Repository are excluded so they remain dynamic. */
+export const STATIC_DIMENSIONS_MAP: Record<string, string[]> = {
+  ageGroup: MASTER_AGE_GROUP_KEY_VALUES,
+  availability: MASTER_AVAILABILITY_KEY_VALUES,
+  size: MASTER_SIZE_KEY_VALUES,
+  type: MASTER_TYPE_KEY_VALUES,
+  license: MASTER_LICENSE_KEY_VALUES,
+  modality: MASTER_MODALITY_KEY_VALUES,
+  participants: MASTER_PARTICIPANTS_KEY_VALUES,
+  year: MASTER_YEAR_KEY_VALUES,
+  region: MASTER_REGION_KEY_VALUES,
+  species: MASTER_SPECIES_KEY_VALUES,
+};
 
 /** Dataset size bucket label for a byte count. */
 export function sizeBucketLabel(bytes: number): string {
@@ -359,24 +443,6 @@ export function sizeBucketLabel(bytes: number): string {
   if (gb <= 100) return "10–100 GB";
   if (gb <= 500) return "100–500 GB";
   return "500 GB+";
-}
-
-export const MASTER_GENDER_KEY_VALUES: string[] = [
-  "Female",
-  "Male",
-  "NA",
-  "Other",
-];
-
-export function normalizeGenderValue(value: unknown): string | null {
-  if (!value) return null;
-  const s = String(value).trim().toLowerCase();
-  if (!s || NONE_LITERALS.has(s)) return null;
-  if (/^(female|f|women|woman|girls|girl)$/i.test(s)) return "Female";
-  if (/^(male|m|men|man|boys|boy)$/i.test(s)) return "Male";
-  if (/^(other|non-binary|nonbinary|transgender|intersex|diverse)$/i.test(s)) return "Other";
-  if (/^(na|n\/a|none|unspecified|unknown|not specified|not reported|not applicable)$/i.test(s)) return "NA";
-  return null;
 }
 
 /** 4-digit year parsed from a publication-date string (null when absent). */
@@ -443,60 +509,6 @@ const MODALITY_CANONICAL_TOKENS: Record<string, string> = {
   "functional near-infrared spectroscopy": "fnirs",
 };
 
-/**
- * Issue 4 — canonical age-group label for a raw value. Mirrors AGE_TERMS
- * (Neuro-Agents/app/data/vocab.py) — the controlled vocabulary the ingestion
- * pipeline already writes into dataset age_group metadata — so query-intent
- * values ("pediatric", legacy parser output) and facet values ("Child") both
- * collapse onto ONE concept and never falsely conflict (FR-7).
- */
-const AGE_GROUP_CANONICAL_TOKENS: Record<string, string> = {
-  infant: "infant",
-  infants: "infant",
-  newborn: "infant",
-  newborns: "infant",
-  neonatal: "infant",
-  neonates: "infant",
-  child: "child",
-  children: "child",
-  kid: "child",
-  kids: "child",
-  pediatric: "child",
-  pediatrics: "child",
-  paediatric: "child",
-  "school-age": "child",
-  adolescent: "adolescent",
-  adolescents: "adolescent",
-  teen: "adolescent",
-  teens: "adolescent",
-  teenager: "adolescent",
-  teenagers: "adolescent",
-  youth: "adolescent",
-  adult: "adult",
-  adults: "adult",
-  elderly: "elderly",
-  geriatric: "elderly",
-  "older adult": "elderly",
-  "older adults": "elderly",
-};
-
-/** Do two raw age-group values denote the same canonical concept? */
-function ageGroupOverlap(requested: string, declared: string): boolean {
-  const r = String(requested || "")
-    .trim()
-    .toLowerCase();
-  const d = String(declared || "")
-    .trim()
-    .toLowerCase();
-  if (!r || !d) return false;
-  const cr = AGE_GROUP_CANONICAL_TOKENS[r] ?? r;
-  const cd = AGE_GROUP_CANONICAL_TOKENS[d] ?? d;
-  if (cr === cd) return true;
-  // Canonical labels are never substrings of one another; containment only
-  // guards against uncanonicalized variants sharing a prefix.
-  return cr.includes(cd) || cd.includes(cr);
-}
-
 export const MASTER_DISEASE_KEY_VALUES: string[] = [
   "ADHD",
   "Alzheimer's",
@@ -525,114 +537,132 @@ export const MASTER_DISEASE_KEY_VALUES: string[] = [
 ];
 
 /**
- * Static Age Group facet vocabulary — the canonical AGE_TERMS labels
- * (Neuro-Agents/app/data/vocab.py), alphabetically ordered. The Age Group
- * filter ALWAYS renders exactly these five options in this order regardless
- * of the current result set; only their counts are dynamic. Kept in sync
- * with AGE_GROUP_CANONICAL_TOKENS above (same five concepts).
- */
-export const MASTER_AGE_GROUP_KEY_VALUES: string[] = [
-  "Adolescent",
-  "Adult",
-  "Child",
-  "Elderly",
-  "Infant",
-];
-
-/**
  * Issue 4 — canonical disease label for a raw value (token -> "alzheimer",
  * "parkinson", …). Mirrors DISEASE_TERMS (Neuro-Agents/app/data/vocab.py) so
  * "Alzheimer", "Alzheimer's", "Alzheimer's disease" all collapse onto one
  * facet value instead of appearing as three separate facets.
  */
 const DISEASE_CANONICAL_TOKENS: Record<string, string> = {
-  parkinson: "parkinson",
-  "parkinson's": "parkinson",
-  parkinsons: "parkinson",
-  "parkinson disease": "parkinson",
-  "parkinson's disease": "parkinson",
-  alzheimer: "alzheimer",
-  "alzheimer's": "alzheimer",
-  alzheimers: "alzheimer",
-  "alzheimer disease": "alzheimer",
-  "alzheimer's disease": "alzheimer",
-  "mild cognitive impairment": "mild cognitive impairment",
-  "cognitive impairment": "mild cognitive impairment",
-  dementia: "dementia",
-  demented: "dementia",
-  "lewy body": "dementia",
-  adhd: "adhd",
-  "attention deficit hyperactivity disorder": "adhd",
-  "attention deficit disorder": "adhd",
-  schizophrenia: "schizophrenia",
-  schizophrenic: "schizophrenia",
-  psychosis: "schizophrenia",
-  psychotic: "schizophrenia",
-  bipolar: "bipolar",
-  "bipolar disorder": "bipolar",
-  "manic depression": "bipolar",
-  depression: "depression",
-  depressive: "depression",
-  "major depressive disorder": "depression",
-  mdd: "depression",
-  anxiety: "anxiety",
-  anxious: "anxiety",
-  "generalized anxiety": "anxiety",
-  autism: "autism",
-  autistic: "autism",
-  asd: "autism",
-  "autism spectrum disorder": "autism",
-  epilepsy: "epilepsy",
-  epileptic: "epilepsy",
-  epileptiform: "epilepsy",
-  seizure: "epilepsy",
-  seizures: "epilepsy",
-  "multiple sclerosis": "multiple sclerosis",
-  "amyotrophic lateral sclerosis": "amyotrophic lateral sclerosis",
-  huntington: "huntington",
-  "huntington's": "huntington",
-  huntingtons: "huntington",
-  "huntington disease": "huntington",
-  stroke: "stroke",
-  strokes: "stroke",
-  "ischemic stroke": "stroke",
-  "cerebrovascular accident": "stroke",
-  "traumatic brain injury": "traumatic brain injury",
-  "head injury": "traumatic brain injury",
-  concussion: "traumatic brain injury",
-  migraine: "migraine",
-  migraines: "migraine",
-  insomnia: "insomnia",
-  "sleep disorder": "insomnia",
-  "sleep disorders": "insomnia",
-  obesity: "obesity",
-  obese: "obesity",
-  diabetes: "diabetes",
-  diabetic: "diabetes",
-  "type 2 diabetes": "diabetes",
-  "type 1 diabetes": "diabetes",
-  covid: "covid",
-  "covid-19": "covid",
-  "sars-cov-2": "covid",
-  coronavirus: "covid",
-  tinnitus: "tinnitus",
-  "chronic pain": "chronic pain",
-  "neuropathic pain": "chronic pain",
-  fibromyalgia: "chronic pain",
+  parkinson: "Parkinson's",
+  "parkinson's": "Parkinson's",
+  parkinsons: "Parkinson's",
+  "parkinson disease": "Parkinson's",
+  "parkinson's disease": "Parkinson's",
+  alzheimer: "Alzheimer's",
+  "alzheimer's": "Alzheimer's",
+  alzheimers: "Alzheimer's",
+  "alzheimer disease": "Alzheimer's",
+  "alzheimer's disease": "Alzheimer's",
+  "mild cognitive impairment": "Mild cognitive impairment",
+  "cognitive impairment": "Mild cognitive impairment",
+  dementia: "Dementia",
+  demented: "Dementia",
+  "lewy body": "Dementia",
+  adhd: "ADHD",
+  "attention deficit hyperactivity disorder": "ADHD",
+  "attention deficit disorder": "ADHD",
+  schizophrenia: "Schizophrenia",
+  schizophrenic: "Schizophrenia",
+  psychosis: "Schizophrenia",
+  psychotic: "Schizophrenia",
+  bipolar: "Bipolar",
+  "bipolar disorder": "Bipolar",
+  "manic depression": "Bipolar",
+  depression: "Depression",
+  depressive: "Depression",
+  "major depressive disorder": "Depression",
+  mdd: "Depression",
+  anxiety: "Anxiety",
+  anxious: "Anxiety",
+  "generalized anxiety": "Anxiety",
+  autism: "Autism",
+  autistic: "Autism",
+  asd: "Autism",
+  "autism spectrum disorder": "Autism",
+  epilepsy: "Epilepsy",
+  epileptic: "Epilepsy",
+  epileptiform: "Epilepsy",
+  seizure: "Epilepsy",
+  seizures: "Epilepsy",
+  "multiple sclerosis": "Multiple sclerosis",
+  "amyotrophic lateral sclerosis": "Amyotrophic lateral sclerosis",
+  huntington: "Huntington's",
+  "huntington's": "Huntington's",
+  huntingtons: "Huntington's",
+  "huntington disease": "Huntington's",
+  stroke: "Stroke",
+  strokes: "Stroke",
+  "ischemic stroke": "Stroke",
+  "cerebrovascular accident": "Stroke",
+  "traumatic brain injury": "Traumatic brain injury",
+  "head injury": "Traumatic brain injury",
+  concussion: "Traumatic brain injury",
+  migraine: "Migraine",
+  migraines: "Migraine",
+  insomnia: "Insomnia",
+  "sleep disorder": "Insomnia",
+  "sleep disorders": "Insomnia",
+  obesity: "Obesity",
+  obese: "Obesity",
+  diabetes: "Diabetes",
+  diabetic: "Diabetes",
+  "type 2 diabetes": "Diabetes",
+  "type 1 diabetes": "Diabetes",
+  covid: "COVID-19",
+  "covid-19": "COVID-19",
+  "sars-cov-2": "COVID-19",
+  coronavirus: "COVID-19",
+  tinnitus: "Tinnitus",
+  "chronic pain": "Chronic pain",
+  "neuropathic pain": "Chronic pain",
+  fibromyalgia: "Chronic pain",
+};
+
+const AGE_GROUP_CANONICAL_TOKENS: Record<string, string> = {
+  pediatric: "Pediatric",
+  infant: "Pediatric",
+  infants: "Pediatric",
+  baby: "Pediatric",
+  babies: "Pediatric",
+  child: "Child",
+  children: "Child",
+  kid: "Child",
+  kids: "Child",
+  adolescent: "Adolescent",
+  adolescents: "Adolescent",
+  teen: "Adolescent",
+  teens: "Adolescent",
+  teenager: "Adolescent",
+  teenagers: "Adolescent",
+  adult: "Adult",
+  adults: "Adult",
+  senior: "Senior",
+  seniors: "Senior",
+  elderly: "Senior",
+  aging: "Senior",
+  aged: "Senior",
 };
 
 /**
  * Issue 4 — canonicalize a single structured value onto its dimension's
  * canonical label when it matches a vocabulary token; otherwise unchanged.
  */
-function canonicalizeDimensionValue(dimension: FilterDimension, value: string): string {
+export function canonicalizeDimensionValue(dimension: FilterDimension, value: string): string {
   const v = String(value ?? "")
     .trim()
     .toLowerCase();
   if (!v) return value;
   if (dimension === "modality") return MODALITY_CANONICAL_TOKENS[v] ?? value;
-  if (dimension === "disease") return DISEASE_CANONICAL_TOKENS[v] ?? value;
-  if (dimension === "ageGroup") return AGE_GROUP_CANONICAL_TOKENS[v] ?? value;
+  if (dimension === "disease") {
+    const masterMatch = MASTER_DISEASE_KEY_VALUES.find((m) => m.toLowerCase() === v);
+    if (masterMatch) return masterMatch;
+    return DISEASE_CANONICAL_TOKENS[v] ?? value;
+  }
+  if (dimension === "ageGroup") {
+    const masterMatch = MASTER_AGE_GROUP_KEY_VALUES.find((m) => m.toLowerCase() === v);
+    if (masterMatch) return masterMatch;
+    return AGE_GROUP_CANONICAL_TOKENS[v] ?? value;
+  }
   return value;
 }
 
@@ -670,12 +700,17 @@ export function dimensionFieldSources(dataset: RawDataset, dimension: FilterDime
     case "species":
       sources.push(...expandStructuredValue(dataset.species));
       break;
-    case "ageGroup":
-      sources.push(
+    case "ageGroup": {
+      const raw = [
         ...expandStructuredValue(dataset.age_group),
         ...expandStructuredValue(dataset.age_range),
-      );
+      ];
+      for (const v of raw) {
+        const norm = canonicalizeDimensionValue("ageGroup", v);
+        if (norm) sources.push(norm);
+      }
       break;
+    }
     case "task":
     case "format": {
       // Advanced Keywords normalization (v0.4, facet layer only): structured
@@ -714,19 +749,6 @@ export function dimensionFieldSources(dataset: RawDataset, dimension: FilterDime
       if (count !== null) {
         const bucket = participantsBucket(count);
         if (bucket) sources.push(bucket);
-      }
-      break;
-    }
-    case "gender": {
-      const raw = [
-        ...expandStructuredValue(dataset.gender),
-        ...expandStructuredValue(dataset.sex),
-        ...expandStructuredValue((dataset.demographics as any)?.gender),
-        ...expandStructuredValue((dataset.demographics as any)?.sex),
-      ];
-      for (const v of raw) {
-        const norm = normalizeGenderValue(v);
-        if (norm) sources.push(norm);
       }
       break;
     }
@@ -803,7 +825,6 @@ export function valuePairMatches(
   if (d.includes(r) || r.includes(d)) return true;
   if (normalizeKey(r) === normalizeKey(d)) return true;
   if (dimension === "modality" && modalityOverlap(r, d)) return true;
-  if (dimension === "ageGroup" && ageGroupOverlap(r, d)) return true;
   return false;
 }
 
@@ -899,23 +920,9 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
     const candidates = new Map<string, string>();
     const eligible = new Array<boolean>(pool.length).fill(false);
 
-    if (dimension === "disease") {
-      for (const masterVal of MASTER_DISEASE_KEY_VALUES) {
-        const key = masterVal.trim().toLowerCase();
-        if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
-      }
-    } else if (dimension === "participants") {
-      for (const masterVal of MASTER_PARTICIPANTS_KEY_VALUES) {
-        const key = masterVal.trim().toLowerCase();
-        if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
-      }
-    } else if (dimension === "size") {
-      for (const masterVal of MASTER_SIZE_KEY_VALUES) {
-        const key = masterVal.trim().toLowerCase();
-        if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
-      }
-    } else if (dimension === "ageGroup") {
-      for (const masterVal of MASTER_AGE_GROUP_KEY_VALUES) {
+    const masterValues = STATIC_DIMENSIONS_MAP[dimension];
+    if (masterValues) {
+      for (const masterVal of masterValues) {
         const key = masterVal.trim().toLowerCase();
         if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
       }
@@ -924,7 +931,6 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
     for (let i = 0; i < pool.length; i++) {
       eligible[i] = matchesAllOtherGroups(pool[i], filters, dimension);
       const values = datasetValues[i][di];
-      if (dimension === "ageGroup") continue; // fixed vocabulary — never extended by result data
       for (const value of values) {
         const key = String(value).trim().toLowerCase();
         if (key && !candidates.has(key)) candidates.set(key, String(value).trim());
@@ -952,12 +958,7 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
     const list: FacetValue[] = [];
     for (const label of labels) {
       const count = counts.get(label);
-      if (
-        dimension === "disease" ||
-        dimension === "participants" ||
-        dimension === "size" ||
-        dimension === "ageGroup"
-      ) {
+      if (STATIC_DIMENSIONS_MAP[dimension]) {
         list.push({ value: label, count: count ?? 0 });
       } else {
         if (count !== undefined) list.push({ value: label, count });
@@ -991,6 +992,10 @@ export function sortFacetValues(dimension: FilterDimension, list: FacetValue[]):
 
 /** Natural sort rank for fixed-order facet groups (NaN = not a ranked group). */
 export function facetNaturalRank(dimension: FilterDimension, value: string): number {
+  if (dimension === "ageGroup") {
+    const idx = MASTER_AGE_GROUP_KEY_VALUES.indexOf(value);
+    return idx >= 0 ? idx : Number.MAX_SAFE_INTEGER;
+  }
   if (dimension === "participants" || dimension === "size") {
     const isLessThan = String(value).startsWith("<");
     const m = String(value).match(/(\d+(?:\.\d+)?)/);

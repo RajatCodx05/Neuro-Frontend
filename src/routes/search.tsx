@@ -13,6 +13,7 @@ import {
   FILTER_DIMENSIONS,
   FILTER_DIMENSION_LABELS,
   PAGE_SIZE,
+  canonicalizeDimensionValue,
   facetDisplayLabel,
   hasAnySelection,
   keywordDisplayLabel,
@@ -84,21 +85,10 @@ function SearchResults() {
     reset,
   } = useSearchState();
 
-  // v0.4 fixed filter groups: primary scientific groups are open by default so
-  // the stable category list is immediately visible; Advanced Keywords and the
-  // secondary groups (Availability/Region) stay collapsed by default.
-  const DEFAULT_OPEN_GROUPS: string[] = [
-    "repository",
-    "modality",
-    "disease",
-    "species",
-    "ageGroup",
-    "year",
-    "participants",
-    "size",
-    "license",
-    "type",
-  ];
+  // All filter groups are open by default when opening the search filters, except Advanced Keywords (task) which starts closed.
+  const DEFAULT_OPEN_GROUPS: string[] = FILTER_DIMENSIONS.filter(
+    (d) => d !== "task" && d !== "format"
+  );
   const SHOW_MORE_LIMIT = 10; // options per group before "Show More"
   const ADVANCED_KEYWORDS_LIMIT = 15; // top-N frequency-sorted keywords
 
@@ -541,10 +531,13 @@ function SearchResults() {
                   // even when another group's selection drops their count to zero. `displayFilters`
                   // (user selection + parser pre-selection, minus user overrides) drives the
                   // checkbox state — parser intent is display-only (Issue 1/3).
-                  const selected = displayFilters[dim] ?? [];
+                  const selectedRaw = displayFilters[dim] ?? [];
+                  const selected = selectedRaw.map((v) => canonicalizeDimensionValue(dim, v));
                   const options = [...groupFacets];
                   for (const v of selected) {
-                    if (!options.some((o) => o.value === v)) options.push({ value: v, count: 0 });
+                    if (!options.some((o) => o.value.toLowerCase() === v.toLowerCase())) {
+                      options.push({ value: v, count: 0 });
+                    }
                   }
                   sortFacetValues(dim, options);
                   if (options.length === 0) return null;
@@ -558,7 +551,7 @@ function SearchResults() {
                   if (!expanded) {
                     visible = options.slice(0, limit);
                     // Selected values must always be visible so they can be unticked.
-                    const extras = options.slice(limit).filter((o) => selected.includes(o.value));
+                    const extras = options.slice(limit).filter((o) => selected.some((s) => s.toLowerCase() === o.value.toLowerCase()));
                     if (extras.length > 0) visible = [...visible, ...extras];
                   }
                   const hasMore = options.length > limit;
@@ -584,7 +577,7 @@ function SearchResults() {
                       {isOpen && (
                         <div className="space-y-1 px-2 pb-2 pt-1">
                           {visible.map((f) => {
-                            const isChecked = selected.includes(f.value);
+                            const isChecked = selected.some((s) => s.toLowerCase() === f.value.toLowerCase());
                             return (
                               <label
                                 key={f.value}
