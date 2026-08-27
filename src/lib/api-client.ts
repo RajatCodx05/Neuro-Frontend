@@ -58,6 +58,21 @@ export type SearchResult = {
   doi: string | null;
   url: string | null;
 };
+
+export type LiteratureResult = {
+  title: string;
+  abstract: string | null;
+  authors: string[];
+  journal: string | null;
+  year: number | null;
+  doi: string | null;
+  pmid: string | null;
+  url: string | null;
+  provider: string;
+  citation_count: number | null;
+  publication_type: string | null;
+  score: number | null;
+};
 export type DatasetReactionSummary = {
   datasetId: string;
   likes: number;
@@ -937,6 +952,16 @@ export const api = {
     }>> {
       const data = await request<{ items: unknown[] }>("/datasets/popular", {}, false);
       return (data.items ?? []) as ReturnType<typeof this.popular> extends Promise<infer T> ? T : never;
+    },
+  },
+  literature: {
+    async search(query: string) {
+      const data = await request<{
+        results: LiteratureResult[];
+        metrics?: Record<string, unknown>;
+        filters?: Record<string, unknown>;
+      }>("/literature/search", { method: "POST", body: JSON.stringify({ query }) });
+      return data;
     },
   },
   streamUrl: (queryId: string) => `${BASE_URL}/stream/${encodeURIComponent(queryId)}`,
