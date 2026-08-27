@@ -85,21 +85,8 @@ function SearchResults() {
     reset,
   } = useSearchState();
 
-  // v0.4 fixed filter groups: primary scientific groups are open by default so
-  // the stable category list is immediately visible; Advanced Keywords and the
-  // secondary groups (Availability/Region) stay collapsed by default.
-  const DEFAULT_OPEN_GROUPS: string[] = [
-    "repository",
-    "modality",
-    "disease",
-    "species",
-    "ageGroup",
-    "year",
-    "participants",
-    "size",
-    "license",
-    "type",
-  ];
+  // All filter groups are open by default when opening the search filters.
+  const DEFAULT_OPEN_GROUPS: string[] = [...FILTER_DIMENSIONS];
   const SHOW_MORE_LIMIT = 10; // options per group before "Show More"
   const ADVANCED_KEYWORDS_LIMIT = 15; // top-N frequency-sorted keywords
 
