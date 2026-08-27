@@ -85,8 +85,10 @@ function SearchResults() {
     reset,
   } = useSearchState();
 
-  // All filter groups are open by default when opening the search filters.
-  const DEFAULT_OPEN_GROUPS: string[] = [...FILTER_DIMENSIONS];
+  // All filter groups are open by default when opening the search filters, except Advanced Keywords (task) which starts closed.
+  const DEFAULT_OPEN_GROUPS: string[] = FILTER_DIMENSIONS.filter(
+    (d) => d !== "task" && d !== "format"
+  );
   const SHOW_MORE_LIMIT = 10; // options per group before "Show More"
   const ADVANCED_KEYWORDS_LIMIT = 15; // top-N frequency-sorted keywords
 

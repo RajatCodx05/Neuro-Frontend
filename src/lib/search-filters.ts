@@ -302,13 +302,6 @@ export const MASTER_AGE_GROUP_KEY_VALUES: string[] = [
   "Senior",
 ];
 
-export const MASTER_PARTICIPANTS_KEY_VALUES: string[] = [
-  "1–25",
-  "26–50",
-  "50–100",
-  "100+",
-];
-
 /** Participants bucket for a subject count (null when the count is absent/invalid). */
 export function participantsBucket(count: number): string | null {
   if (count === null || count < 1) return null;
@@ -346,12 +339,102 @@ function parseSizeBytes(value: unknown): number | null {
   return Number.isFinite(n) && n > 0 ? n * (SIZE_UNIT_MULTIPLIER[m[2]] ?? 1) : null;
 }
 
+export const MASTER_AVAILABILITY_KEY_VALUES: string[] = [
+  "Controlled",
+  "On Request",
+  "Open",
+  "Registered",
+  "Restricted",
+];
+
 export const MASTER_SIZE_KEY_VALUES: string[] = [
   "<10 GB",
   "10–100 GB",
   "100–500 GB",
   "500 GB+",
 ];
+
+export const MASTER_TYPE_KEY_VALUES: string[] = [
+  "Clinical Data",
+  "Code & Analysis",
+  "Derived Data",
+  "Processed Data",
+  "Raw Data",
+];
+
+export const MASTER_LICENSE_KEY_VALUES: string[] = [
+  "CC0",
+  "CC-BY-4.0",
+  "CC-BY-NC-4.0",
+  "CC-BY-NC-SA-4.0",
+  "CC-BY-SA-4.0",
+  "Open Data",
+  "PDDL",
+];
+
+export const MASTER_MODALITY_KEY_VALUES: string[] = [
+  "EEG",
+  "fMRI",
+  "fNIRS",
+  "iEEG",
+  "MEG",
+  "MRI",
+  "PET",
+  "sMRI",
+];
+
+export const MASTER_PARTICIPANTS_KEY_VALUES: string[] = [
+  "1–25",
+  "26–50",
+  "50–100",
+  "100+",
+];
+
+export const MASTER_YEAR_KEY_VALUES: string[] = [
+  "2024",
+  "2023",
+  "2022",
+  "2021",
+  "2020",
+  "2019",
+  "2018",
+  "2017",
+  "2016",
+  "2015 & Earlier",
+];
+
+export const MASTER_REGION_KEY_VALUES: string[] = [
+  "Amygdala",
+  "Basal Ganglia",
+  "Brainstem",
+  "Cerebellum",
+  "Cortex",
+  "Hippocampus",
+  "Prefrontal Cortex",
+  "Whole Brain",
+];
+
+export const MASTER_SPECIES_KEY_VALUES: string[] = [
+  "Human",
+  "Mouse",
+  "Non-Human Primate",
+  "Other",
+  "Rat",
+];
+
+/** Map of static filter dimensions to their pre-seeded master options. Disease and Repository are excluded so they remain dynamic. */
+export const STATIC_DIMENSIONS_MAP: Record<string, string[]> = {
+  ageGroup: MASTER_AGE_GROUP_KEY_VALUES,
+  availability: MASTER_AVAILABILITY_KEY_VALUES,
+  size: MASTER_SIZE_KEY_VALUES,
+  type: MASTER_TYPE_KEY_VALUES,
+  license: MASTER_LICENSE_KEY_VALUES,
+  modality: MASTER_MODALITY_KEY_VALUES,
+  participants: MASTER_PARTICIPANTS_KEY_VALUES,
+  year: MASTER_YEAR_KEY_VALUES,
+  region: MASTER_REGION_KEY_VALUES,
+  species: MASTER_SPECIES_KEY_VALUES,
+};
 
 /** Dataset size bucket label for a byte count. */
 export function sizeBucketLabel(bytes: number): string {
@@ -837,23 +920,9 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
     const candidates = new Map<string, string>();
     const eligible = new Array<boolean>(pool.length).fill(false);
 
-    if (dimension === "ageGroup") {
-      for (const masterVal of MASTER_AGE_GROUP_KEY_VALUES) {
-        const key = masterVal.trim().toLowerCase();
-        if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
-      }
-    } else if (dimension === "disease") {
-      for (const masterVal of MASTER_DISEASE_KEY_VALUES) {
-        const key = masterVal.trim().toLowerCase();
-        if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
-      }
-    } else if (dimension === "participants") {
-      for (const masterVal of MASTER_PARTICIPANTS_KEY_VALUES) {
-        const key = masterVal.trim().toLowerCase();
-        if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
-      }
-    } else if (dimension === "size") {
-      for (const masterVal of MASTER_SIZE_KEY_VALUES) {
+    const masterValues = STATIC_DIMENSIONS_MAP[dimension];
+    if (masterValues) {
+      for (const masterVal of masterValues) {
         const key = masterVal.trim().toLowerCase();
         if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
       }
@@ -889,12 +958,7 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
     const list: FacetValue[] = [];
     for (const label of labels) {
       const count = counts.get(label);
-      if (
-        dimension === "ageGroup" ||
-        dimension === "disease" ||
-        dimension === "participants" ||
-        dimension === "size"
-      ) {
+      if (STATIC_DIMENSIONS_MAP[dimension]) {
         list.push({ value: label, count: count ?? 0 });
       } else {
         if (count !== undefined) list.push({ value: label, count });
