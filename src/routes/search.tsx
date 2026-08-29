@@ -6,7 +6,7 @@ import Lottie from "lottie-react";
 import lottieLoadingData from "@/assets/lottieflow-loading-07-000000-easey.json";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
-import { api, type DatasetReactionSummary, type SearchResult } from "@/lib/api-client";
+import { api, type DatasetReactionSummary, type SearchResult, type LiteratureResult } from "@/lib/api-client";
 import { DislikeFeedbackModal, type DislikeReasonId } from "@/components/app/DislikeFeedbackModal";
 import { useSearchState } from "@/lib/search-state";
 import {
@@ -97,13 +97,16 @@ function SearchResults() {
   const [showMore, setShowMore] = useState<Set<string>>(new Set());
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [reactions, setReactions] = useState<Record<string, DatasetReactionSummary>>({});
+  const [activeTab, setActiveTab] = useState<"datasets" | "papers">("datasets");
+  const [literatureResults, setLiteratureResults] = useState<LiteratureResult[]>([]);
+  const [literatureLoading, setLiteratureLoading] = useState(false);
+  const [literatureError, setLiteratureError] = useState<string | null>(null);
   // dislikeTarget: dataset the user clicked thumbs-down on; null = modal closed
   const [dislikeTarget, setDislikeTarget] = useState<{ id: string; name: string } | null>(null);
   const [msgIndex, setMsgIndex] = useState(0);
   const loadingMessages = [
     "Searching Datasets for You",
     "Scanning Neural Pathways",
-    "Indexing Brain Waves",
     "Analyzing the Results"
   ];
 
@@ -171,6 +174,16 @@ function SearchResults() {
     }
     if (!hasBaseline || textQuery !== originalQuery) {
       runSearch(textQuery, urlFilters);
+      // Literature lane — independent, parallel, failure isolated
+      setLiteratureLoading(true);
+      setLiteratureError(null);
+      api.literature.search(textQuery)
+        .then((res) => setLiteratureResults(res.results ?? []))
+        .catch((err) => {
+          setLiteratureError(err instanceof Error ? err.message : "Literature search failed");
+          setLiteratureResults([]);
+        })
+        .finally(() => setLiteratureLoading(false));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.q, user, hasBaseline, originalQuery, mode, runSearch, reset]);
@@ -417,7 +430,25 @@ function SearchResults() {
           <span>
             AI can make mistakes. Please double-check the datasets before use.
           </span>
-        </div>          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+        </div>
+
+        {/* Tabs: DATASETS | RESEARCH PAPERS */}
+        <div className="mt-4 flex gap-2">
+          <button
+            onClick={() => setActiveTab("datasets")}
+            className={`rounded-full px-4 py-1.5 text-xs font-medium ${activeTab==="datasets" ? "bg-cyan text-slate-950" : "border border-white/10 bg-white/5 text-muted-foreground"}`}
+          >
+            DATASETS {filteredResults.length ? `(${filteredResults.length})` : ""}
+          </button>
+          <button
+            onClick={() => setActiveTab("papers")}
+            className={`rounded-full px-4 py-1.5 text-xs font-medium ${activeTab==="papers" ? "bg-cyan text-slate-950" : "border border-white/10 bg-white/5 text-muted-foreground"}`}
+          >
+            RESEARCH PAPERS {literatureResults.length ? `(${literatureResults.length})` : literatureLoading ? "(...)" : ""}
+          </button>
+        </div>
+
+                  <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
           <div>
             {streaming ? (
               <span className="inline-flex items-center gap-1.5">
@@ -598,6 +629,36 @@ function SearchResults() {
 
           {/* Results List */}
           <div className="space-y-4">
+            {activeTab === "papers" ? (
+              literatureLoading ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                  <LottieSearchLoader className="h-12 w-12" />
+                  <span className="mt-4 text-sm">Searching Research Papers<AnimatedDots /></span>
+                </div>
+              ) : literatureError ? (
+                <div className="py-12 text-center text-sm text-muted-foreground">{literatureError}</div>
+              ) : literatureResults.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <SearchX className="h-8 w-8 text-muted-foreground/50" />
+                  <p className="mt-3 text-sm text-muted-foreground">No sufficiently relevant research papers were found.</p>
+                </div>
+              ) : (
+                literatureResults.map((p, i) => (
+                  <article key={`${p.doi || p.url || p.title}-${i}`} className="glass card-elevated rounded-2xl p-5">
+                    <h3 className="font-display text-base font-semibold">{p.title}</h3>
+                    {p.authors.length > 0 && <p className="mt-1 text-xs text-muted-foreground">{p.authors.slice(0,4).join(", ")}{p.authors.length>4?" et al":""}{p.journal ? ` · ${p.journal}` : ""}{p.year ? ` · ${p.year}` : ""}</p>}
+                    {p.abstract && <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{p.abstract.slice(0,400)}</p>}
+                    <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+                      {p.doi && <span className="rounded-full border px-2 py-0.5">DOI: {p.doi}</span>}
+                      {p.citation_count!=null && <span className="rounded-full border px-2 py-0.5">{p.citation_count} citations</span>}
+                      <span className="rounded-full border px-2 py-0.5 capitalize">{p.provider}</span>
+                    </div>
+                    {p.url && <a href={p.url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs text-cyan hover:underline">View Paper <ExternalLink className="h-3 w-3" /></a>}
+                  </article>
+                ))
+              )
+            ) : (
+              <>
             {streaming && filteredResults.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                 <LottieSearchLoader className="h-12 w-12" />
@@ -609,7 +670,10 @@ function SearchResults() {
             )}
 
             {!streaming && filteredResults.length === 0 && (
-              <NoResultsEmptyState query={search.q || ""} />
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <SearchX className="h-8 w-8 text-muted-foreground/50" />
+                <p className="mt-3 text-sm text-muted-foreground">No sufficiently relevant datasets were found in our current catalog.</p>
+              </div>
             )}
             {pageItems.map((d, i) => (
               <motion.article
@@ -700,8 +764,7 @@ function SearchResults() {
               </motion.article>
             ))}
 
-            {/* FR-10 pagination — reuses the existing (previously unused) component */}
-            {totalPages > 1 && (
+            {activeTab==="datasets" && totalPages > 1 && (
               <Pagination className="pt-4">
                 <PaginationContent>
                   <PaginationItem>
@@ -729,6 +792,8 @@ function SearchResults() {
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
+            )}
+              </>
             )}
           </div>
         </div>
