@@ -18,7 +18,7 @@ import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
 import { useSearchState } from "@/lib/search-state";
 import { api, type SearchResult } from "@/lib/api-client";
-import { modalityDisplayLabel } from "@/lib/search-filters";
+import { licenseDisplayLabel, modalityDisplayLabel } from "@/lib/search-filters";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dataset/$id")({
@@ -492,7 +492,7 @@ function DatasetPage() {
               <div className="space-y-2.5 text-xs">
                 <div className="flex justify-between py-1.5 border-b border-white/5">
                   <span className="text-muted-foreground">License</span>
-                  <span className="font-medium text-foreground">{d.license ?? "Open Data"}</span>
+                  <span className="font-medium text-foreground">{licenseDisplayLabel(d.license ?? "Open Data")}</span>
                 </div>
                 <div className="flex justify-between py-1.5 border-b border-white/5">
                   <span className="text-muted-foreground">Access Tier</span>

@@ -1119,19 +1119,41 @@ export function keywordDisplayLabel(value: string): string {
  * recorded string — values are never fabricated.
  */
 export function normalizeLicenseValue(value: string): string {
-  const v = String(value ?? "").trim();
-  if (!v) return v;
-  // Facet values round-trip through the URL as comma-joined lists
-  // (parseUrlFilters splits on ","), so a comma inside a license value would
-  // fragment on reload/share — commas are replaced with spaces.
+  const raw = String(value ?? "").trim();
+  if (!raw) return raw;
   const clean = (s: string) => s.replace(/,/g, " ");
+
+  // Extract license name from raw SPDX / HTTP URLs (e.g., https://spdx.org/licenses/CC0-1.0.html -> CC0-1.0)
+  let v = raw;
+  if (v.toLowerCase().includes("spdx.org/licenses/") || v.startsWith("http://") || v.startsWith("https://")) {
+    try {
+      const parts = v.split("/").filter(Boolean);
+      let filename = parts[parts.length - 1] || "";
+      filename = filename.replace(/\.html?$/i, "");
+      if (filename) v = filename;
+    } catch {
+      // fallback to raw string
+    }
+  }
+
   const lower = v.toLowerCase();
   if (["unknown", "none", "n/a", "-", "nan", "null"].includes(lower)) return "Unknown";
-  if (["cc0", "cc-0", "cc 0", "cc-zero"].includes(lower)) return "CC0";
+  if (["cc0", "cc-0", "cc 0", "cc-zero", "cc0-1.0", "cc0 1.0"].includes(lower)) return "CC0";
   if (lower === "mit") return "MIT";
   if (lower === "pddl") return "PDDL";
-  const cc = lower.match(/^cc[- ](by[-a-z0-9.]*)$/);
-  if (cc) return `CC-${cc[1].toUpperCase()}`;
+
+  const cc = lower.match(/^(?:cc[- ]?)?(by[-a-z0-9.]*)$/);
+  if (cc) {
+    const rest = cc[1].replace(/[-.]?1\.0$/, "").replace(/[-.]?4\.0$/, "-4.0").toUpperCase();
+    return `CC-${rest}`;
+  }
+
+  if (lower.includes("cc0")) return "CC0";
+  if (lower.includes("cc-by-nc-sa")) return "CC-BY-NC-SA-4.0";
+  if (lower.includes("cc-by-nc")) return "CC-BY-NC-4.0";
+  if (lower.includes("cc-by-sa")) return "CC-BY-SA-4.0";
+  if (lower.includes("cc-by")) return "CC-BY-4.0";
+
   if (v.length <= 64) return clean(v);
   const firstSentence = v.split(/(?<=[.!?])\s+|\n/)[0].trim();
   if (firstSentence && firstSentence.length <= 64) return clean(firstSentence);

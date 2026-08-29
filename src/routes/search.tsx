@@ -653,7 +653,7 @@ function SearchResults() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-widest text-muted-foreground">
-                    {d.license && <><span>·</span><span>{d.license}</span></>}
+                    {d.license && <><span>·</span><span>{licenseDisplayLabel(d.license)}</span></>}
                     {(d.access || d.access_tier) && <><span>·</span><span>{d.access || d.access_tier}</span></>}
                   </div>
                   <Link to="/dataset/$id" params={{ id: d.id }} target="_blank" className="mt-1 block break-words font-display text-lg font-semibold hover:text-cyan">
