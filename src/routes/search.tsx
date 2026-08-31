@@ -6,7 +6,7 @@ import Lottie from "lottie-react";
 import lottieLoadingData from "@/assets/lottieflow-loading-07-000000-easey.json";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
-import { api, type DatasetReactionSummary, type SearchResult, type LiteratureResult } from "@/lib/api-client";
+import { api, cleanSummaryText, type DatasetReactionSummary, type SearchResult, type LiteratureResult } from "@/lib/api-client";
 import { DislikeFeedbackModal, type DislikeReasonId } from "@/components/app/DislikeFeedbackModal";
 import { useSearchState } from "@/lib/search-state";
 import {
@@ -96,11 +96,20 @@ function SearchResults() {
   const [open, setOpen] = useState<string[]>(DEFAULT_OPEN_GROUPS);
   const [showMore, setShowMore] = useState<Set<string>>(new Set());
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [savedPaperIds, setSavedPaperIds] = useState<Set<string>>(new Set());
   const [reactions, setReactions] = useState<Record<string, DatasetReactionSummary>>({});
   const [activeTab, setActiveTab] = useState<"datasets" | "papers">("datasets");
   const [literatureResults, setLiteratureResults] = useState<LiteratureResult[]>([]);
   const [literatureLoading, setLiteratureLoading] = useState(false);
   const [literatureError, setLiteratureError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.savedPapers.list()
+      .then((list) => {
+        setSavedPaperIds(new Set(list.map((p) => api.savedPapers.getPaperId(p))));
+      })
+      .catch(() => {});
+  }, []);
   // dislikeTarget: dataset the user clicked thumbs-down on; null = modal closed
   const [dislikeTarget, setDislikeTarget] = useState<{ id: string; name: string } | null>(null);
   const [msgIndex, setMsgIndex] = useState(0);
@@ -648,19 +657,65 @@ function SearchResults() {
                   <p className="mt-3 text-sm text-muted-foreground">No sufficiently relevant research papers were found.</p>
                 </div>
               ) : (
-                literatureResults.map((p, i) => (
-                  <article key={`${p.doi || p.url || p.title}-${i}`} className="glass card-elevated rounded-2xl p-5">
-                    <h3 className="font-display text-base font-semibold">{p.title}</h3>
-                    {p.authors.length > 0 && <p className="mt-1 text-xs text-muted-foreground">{p.authors.slice(0,4).join(", ")}{p.authors.length>4?" et al":""}{p.journal ? ` · ${p.journal}` : ""}{p.year ? ` · ${p.year}` : ""}</p>}
-                    {p.abstract && <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{p.abstract.slice(0,400)}</p>}
-                    <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
-                      {p.doi && <span className="rounded-full border px-2 py-0.5">DOI: {p.doi}</span>}
-                      {p.citation_count!=null && <span className="rounded-full border px-2 py-0.5">{p.citation_count} citations</span>}
-                      <span className="rounded-full border px-2 py-0.5 capitalize">{p.provider}</span>
-                    </div>
-                    {p.url && <a href={p.url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs text-cyan hover:underline">View Paper <ExternalLink className="h-3 w-3" /></a>}
-                  </article>
-                ))
+                literatureResults.map((p, i) => {
+                  const pId = api.savedPapers.getPaperId(p);
+                  const isSaved = savedPaperIds.has(pId);
+                  return (
+                    <article key={`${p.doi || p.url || p.title}-${i}`} className="glass card-elevated flex flex-col justify-between rounded-2xl p-5">
+                      <div>
+                        <h3 className="font-display text-base font-semibold">{p.title}</h3>
+                        {p.authors.length > 0 && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {p.authors.slice(0, 4).join(", ")}{p.authors.length > 4 ? " et al" : ""}
+                            {p.journal ? ` · ${p.journal}` : ""}
+                            {p.year ? ` · ${p.year}` : ""}
+                          </p>
+                        )}
+                        {p.abstract && <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{cleanSummaryText(p.abstract).slice(0, 400)}</p>}
+                        <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+                          {p.doi && <span className="rounded-full border border-white/10 px-2 py-0.5">DOI: {p.doi}</span>}
+                          {p.citation_count != null && <span className="rounded-full border border-white/10 px-2 py-0.5">{p.citation_count} citations</span>}
+                          <span className="rounded-full border border-white/10 px-2 py-0.5 capitalize">{p.provider}</span>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3">
+                        <div>
+                          {p.url && (
+                            <a href={p.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-cyan hover:underline">
+                              View Paper <ExternalLink className="h-3 w-3" />
+                            </a>
+                          )}
+                        </div>
+                        <button
+                          onClick={async () => {
+                            if (isSaved) {
+                              await api.savedPapers.delete(pId);
+                              setSavedPaperIds((prev) => {
+                                const next = new Set(prev);
+                                next.delete(pId);
+                                return next;
+                              });
+                              toast.success("Research paper unsaved");
+                            } else {
+                              await api.savedPapers.save(p);
+                              setSavedPaperIds((prev) => new Set(prev).add(pId));
+                              toast.success("Research paper saved");
+                            }
+                          }}
+                          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+                            isSaved
+                              ? "bg-cyan/20 border border-cyan/40 text-cyan-300"
+                              : "border border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+                          }`}
+                          title={isSaved ? "Unsave research paper" : "Save research paper"}
+                        >
+                          <Bookmark className={`h-3.5 w-3.5 ${isSaved ? "fill-cyan-400 text-cyan-400" : ""}`} />
+                          <span>{isSaved ? "Saved" : "Save"}</span>
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })
               )
             ) : (
               <>

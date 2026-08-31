@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bookmark, FolderOpen, FolderPlus, Plus, Trash2, ArrowRight, Loader2, ArrowLeft } from "lucide-react";
-import { api, cleanSummaryText, type SavedDataset, type Collection } from "@/lib/api-client";
+import { Bookmark, FolderOpen, FolderPlus, Plus, Trash2, ArrowRight, Loader2, ArrowLeft, FileText, ExternalLink } from "lucide-react";
+import { api, cleanSummaryText, type SavedDataset, type Collection, type SavedPaper } from "@/lib/api-client";
 import { modalityDisplayLabel } from "@/lib/search-filters";
 import { useAuth } from "@/lib/auth-context";
 import { AppShell } from "@/components/app/app-shell";
@@ -25,8 +25,9 @@ const LIMIT = 50;
 
 function SavedPage() {
   const { user } = useAuth();
-  const [tab, setTab] = useState<"saved" | "collections">("saved");
+  const [tab, setTab] = useState<"saved" | "papers" | "collections">("saved");
   const [saved, setSaved] = useState<SavedDataset[]>([]);
+  const [savedPapers, setSavedPapers] = useState<SavedPaper[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [newName, setNewName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -41,9 +42,14 @@ function SavedPage() {
 
   const load = async () => {
     if (!user) return;
-    const [s, c] = await Promise.all([api.savedDatasets.list(), api.collections.list()]);
+    const [s, c, p] = await Promise.all([
+      api.savedDatasets.list(),
+      api.collections.list(),
+      api.savedPapers.list(),
+    ]);
     setSaved(s ?? []);
     setCollections(c ?? []);
+    setSavedPapers(p ?? []);
     setLoading(false);
   };
 
@@ -68,6 +74,13 @@ function SavedPage() {
       setColItems(prevColItems);
       toast.error(err instanceof Error ? err.message : "Failed to remove");
     }
+  };
+
+  const removeSavedPaper = async (paper: SavedPaper) => {
+    const id = api.savedPapers.getPaperId(paper);
+    setSavedPapers((prev) => prev.filter((p) => api.savedPapers.getPaperId(p) !== id));
+    await api.savedPapers.delete(id);
+    toast.success("Removed research paper from saved");
   };
 
   const addCollection = async () => {
@@ -297,11 +310,15 @@ function SavedPage() {
 
         <div className="mt-6 inline-flex rounded-full border border-white/10 bg-white/5 p-1 text-sm">
           <button onClick={() => setTab("saved")}
-            className={`rounded-full px-4 py-1.5 ${tab === "saved" ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}>
+            className={`rounded-full px-4 py-1.5 transition-colors ${tab === "saved" ? "bg-white/10 text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
             <Bookmark className="mr-1.5 inline h-3.5 w-3.5" />Saved datasets
           </button>
+          <button onClick={() => setTab("papers")}
+            className={`rounded-full px-4 py-1.5 transition-colors ${tab === "papers" ? "bg-white/10 text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
+            <FileText className="mr-1.5 inline h-3.5 w-3.5" />Research Papers
+          </button>
           <button onClick={() => setTab("collections")}
-            className={`rounded-full px-4 py-1.5 ${tab === "collections" ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}>
+            className={`rounded-full px-4 py-1.5 transition-colors ${tab === "collections" ? "bg-white/10 text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
             <FolderOpen className="mr-1.5 inline h-3.5 w-3.5" />Collections
           </button>
         </div>
@@ -366,6 +383,71 @@ function SavedPage() {
                       </button>
                       <button onClick={() => removeSaved(s.id)}
                         className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/5">
+                        <Trash2 className="h-3 w-3" /> Remove
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
+        ) : tab === "papers" ? (
+          loading ? (
+            <div className="mt-6 space-y-3">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <Skeleton className="h-3 w-24 rounded" />
+              </div>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="glass card-elevated rounded-2xl p-5 space-y-3">
+                  <Skeleton className="h-5 w-3/4 rounded" />
+                  <Skeleton className="h-3.5 w-1/2 rounded" />
+                  <Skeleton className="h-3.5 w-11/12 rounded" />
+                </div>
+              ))}
+            </div>
+          ) : savedPapers.length === 0 ? (
+            <div className="mt-6">
+              <EmptyState icon={FileText} title="No saved research papers yet"
+                description="Bookmark research papers from search results to find them here." />
+            </div>
+          ) : (
+            <div className="mt-6 space-y-3">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{savedPapers.length} / {LIMIT} saved</span>
+                {savedPapers.length >= LIMIT && <span className="text-amber-400">Limit reached — remove a research paper to save more</span>}
+              </div>
+              {savedPapers.map((p) => {
+                const pId = api.savedPapers.getPaperId(p);
+                return (
+                  <div key={pId} className="glass card-elevated flex flex-col justify-between rounded-2xl p-5 gap-3">
+                    <div>
+                      <h3 className="font-display text-base font-semibold">{p.title}</h3>
+                      {p.authors && p.authors.length > 0 && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {p.authors.slice(0, 4).join(", ")}{p.authors.length > 4 ? " et al" : ""}
+                          {p.journal ? ` · ${p.journal}` : ""}
+                          {p.year ? ` · ${p.year}` : ""}
+                        </p>
+                      )}
+                      {p.abstract && <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{cleanSummaryText(p.abstract).slice(0, 400)}</p>}
+                      <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+                        {p.doi && <span className="rounded-full border border-white/10 px-2 py-0.5">DOI: {p.doi}</span>}
+                        {p.citation_count != null && <span className="rounded-full border border-white/10 px-2 py-0.5">{p.citation_count} citations</span>}
+                        {p.provider && <span className="rounded-full border border-white/10 px-2 py-0.5 capitalize">{p.provider}</span>}
+                      </div>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between border-t border-white/5 pt-3">
+                      <div>
+                        {p.url && (
+                          <a href={p.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-cyan hover:underline">
+                            View Paper <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => removeSavedPaper(p)}
+                        className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                      >
                         <Trash2 className="h-3 w-3" /> Remove
                       </button>
                     </div>

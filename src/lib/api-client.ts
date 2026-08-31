@@ -73,6 +73,10 @@ export type LiteratureResult = {
   publication_type: string | null;
   score: number | null;
 };
+export type SavedPaper = LiteratureResult & {
+  id: string;
+  created_at: string;
+};
 export type DatasetReactionSummary = {
   datasetId: string;
   likes: number;
@@ -962,6 +966,44 @@ export const api = {
         filters?: Record<string, unknown>;
       }>("/literature/search", { method: "POST", body: JSON.stringify({ query }) });
       return data;
+    },
+  },
+  savedPapers: {
+    getPaperId(paperOrId: LiteratureResult | SavedPaper | string): string {
+      if (typeof paperOrId === "string") return paperOrId;
+      return paperOrId.doi || paperOrId.url || paperOrId.title;
+    },
+    async list(): Promise<SavedPaper[]> {
+      try {
+        const raw = localStorage.getItem("neurosearch_saved_papers");
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    },
+    async save(paper: LiteratureResult): Promise<SavedPaper> {
+      const list = await this.list();
+      const id = this.getPaperId(paper);
+      const existing = list.find((p) => this.getPaperId(p) === id);
+      if (existing) return existing;
+      const newPaper: SavedPaper = {
+        ...paper,
+        id,
+        created_at: new Date().toISOString(),
+      };
+      const updated = [newPaper, ...list];
+      localStorage.setItem("neurosearch_saved_papers", JSON.stringify(updated));
+      return newPaper;
+    },
+    async delete(paperOrId: LiteratureResult | SavedPaper | string): Promise<void> {
+      const id = this.getPaperId(paperOrId);
+      const list = (await this.list()).filter((p) => this.getPaperId(p) !== id);
+      localStorage.setItem("neurosearch_saved_papers", JSON.stringify(list));
+    },
+    async isSaved(paperOrId: LiteratureResult | SavedPaper | string): Promise<boolean> {
+      const id = this.getPaperId(paperOrId);
+      const list = await this.list();
+      return list.some((p) => this.getPaperId(p) === id);
     },
   },
   streamUrl: (queryId: string) => `${BASE_URL}/stream/${encodeURIComponent(queryId)}`,
