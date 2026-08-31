@@ -389,16 +389,14 @@ export const MASTER_PARTICIPANTS_KEY_VALUES: string[] = [
 ];
 
 export const MASTER_YEAR_KEY_VALUES: string[] = [
-  "2024",
-  "2023",
-  "2022",
-  "2021",
+  "Before 2020",
   "2020",
-  "2019",
-  "2018",
-  "2017",
-  "2016",
-  "2015 & Earlier",
+  "2021",
+  "2022",
+  "2023",
+  "2024",
+  "2025",
+  "2025+",
 ];
 
 export const MASTER_REGION_KEY_VALUES: string[] = [
@@ -443,14 +441,17 @@ export function sizeBucketLabel(bytes: number): string {
   return "500 GB+";
 }
 
-/** 4-digit year parsed from a publication-date string (null when absent). */
+/** Map a raw publication date/year string to a standardized year bucket label (null when absent). */
 function yearOf(value: string): string | null {
   const s = String(value ?? "").trim();
   if (!s) return null;
   const m = s.match(/\b(19\d{2}|20\d{2})\b/);
   if (!m) return null;
   const y = parseInt(m[1], 10);
-  return y >= 1900 && y <= 2100 ? m[1] : null;
+  if (y < 1900 || y > 2100) return null;
+  if (y < 2020) return "Before 2020";
+  if (y > 2025) return "2025+";
+  return String(y);
 }
 
 /** Dedupe a value list case-insensitively, keeping first-seen casing. */
@@ -668,6 +669,13 @@ export function canonicalizeDimensionValue(dimension: FilterDimension, value: st
     const masterMatch = MASTER_AVAILABILITY_KEY_VALUES.find((m) => m.toLowerCase() === v);
     if (masterMatch) return masterMatch;
     return "Restricted";
+  }
+  if (dimension === "year") {
+    const b = yearOf(value);
+    if (b) return b;
+    const masterMatch = MASTER_YEAR_KEY_VALUES.find((m) => m.toLowerCase() === v);
+    if (masterMatch) return masterMatch;
+    return value;
   }
   return value;
 }
@@ -1010,8 +1018,8 @@ export function facetNaturalRank(dimension: FilterDimension, value: string): num
     return isLessThan ? num - 0.5 : num;
   }
   if (dimension === "year") {
-    const y = parseInt(String(value), 10);
-    return Number.isFinite(y) ? y : Number.MAX_SAFE_INTEGER;
+    const idx = MASTER_YEAR_KEY_VALUES.indexOf(value);
+    return idx >= 0 ? idx : Number.MAX_SAFE_INTEGER;
   }
   return Number.NaN;
 }
