@@ -64,7 +64,6 @@ export const FILTER_DIMENSIONS = [
   "modality", // Modality
   "participants", // Participants
   "year", // Publication Year
-  "region", // Region
   "repository", // Repository
   "species", // Species
   "task", // rendered as "Advanced Keywords" (exception: positioned at the end of filter dimensions)
@@ -131,14 +130,10 @@ export const FILTER_DIMENSION_LABELS: Record<FilterDimension, string> = {
   type: "Dataset Type",
   task: "Advanced Keywords", // `task` renders as the Advanced Keywords group
   availability: "Availability",
-  region: "Region",
   format: "Data Format",
 };
 
-// All dimensions synchronized through URL params — including `region`, which
-// is a first-class filter dimension like modality/species (Issue 5: the
-// backend buildMongoQuery already handles `region`, so region checkboxes must
-// round-trip through the URL exactly like every other group).
+// All dimensions synchronized through URL params
 export const URL_DIMENSIONS: FilterDimension[] = [
   "repository",
   "modality",
@@ -152,7 +147,6 @@ export const URL_DIMENSIONS: FilterDimension[] = [
   "type",
   "task",
   "availability",
-  "region",
   "format",
 ];
 
@@ -179,7 +173,6 @@ const DIMENSION_ALIASES: Record<string, FilterDimension> = {
   repository: "repository",
   availability: "availability",
   access_tier: "availability",
-  region: "region",
 };
 
 /**
@@ -399,17 +392,6 @@ export const MASTER_YEAR_KEY_VALUES: string[] = [
   "2025+",
 ];
 
-export const MASTER_REGION_KEY_VALUES: string[] = [
-  "Amygdala",
-  "Basal Ganglia",
-  "Brainstem",
-  "Cerebellum",
-  "Cortex",
-  "Hippocampus",
-  "Prefrontal Cortex",
-  "Whole Brain",
-];
-
 export const MASTER_SPECIES_KEY_VALUES: string[] = [
   "Human",
   "Mouse",
@@ -428,7 +410,6 @@ export const STATIC_DIMENSIONS_MAP: Record<string, string[]> = {
   modality: MASTER_MODALITY_KEY_VALUES,
   participants: MASTER_PARTICIPANTS_KEY_VALUES,
   year: MASTER_YEAR_KEY_VALUES,
-  region: MASTER_REGION_KEY_VALUES,
   species: MASTER_SPECIES_KEY_VALUES,
 };
 
@@ -797,9 +778,6 @@ export function dimensionFieldSources(dataset: RawDataset, dimension: FilterDime
         ...expandStructuredValue(dataset.access_tier),
         ...expandStructuredValue(dataset.access),
       );
-      break;
-    case "region":
-      sources.push(...expandStructuredValue(dataset.region));
       break;
   }
   // Issue 4: normalize structured metadata BEFORE facet generation — split

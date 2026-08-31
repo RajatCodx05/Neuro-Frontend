@@ -432,28 +432,17 @@ function SearchResults() {
           </span>
         </div>
 
-        {/* Tabs: DATASETS | RESEARCH PAPERS */}
-        <div className="mt-4 flex gap-2">
-          <button
-            onClick={() => setActiveTab("datasets")}
-            className={`rounded-full px-4 py-1.5 text-xs font-medium ${activeTab==="datasets" ? "bg-cyan text-slate-950" : "border border-white/10 bg-white/5 text-muted-foreground"}`}
-          >
-            DATASETS {filteredResults.length ? `(${filteredResults.length})` : ""}
-          </button>
-          <button
-            onClick={() => setActiveTab("papers")}
-            className={`rounded-full px-4 py-1.5 text-xs font-medium ${activeTab==="papers" ? "bg-cyan text-slate-950" : "border border-white/10 bg-white/5 text-muted-foreground"}`}
-          >
-            RESEARCH PAPERS {literatureResults.length ? `(${literatureResults.length})` : literatureLoading ? "(...)" : ""}
-          </button>
-        </div>
-
-                  <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+        {/* Single row: X datasets found on left | Tabs on right */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
           <div>
             {streaming ? (
-              <span className="inline-flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
                 <LottieSearchLoader className="h-4 w-4" /> {loadingMessages[msgIndex]}
                 <AnimatedDots />
+              </span>
+            ) : activeTab === "papers" ? (
+              <span className="font-medium text-foreground">
+                {literatureResults.length} research papers found
               </span>
             ) : filteredResults.length > 0 ? (
               <span className="font-medium text-foreground">{filteredResults.length} datasets found</span>
@@ -462,11 +451,27 @@ function SearchResults() {
             ) : null}
           </div>
 
-          {hasActiveFilters && (
-            <button onClick={resetFilters} className="inline-flex items-center gap-1 text-xs text-cyan hover:underline">
-              <RotateCcw className="h-3 w-3" /> Clear all filters
-            </button>
-          )}
+          <div className="flex flex-wrap items-center gap-3">
+            {hasActiveFilters && (
+              <button onClick={resetFilters} className="inline-flex items-center gap-1 text-xs text-cyan hover:underline mr-1">
+                <RotateCcw className="h-3 w-3" /> Clear all filters
+              </button>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setActiveTab("datasets")}
+                className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${activeTab==="datasets" ? "bg-cyan text-slate-950 font-semibold" : "border border-white/10 bg-white/5 text-muted-foreground hover:text-foreground"}`}
+              >
+                DATASETS {filteredResults.length ? `(${filteredResults.length})` : ""}
+              </button>
+              <button
+                onClick={() => setActiveTab("papers")}
+                className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${activeTab==="papers" ? "bg-cyan text-slate-950 font-semibold" : "border border-white/10 bg-white/5 text-muted-foreground hover:text-foreground"}`}
+              >
+                RESEARCH PAPERS {literatureResults.length ? `(${literatureResults.length})` : literatureLoading ? "(...)" : ""}
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* FR-7: conflicting filter selection — never silently re-runs search. */}
