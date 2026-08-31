@@ -340,8 +340,6 @@ function parseSizeBytes(value: unknown): number | null {
 }
 
 export const MASTER_AVAILABILITY_KEY_VALUES: string[] = [
-  "Controlled",
-  "On Request",
   "Open",
   "Registered",
   "Restricted",
@@ -662,6 +660,14 @@ export function canonicalizeDimensionValue(dimension: FilterDimension, value: st
     const masterMatch = MASTER_AGE_GROUP_KEY_VALUES.find((m) => m.toLowerCase() === v);
     if (masterMatch) return masterMatch;
     return AGE_GROUP_CANONICAL_TOKENS[v] ?? value;
+  }
+  if (dimension === "availability") {
+    if (v === "open" || v === "public") return "Open";
+    if (v === "registered" || v === "account" || v === "login") return "Registered";
+    if (v === "restricted" || v === "controlled" || v === "on request" || v === "dua" || v === "approval") return "Restricted";
+    const masterMatch = MASTER_AVAILABILITY_KEY_VALUES.find((m) => m.toLowerCase() === v);
+    if (masterMatch) return masterMatch;
+    return "Restricted";
   }
   return value;
 }
