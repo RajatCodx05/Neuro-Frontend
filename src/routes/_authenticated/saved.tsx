@@ -315,7 +315,7 @@ function SavedPage() {
           </button>
           <button onClick={() => setTab("papers")}
             className={`rounded-full px-4 py-1.5 transition-colors ${tab === "papers" ? "bg-white/10 text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
-            <FileText className="mr-1.5 inline h-3.5 w-3.5" />Research Papers
+            <FileText className="mr-1.5 inline h-3.5 w-3.5" />Article/Research Paper
           </button>
           <button onClick={() => setTab("collections")}
             className={`rounded-full px-4 py-1.5 transition-colors ${tab === "collections" ? "bg-white/10 text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
@@ -407,8 +407,8 @@ function SavedPage() {
             </div>
           ) : savedPapers.length === 0 ? (
             <div className="mt-6">
-              <EmptyState icon={FileText} title="No saved research papers yet"
-                description="Bookmark research papers from search results to find them here." />
+              <EmptyState icon={FileText} title="No saved articles or research papers yet"
+                description="Bookmark articles and research papers from search results to find them here." />
             </div>
           ) : (
             <div className="mt-6 space-y-3">
