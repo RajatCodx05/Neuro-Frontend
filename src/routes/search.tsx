@@ -99,6 +99,7 @@ function SearchResults() {
   const [open, setOpen] = useState<string[]>(DEFAULT_OPEN_GROUPS);
   const [showMore, setShowMore] = useState<Set<string>>(new Set());
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [savedMap, setSavedMap] = useState<Map<string, string>>(new Map());
   const [savedPaperIds, setSavedPaperIds] = useState<Set<string>>(new Set());
   const [reactions, setReactions] = useState<Record<string, DatasetReactionSummary>>({});
   const [activeTab, setActiveTab] = useState<"datasets" | "papers">("datasets");
@@ -248,11 +249,13 @@ function SearchResults() {
   useEffect(() => {
     if (!user) {
       setSavedIds(new Set());
+      setSavedMap(new Map());
       return;
     }
     api.savedDatasets.list()
       .then((list) => {
         setSavedIds(new Set(list.map((item) => item.dataset_id)));
+        setSavedMap(new Map(list.map((item) => [item.dataset_id, item.id])));
       })
       .catch(() => {});
   }, [user]);
@@ -324,30 +327,62 @@ function SearchResults() {
     });
   };
 
-  const saveDataset = async (d: SearchResult) => {
+  const toggleSaveDataset = async (d: SearchResult) => {
     if (!user) {
       navigate({ to: "/auth", search: { redirect: "/search", mode: "login" } });
       return;
     }
-    if (savedIds.has(d.id)) {
-      toast.error("Dataset already saved");
-      return;
-    }
-    setSavedIds((prev) => {
-      const next = new Set(prev);
-      next.add(d.id);
-      return next;
-    });
-    try {
-      await api.savedDatasets.upsert({ dataset_id: d.id, dataset_snapshot: d });
-      toast.success("Saved");
-    } catch (err) {
+    const isSaved = savedIds.has(d.id);
+    if (isSaved) {
+      const savedDbId = savedMap.get(d.id);
       setSavedIds((prev) => {
         const next = new Set(prev);
         next.delete(d.id);
         return next;
       });
-      toast.error(err instanceof Error ? err.message : "Save failed");
+      setSavedMap((prev) => {
+        const next = new Map(prev);
+        next.delete(d.id);
+        return next;
+      });
+      try {
+        if (savedDbId) {
+          await api.savedDatasets.delete(savedDbId);
+        } else {
+          const list = await api.savedDatasets.list();
+          const match = list.find((s) => s.dataset_id === d.id);
+          if (match) await api.savedDatasets.delete(match.id);
+        }
+        toast.success("Removed from saved");
+      } catch (err) {
+        setSavedIds((prev) => new Set(prev).add(d.id));
+        if (savedDbId) setSavedMap((prev) => new Map(prev).set(d.id, savedDbId));
+        toast.error(err instanceof Error ? err.message : "Unsave failed");
+      }
+    } else {
+      setSavedIds((prev) => new Set(prev).add(d.id));
+      try {
+        const res = (await api.savedDatasets.upsert({
+          dataset_id: d.id,
+          dataset_snapshot: d as unknown as Record<string, unknown>,
+        })) as unknown as { id?: string; _id?: string };
+        const dbId = String(res?.id ?? res?._id ?? "");
+        if (dbId) {
+          setSavedMap((prev) => new Map(prev).set(d.id, dbId));
+        } else {
+          const list = await api.savedDatasets.list();
+          const match = list.find((s) => s.dataset_id === d.id);
+          if (match) setSavedMap((prev) => new Map(prev).set(d.id, match.id));
+        }
+        toast.success("Saved");
+      } catch (err) {
+        setSavedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(d.id);
+          return next;
+        });
+        toast.error(err instanceof Error ? err.message : "Save failed");
+      }
     }
   };
 
@@ -849,11 +884,19 @@ function SearchResults() {
                     Expand <ArrowRight className="h-3 w-3" />
                   </Link>
                   {savedIds.has(d.id) ? (
-                    <button disabled className="inline-flex items-center justify-center gap-1.5 rounded-full border border-green-500/30 px-3 py-1.5 text-xs text-green-500 bg-green-500/5 cursor-default">
+                    <button
+                      onClick={() => toggleSaveDataset(d)}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-full border border-green-500/30 px-3 py-1.5 text-xs text-green-500 bg-green-500/10 hover:bg-green-500/20 transition-colors"
+                      title="Click to unsave dataset"
+                    >
                       <Check className="h-3.5 w-3.5" /> Saved
                     </button>
                   ) : (
-                    <button onClick={() => saveDataset(d)} className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1.5 text-xs hover:bg-white/10 [.light_&]:hover:bg-black/[0.08]">
+                    <button
+                      onClick={() => toggleSaveDataset(d)}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1.5 text-xs hover:bg-white/10 [.light_&]:hover:bg-black/[0.08]"
+                      title="Save dataset"
+                    >
                       <Bookmark className="h-3.5 w-3.5" /> Save
                     </button>
                   )}
