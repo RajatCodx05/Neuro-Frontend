@@ -60,6 +60,9 @@ export const Route = createFileRoute("/search")({
   component: SearchResults,
 });
 
+// Module-level literature cache for persistent research paper results across route navigation
+const literatureCache = new Map<string, LiteratureResult[]>();
+
 function SearchResults() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -172,6 +175,7 @@ function SearchResults() {
   // v0.3 FR-1: the pipeline is invoked ONLY when (a) there is no baseline yet
   // (initial load / shareable URL reload) or (b) the query text changed
   // (submit). Filter param changes are deliberately NOT in this effect's deps.
+  // Literature lane & route-navigation caching — independent, parallel, failure isolated
   useEffect(() => {
     if (!user) return;
     const textQuery = search.q?.trim() || "";
@@ -181,13 +185,46 @@ function SearchResults() {
       if (hasBaseline || mode !== "idle") reset();
       return;
     }
+
+    const cacheKey = textQuery.toLowerCase();
+    const cached = literatureCache.get(cacheKey);
+
     if (!hasBaseline || textQuery !== originalQuery) {
       runSearch(textQuery, urlFilters);
-      // Literature lane — independent, parallel, failure isolated
+      if (cached && cached.length > 0) {
+        setLiteratureResults(cached);
+        setLiteratureLoading(false);
+        setLiteratureError(null);
+      } else {
+        setLiteratureLoading(true);
+        setLiteratureError(null);
+        api.literature.search(textQuery)
+          .then((res) => {
+            const papers = res.results ?? [];
+            if (papers.length > 0) literatureCache.set(cacheKey, papers);
+            setLiteratureResults(papers);
+          })
+          .catch((err) => {
+            setLiteratureError(err instanceof Error ? err.message : "Literature search failed");
+            setLiteratureResults([]);
+          })
+          .finally(() => setLiteratureLoading(false));
+      }
+    } else if (cached && cached.length > 0 && literatureResults.length === 0) {
+      // Re-mounted from route navigation (e.g. returning from /saved) — restore cached research papers instantly!
+      setLiteratureResults(cached);
+      setLiteratureLoading(false);
+      setLiteratureError(null);
+    } else if (!cached && literatureResults.length === 0 && textQuery !== "" && !literatureLoading && !literatureError) {
+      // Baseline restored but literature cache missing (e.g. hard reload) — fetch research papers
       setLiteratureLoading(true);
       setLiteratureError(null);
       api.literature.search(textQuery)
-        .then((res) => setLiteratureResults(res.results ?? []))
+        .then((res) => {
+          const papers = res.results ?? [];
+          if (papers.length > 0) literatureCache.set(cacheKey, papers);
+          setLiteratureResults(papers);
+        })
         .catch((err) => {
           setLiteratureError(err instanceof Error ? err.message : "Literature search failed");
           setLiteratureResults([]);
@@ -195,7 +232,7 @@ function SearchResults() {
         .finally(() => setLiteratureLoading(false));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.q, user, hasBaseline, originalQuery, mode, runSearch, reset]);
+  }, [search.q, user, hasBaseline, originalQuery, mode, runSearch, reset, literatureResults.length]);
 
   // Surface pipeline failures the same way the previous debounced effect did.
   useEffect(() => {
