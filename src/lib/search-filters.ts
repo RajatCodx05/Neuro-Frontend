@@ -293,6 +293,7 @@ export const MASTER_AGE_GROUP_KEY_VALUES: string[] = [
   "Child",
   "Pediatric",
   "Senior",
+  "Unspecified",
 ];
 
 /** Participants bucket for a subject count (null when the count is absent/invalid). */
@@ -336,6 +337,7 @@ export const MASTER_AVAILABILITY_KEY_VALUES: string[] = [
   "Open",
   "Registered",
   "Restricted",
+  "Unspecified",
 ];
 
 export const MASTER_SIZE_KEY_VALUES: string[] = [
@@ -343,6 +345,7 @@ export const MASTER_SIZE_KEY_VALUES: string[] = [
   "10–100 GB",
   "100–500 GB",
   "500 GB+",
+  "Unspecified",
 ];
 
 export const MASTER_TYPE_KEY_VALUES: string[] = [
@@ -351,6 +354,7 @@ export const MASTER_TYPE_KEY_VALUES: string[] = [
   "Derived Data",
   "Processed Data",
   "Raw Data",
+  "Unspecified",
 ];
 
 export const MASTER_LICENSE_KEY_VALUES: string[] = [
@@ -361,6 +365,7 @@ export const MASTER_LICENSE_KEY_VALUES: string[] = [
   "CC-BY-SA-4.0",
   "Open Data",
   "PDDL",
+  "Unspecified",
 ];
 
 export const MASTER_MODALITY_KEY_VALUES: string[] = [
@@ -372,6 +377,7 @@ export const MASTER_MODALITY_KEY_VALUES: string[] = [
   "MRI",
   "PET",
   "sMRI",
+  "Unspecified",
 ];
 
 export const MASTER_PARTICIPANTS_KEY_VALUES: string[] = [
@@ -379,6 +385,7 @@ export const MASTER_PARTICIPANTS_KEY_VALUES: string[] = [
   "26–50",
   "50–100",
   "100+",
+  "Unspecified",
 ];
 
 export const MASTER_YEAR_KEY_VALUES: string[] = [
@@ -390,6 +397,7 @@ export const MASTER_YEAR_KEY_VALUES: string[] = [
   "2024",
   "2025",
   "2025+",
+  "Unspecified",
 ];
 
 export const MASTER_SPECIES_KEY_VALUES: string[] = [
@@ -398,33 +406,19 @@ export const MASTER_SPECIES_KEY_VALUES: string[] = [
   "Non-Human Primate",
   "Other",
   "Rat",
+  "Unspecified",
 ];
 
 export const MASTER_DISEASE_KEY_VALUES: string[] = [
   "ADHD",
   "Alzheimer's",
-  "Amyotrophic lateral sclerosis",
-  "Anxiety",
   "Autism",
   "Bipolar",
-  "Chronic pain",
-  "COVID-19",
-  "Dementia",
-  "Depression",
-  "Diabetes",
   "Epilepsy",
   "Healthy",
-  "Huntington's",
-  "Insomnia",
-  "Migraine",
-  "Mild cognitive impairment",
-  "Multiple sclerosis",
-  "Obesity",
   "Parkinson's",
   "Schizophrenia",
-  "Stroke",
-  "Tinnitus",
-  "Traumatic brain injury",
+  "Unspecified",
 ];
 
 /** Map of static filter dimensions to their pre-seeded master options. Repository is excluded so it remains dynamic. */
@@ -597,6 +591,14 @@ const DISEASE_CANONICAL_TOKENS: Record<string, string> = {
   "chronic pain": "Chronic pain",
   "neuropathic pain": "Chronic pain",
   fibromyalgia: "Chronic pain",
+  healthy: "Healthy",
+  health: "Healthy",
+  "healthy control": "Healthy",
+  "healthy controls": "Healthy",
+  "normal control": "Healthy",
+  "normal controls": "Healthy",
+  control: "Healthy",
+  controls: "Healthy",
 };
 
 const AGE_GROUP_CANONICAL_TOKENS: Record<string, string> = {
@@ -832,6 +834,16 @@ function anyValueMatches(
   requested: string,
   declaredValues: string[],
 ): boolean {
+  if (requested.trim().toLowerCase() === "unspecified") {
+    return (
+      declaredValues.length === 0 ||
+      declaredValues.every(
+        (v) =>
+          NONE_LITERALS.has(String(v).toLowerCase()) ||
+          String(v).trim().toLowerCase() === "unspecified",
+      )
+    );
+  }
   return declaredValues.some((declared) => valuePairMatches(dimension, requested, declared));
 }
 
@@ -929,6 +941,7 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
         if (key && !candidates.has(key)) candidates.set(key, String(value).trim());
       }
     }
+    candidates.set("unspecified", "Unspecified");
     if (candidates.size === 0) continue;
     // Display labels (first-seen casing, preserved exactly like before).
     const labels = [...candidates.values()];
@@ -940,7 +953,6 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
     for (let i = 0; i < pool.length; i++) {
       if (!eligible[i]) continue;
       const values = datasetValues[i][di];
-      if (values.length === 0) continue;
       for (const label of labels) {
         if (anyValueMatches(dimension, label, values)) {
           counts.set(label, (counts.get(label) ?? 0) + 1);
@@ -951,7 +963,7 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
     const list: FacetValue[] = [];
     for (const label of labels) {
       const count = counts.get(label);
-      if (STATIC_DIMENSIONS_MAP[dimension]) {
+      if (STATIC_DIMENSIONS_MAP[dimension] || label.toLowerCase() === "unspecified") {
         list.push({ value: label, count: count ?? 0 });
       } else {
         if (count !== undefined) list.push({ value: label, count });
@@ -974,6 +986,8 @@ export function getFacetSortLabel(dimension: FilterDimension, value: string): st
 /** Sort facet values alphabetically by their user-visible display label (preserving numeric rank for buckets/years). */
 export function sortFacetValues(dimension: FilterDimension, list: FacetValue[]): FacetValue[] {
   return list.sort((a, b) => {
+    if (a.value.trim().toLowerCase() === "unspecified") return 1;
+    if (b.value.trim().toLowerCase() === "unspecified") return -1;
     const ra = facetNaturalRank(dimension, a.value);
     const rb = facetNaturalRank(dimension, b.value);
     if (Number.isFinite(ra) && Number.isFinite(rb) && ra !== rb) return ra - rb;
