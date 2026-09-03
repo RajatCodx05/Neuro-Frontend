@@ -320,14 +320,11 @@ export function SearchProvider({ children }: { children: ReactNode }) {
     return { appliedFilters: applied, conflict: foundConflict };
   }, [activeFilters, baselineFilters, parsedIntent]);
 
-  // Parser pre-selection (FR-8) for the facet checkboxes — display ONLY. The
-  // pool is already filtered by the parser, so these values must never filter
-  // again; they only pre-tick checkboxes. `overrides` (Issue 3) suppresses the
-  // parser's value on any dimension the user touched, so the user's choice
-  // always wins until a new search re-applies parser intent.
+  // Checkbox display state reflects ONLY explicit user selections (activeFilters).
+  // Search query intent (parsedIntent) drives backend retrieval but MUST NOT auto-check checkboxes.
   const displayFilters = useMemo(
-    () => mergeFilters(activeFilters, parsedIntent, overrides),
-    [activeFilters, parsedIntent, overrides],
+    () => activeFilters,
+    [activeFilters],
   );
 
   /** Record a user interaction on `dimension` so parser pre-selection stops applying to it (Issue 3). */

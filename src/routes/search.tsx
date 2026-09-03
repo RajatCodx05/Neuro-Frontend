@@ -620,9 +620,11 @@ function SearchResults() {
                   const selectedRaw = displayFilters[dim] ?? [];
                   const selected = selectedRaw.map((v) => canonicalizeDimensionValue(dim, v));
                   const options = [...groupFacets];
-                  for (const v of selected) {
-                    if (!options.some((o) => o.value.toLowerCase() === v.toLowerCase())) {
-                      options.push({ value: v, count: 0 });
+                  if (!STATIC_DIMENSIONS_MAP[dim]) {
+                    for (const v of selected) {
+                      if (!options.some((o) => o.value.toLowerCase() === v.toLowerCase())) {
+                        options.push({ value: v, count: 0 });
+                      }
                     }
                   }
                   sortFacetValues(dim, options);

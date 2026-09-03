@@ -32,6 +32,8 @@ import {
 import {
   computeFacets,
   applyFilters,
+  canonicalizeDimensionValue,
+  normalizeDimensions,
   MASTER_MODALITY_KEY_VALUES,
   MASTER_DISEASE_KEY_VALUES,
   MASTER_SPECIES_KEY_VALUES,
@@ -352,5 +354,43 @@ describe('Master key lists match canonical bucket constants', () => {
     expect(MASTER_SPECIES_KEY_VALUES).toContain('Animal');
     expect(MASTER_SPECIES_KEY_VALUES).not.toContain('Mouse');
     expect(MASTER_SPECIES_KEY_VALUES).not.toContain('Rat');
+  });
+});
+
+describe('Focused UI contract fixes (A-F)', () => {
+  it('A. fMRI canonicalizes to MRI (never fMRI UI option)', () => {
+    expect(canonicalizeDimensionValue('modality', 'fMRI')).toBe('MRI');
+    expect(canonicalizeDimensionValue('modality', 'fmri')).toBe('MRI');
+    expect(canonicalizeDimensionValue('modality', 'functional mri')).toBe('MRI');
+  });
+
+  it('B. sMRI canonicalizes to MRI', () => {
+    expect(canonicalizeDimensionValue('modality', 'sMRI')).toBe('MRI');
+    expect(canonicalizeDimensionValue('modality', 'smri')).toBe('MRI');
+    expect(canonicalizeDimensionValue('modality', 'dti')).toBe('MRI');
+  });
+
+  it('C. Disease query "seizure disorders" canonicalizes to Others (never Seizure disorders option)', () => {
+    expect(canonicalizeDimensionValue('disease', 'seizure disorders')).toBe('Others');
+    expect(canonicalizeDimensionValue('disease', 'seizure disorder')).toBe('Others');
+  });
+
+  it('D. Unknown disease "migraine" canonicalizes to Others', () => {
+    expect(canonicalizeDimensionValue('disease', 'migraine')).toBe('Others');
+    expect(canonicalizeDimensionValue('disease', 'stroke')).toBe('Others');
+    expect(canonicalizeDimensionValue('disease', 'multiple sclerosis')).toBe('Others');
+  });
+
+  it('E. Canonical 8 diseases map to exact canonical strings', () => {
+    expect(canonicalizeDimensionValue('disease', 'epilepsy')).toBe('Epilepsy');
+    expect(canonicalizeDimensionValue('disease', 'alzheimers')).toBe("Alzheimer's");
+    expect(canonicalizeDimensionValue('disease', 'adhd')).toBe('ADHD');
+  });
+
+  it('F. Multi-condition query intent does not create unmapped options', () => {
+    const rawParsed = { modality: ['EEG'], condition: ['epilepsy', "Alzheimer's disease"] };
+    const normalized = normalizeDimensions(rawParsed);
+    expect(normalized.modality).toEqual(['EEG']);
+    expect(normalized.disease).toEqual(['Epilepsy', "Alzheimer's"]);
   });
 });

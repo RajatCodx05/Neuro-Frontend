@@ -453,44 +453,43 @@ function dedupeValues(values: string[]): string[] {
  * one facet value, exactly like the synonym families already used for matching.
  */
 const MODALITY_CANONICAL_TOKENS: Record<string, string> = {
-  meg: "meg",
-  magnetoencephalography: "meg",
-  magnetoencephalogram: "meg",
-  eeg: "eeg",
-  electroencephalography: "eeg",
-  electroencephalogram: "eeg",
-  ieeg: "ieeg",
-  "intracranial eeg": "ieeg",
-  "intracranial electroencephalography": "ieeg",
-  ecog: "ecog",
-  electrocorticography: "ecog",
-  mri: "mri",
-  "magnetic resonance imaging": "mri",
-  fmri: "fmri",
-  "functional mri": "fmri",
-  "functional magnetic resonance imaging": "fmri",
-  smri: "smri",
-  "structural mri": "smri",
-  "structural magnetic resonance imaging": "smri",
-  "t1-weighted": "smri",
-  "t2-weighted": "smri",
-  pet: "pet",
-  "positron emission tomography": "pet",
-  dti: "dti",
-  "diffusion tensor imaging": "dti",
-  "diffusion-weighted imaging": "dti",
-  "diffusion mri": "dti",
-  nirs: "nirs",
-  "near-infrared spectroscopy": "nirs",
-  fnirs: "fnirs",
-  "functional near-infrared spectroscopy": "fnirs",
+  meg: "MEG",
+  magnetoencephalography: "MEG",
+  magnetoencephalogram: "MEG",
+  eeg: "EEG",
+  electroencephalography: "EEG",
+  electroencephalogram: "EEG",
+  ieeg: "IEEG",
+  "intracranial eeg": "IEEG",
+  "intracranial electroencephalography": "IEEG",
+  ecog: "IEEG",
+  electrocorticography: "IEEG",
+  seeg: "IEEG",
+  mri: "MRI",
+  "magnetic resonance imaging": "MRI",
+  fmri: "MRI",
+  "functional mri": "MRI",
+  "functional magnetic resonance imaging": "MRI",
+  smri: "MRI",
+  "structural mri": "MRI",
+  "structural magnetic resonance imaging": "MRI",
+  "t1-weighted": "MRI",
+  "t2-weighted": "MRI",
+  pet: "PET",
+  "positron emission tomography": "PET",
+  dti: "MRI",
+  "diffusion tensor imaging": "MRI",
+  "diffusion-weighted imaging": "MRI",
+  "diffusion mri": "MRI",
+  nirs: "fNIRS",
+  "near-infrared spectroscopy": "fNIRS",
+  fnirs: "fNIRS",
+  "functional near-infrared spectroscopy": "fNIRS",
 };
 
 /**
- * Issue 4 — canonical disease label for a raw value (token -> "alzheimer",
- * "parkinson", …). Mirrors DISEASE_TERMS (Neuro-Agents/app/data/vocab.py) so
- * "Alzheimer", "Alzheimer's", "Alzheimer's disease" all collapse onto one
- * facet value instead of appearing as three separate facets.
+ * Canonical disease tokens (M7): maps variant labels onto the 8 canonical disease buckets.
+ * Non-canonical diseases ("stroke", "migraine", "seizure disorder") map to "Others".
  */
 const DISEASE_CANONICAL_TOKENS: Record<string, string> = {
   parkinson: "Parkinson's",
@@ -498,74 +497,38 @@ const DISEASE_CANONICAL_TOKENS: Record<string, string> = {
   parkinsons: "Parkinson's",
   "parkinson disease": "Parkinson's",
   "parkinson's disease": "Parkinson's",
+
   alzheimer: "Alzheimer's",
   "alzheimer's": "Alzheimer's",
   alzheimers: "Alzheimer's",
   "alzheimer disease": "Alzheimer's",
   "alzheimer's disease": "Alzheimer's",
-  "mild cognitive impairment": "Mild cognitive impairment",
-  "cognitive impairment": "Mild cognitive impairment",
-  dementia: "Dementia",
-  demented: "Dementia",
-  "lewy body": "Dementia",
+
   adhd: "ADHD",
   "attention deficit hyperactivity disorder": "ADHD",
   "attention deficit disorder": "ADHD",
+  add: "ADHD",
+
   schizophrenia: "Schizophrenia",
   schizophrenic: "Schizophrenia",
   psychosis: "Schizophrenia",
   psychotic: "Schizophrenia",
+
   bipolar: "Bipolar",
   "bipolar disorder": "Bipolar",
   "manic depression": "Bipolar",
-  depression: "Depression",
-  depressive: "Depression",
-  "major depressive disorder": "Depression",
-  mdd: "Depression",
-  anxiety: "Anxiety",
-  anxious: "Anxiety",
-  "generalized anxiety": "Anxiety",
+
   autism: "Autism",
   autistic: "Autism",
   asd: "Autism",
   "autism spectrum disorder": "Autism",
+
   epilepsy: "Epilepsy",
   epileptic: "Epilepsy",
   epileptiform: "Epilepsy",
   seizure: "Epilepsy",
   seizures: "Epilepsy",
-  "multiple sclerosis": "Multiple sclerosis",
-  "amyotrophic lateral sclerosis": "Amyotrophic lateral sclerosis",
-  huntington: "Huntington's",
-  "huntington's": "Huntington's",
-  huntingtons: "Huntington's",
-  "huntington disease": "Huntington's",
-  stroke: "Stroke",
-  strokes: "Stroke",
-  "ischemic stroke": "Stroke",
-  "cerebrovascular accident": "Stroke",
-  "traumatic brain injury": "Traumatic brain injury",
-  "head injury": "Traumatic brain injury",
-  concussion: "Traumatic brain injury",
-  migraine: "Migraine",
-  migraines: "Migraine",
-  insomnia: "Insomnia",
-  "sleep disorder": "Insomnia",
-  "sleep disorders": "Insomnia",
-  obesity: "Obesity",
-  obese: "Obesity",
-  diabetes: "Diabetes",
-  diabetic: "Diabetes",
-  "type 2 diabetes": "Diabetes",
-  "type 1 diabetes": "Diabetes",
-  covid: "COVID-19",
-  "covid-19": "COVID-19",
-  "sars-cov-2": "COVID-19",
-  coronavirus: "COVID-19",
-  tinnitus: "Tinnitus",
-  "chronic pain": "Chronic pain",
-  "neuropathic pain": "Chronic pain",
-  fibromyalgia: "Chronic pain",
+
   healthy: "Healthy",
   health: "Healthy",
   "healthy control": "Healthy",
@@ -602,19 +565,29 @@ const AGE_GROUP_CANONICAL_TOKENS: Record<string, string> = {
 };
 
 /**
- * Issue 4 — canonicalize a single structured value onto its dimension's
- * canonical label when it matches a vocabulary token; otherwise unchanged.
+ * Canonicalize a single raw metadata/query string onto its dimension's canonical label.
+ * Modality: fMRI/sMRI/DTI → MRI (exactly 7 buckets).
+ * Disease: 8 canonical diseases → canonical bucket; non-canonical real diseases → Others; missing → Unspecified.
  */
 export function canonicalizeDimensionValue(dimension: FilterDimension, value: string): string {
-  const v = String(value ?? "")
-    .trim()
-    .toLowerCase();
-  if (!v) return value;
-  if (dimension === "modality") return MODALITY_CANONICAL_TOKENS[v] ?? value;
+  const v = String(value ?? "").trim().toLowerCase();
+  if (!v || NONE_LITERALS.has(v)) return "Unspecified";
+
+  if (dimension === "modality") {
+    return MODALITY_CANONICAL_TOKENS[v] ?? "MRI";
+  }
   if (dimension === "disease") {
     const masterMatch = MASTER_DISEASE_KEY_VALUES.find((m) => m.toLowerCase() === v);
     if (masterMatch) return masterMatch;
-    return DISEASE_CANONICAL_TOKENS[v] ?? value;
+    return DISEASE_CANONICAL_TOKENS[v] ?? "Others";
+  }
+  if (dimension === "species") {
+    const masterMatch = MASTER_SPECIES_KEY_VALUES.find((m) => m.toLowerCase() === v);
+    if (masterMatch) return masterMatch;
+    if (["human", "humans", "homo sapiens", "patient", "patients", "subject", "subjects", "adult", "adults", "child", "children"].some((t) => v.includes(t))) {
+      return "Human";
+    }
+    return "Animal";
   }
   if (dimension === "ageGroup") {
     const masterMatch = MASTER_AGE_GROUP_KEY_VALUES.find((m) => m.toLowerCase() === v);
