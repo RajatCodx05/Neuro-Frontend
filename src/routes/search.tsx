@@ -12,6 +12,7 @@ import { useSearchState } from "@/lib/search-state";
 import {
   FILTER_DIMENSIONS,
   FILTER_DIMENSION_LABELS,
+  STATIC_DIMENSIONS_MAP,
   PAGE_SIZE,
   canonicalizeDimensionValue,
   facetDisplayLabel,
