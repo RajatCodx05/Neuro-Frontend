@@ -1,73 +1,61 @@
+import {
+  classifyModality,
+  classifyDisease,
+  classifySpecies,
+  classifyYear,
+  classifyParticipants,
+  classifySize,
+} from "./filter-classifications";
+
 /**
- * search-filters.ts — the SINGLE filtering engine (v0.3 §8.5 / FR-3 / G9).
+ * search-filters.ts — the SINGLE filtering engine (v0.4 / M1–M7).
  *
  * Search ≠ Filter. The AI pipeline runs once per query and produces an
  * immutable ranked baseline pool of raw dataset records. Every filter
  * interaction (checkbox toggle, facet click, clear) is a pure, synchronous
  * client-side operation over that pool. There is exactly ONE matching
- * implementation in the frontend: the functions below. The same predicate
- * (`matchesFilter`) drives both filtered result lists and dynamic facet
- * counts, so "EEG (18)" always means exactly 18 datasets (G3 by construction).
+ * implementation in the frontend: the functions below.
  *
- * Matching semantics mirror the backend `buildMongoQuery` (dataset.service.js):
- * case-insensitive substring matching over the dataset's structured fields,
- * operating on already-retrieved documents instead of MongoDB. On top of that
- * the engine reuses the codebase's existing MODALITY_SYNONYMS modality
- * families (Python connectors/base.py, Node rankingEngine.js) so coarse
- * repository-native values (`mri`) match precise parser terms (`fMRI`) and
- * vice versa — the same semantic matching the ranking engine already uses.
- *
- * NOTE: unlike the backend's Mongo query (which additionally scans
- * title/description free text), this engine deliberately reads structured
- * metadata fields only — the backend's broad matching happens once when the
- * ranked pool is produced, and must not be re-applied with a narrower engine
- * against the same pool (see search-state.tsx baseline filter diffing).
- *
- * Canonical dimension → structured metadata fields ONLY. Free-text content
- * (title, description, abstract, rendered HTML) NEVER generates facet values
- * or filter options — facet values must be canonical metadata so that a facet
- * click filters the exact same value set it was counted from (Issues 2 & 4).
- * `keywords` is a structured metadata array on the dataset document (not free
- * text), so it remains a valid source for task/format/disease.
+ * Partition invariant (M2–M7): SUM(bucket counts for dimension D) === eligible
+ * pool size. Each dataset maps to EXACTLY ONE bucket per dimension, enforced
+ * by delegating to filter-classifications.ts classifiers that always return a
+ * single canonical string. The facet counter uses exclusive single-bucket
+ * assignment (not multi-value anyValueMatches) so double-counting is
+ * structurally impossible.
  *
  *   repository   → source
- *   modality     → modality[]
- *   disease      → disease + keywords[]        (parser may emit `condition`)
- *   species      → species[]
- *   ageGroup     → age_group[] / age_range[]   (parser may emit `age_range`)
- *   year         → published_at / publication_year / date_published
- *                 (parsed to a 4-digit year; ABSENT records contribute nothing —
- *                  the group auto-hides when no publication date survives)
- *   participants → subject_count bucketed (1–25 / 26–50 / 51–100 / 101–250 / 251+)
- *   size         → size_bytes / size_label bucketed (<10 / 10–100 / 100–500 / 500+ GB)
+ *   modality     → modality[]  (M2: MRI|EEG|IEEG|PET|MEG|fNIRS|Unspecified, IEEG>EEG)
+ *   disease      → disease+keywords[]  (M7: 8 canonical|Others|Unspecified)
+ *   species      → species[]  (M5: Human|Animal|Unspecified)
+ *   ageGroup     → age_group[]/age_range[]
+ *   year         → published_at/publication_year/date_published
+ *                  (M4: Before 2020|2020–2022|2023–2025|2026+|Unspecified)
+ *   participants → subject_count  (M6: 1–25|26–50|51–100|101+|Unspecified)
+ *   size         → size_bytes/size_label  (M3: <10 GB|10–100 GB|100–500 GB|500 GB+|Unspecified)
  *   license      → license
- *   type         → dataset_type / data_type (not populated by current metadata →
- *                 the group auto-hides)
- *   task         → keywords[]  (rendered as the single "Advanced Keywords" group;
- *                 `format` is byte-identical and kept for URL backward compat)
+ *   task         → keywords[]  ("Advanced Keywords" group)
  *   availability → access_tier
  *   region       → region
+ *
+ * M1: Dataset Type filter has been removed entirely.
+ * M3/M4/M6: size/year/participants now also apply as backend MongoDB predicates.
  */
 
-// FIXED filter categories + dynamic values (v0.4 filter redesign): the group
-// list and its order NEVER change; only the values/counts change per result
-// set. Advanced Keywords (`task`, sourced from the structured `keywords`
-// array — `format` reads the identical array and is kept only so pre-existing
-// `format=` URLs keep filtering) is collapsed by default in the UI.
+// FIXED filter categories + dynamic values (v0.4 / M1–M7):
+// M1: Dataset Type has been removed. All other groups remain in fixed order.
 export const FILTER_DIMENSIONS = [
-  "ageGroup", // Age Group
-  "availability", // Availability
-  "size", // Dataset Size
-  "type", // Dataset Type
-  "disease", // Disease / Condition
-  "license", // License
-  "modality", // Modality
-  "participants", // Participants
-  "year", // Publication Year
-  "repository", // Repository
-  "species", // Species
-  "task", // rendered as "Advanced Keywords" (exception: positioned at the end of filter dimensions)
-  "format", // Data Format (hidden from sidebar; URL backward compatibility)
+  "ageGroup",      // Age Group
+  "availability",  // Availability
+  "size",          // Dataset Size          (M3: backend-connected)
+  "disease",       // Disease / Condition   (M7: +Others+Unspecified)
+  "license",       // License
+  "modality",      // Modality              (M2: 7 buckets)
+  "participants",  // Participants          (M6: backend-connected)
+  "year",          // Publication Year      (M4: backend-connected, 2026+)
+  "repository",    // Repository
+  "species",       // Species               (M5: 3 buckets)
+  "task",          // Advanced Keywords
+  "format",        // Data Format (hidden; URL backward compat)
 ] as const;
 
 export type FilterDimension = (typeof FILTER_DIMENSIONS)[number];
@@ -95,12 +83,11 @@ export const LOW_WATERMARK = 3;
  * baseline-exclusion in search-state can never drop them — they always apply
  * locally, even when present in the URL at initial load).
  */
+// ponytail: M3/M4/M6 promote size/year/participants to backend-aware.
+// They still work client-side over the pool but are no longer stripped
+// from the search payload → backend builds Mongo predicates for them.
 export const CLIENT_ONLY_FILTER_DIMENSIONS = new Set<FilterDimension>([
-  "year",
-  "participants",
-  "size",
   "license",
-  "type",
 ]);
 
 /**
@@ -109,12 +96,15 @@ export const CLIENT_ONLY_FILTER_DIMENSIONS = new Set<FilterDimension>([
  * matching is exact (case/punctuation-insensitive) — substring semantics
  * would over-count (e.g. "1–25" is a substring of "101–250").
  */
+// ponytail: all bucket dimensions use exact match (substring would over-count).
 const EXACT_MATCH_DIMENSIONS = new Set<FilterDimension>([
   "year",
   "participants",
   "size",
   "license",
-  "type",
+  "modality",
+  "species",
+  "disease",
 ]);
 
 export const FILTER_DIMENSION_LABELS: Record<FilterDimension, string> = {
@@ -127,13 +117,12 @@ export const FILTER_DIMENSION_LABELS: Record<FilterDimension, string> = {
   participants: "Participants",
   size: "Dataset Size",
   license: "License",
-  type: "Dataset Type",
-  task: "Advanced Keywords", // `task` renders as the Advanced Keywords group
+  task: "Advanced Keywords",
   availability: "Availability",
   format: "Data Format",
 };
 
-// All dimensions synchronized through URL params
+// All dimensions synchronized through URL params (M1: type removed)
 export const URL_DIMENSIONS: FilterDimension[] = [
   "repository",
   "modality",
@@ -144,13 +133,12 @@ export const URL_DIMENSIONS: FilterDimension[] = [
   "participants",
   "size",
   "license",
-  "type",
   "task",
   "availability",
   "format",
 ];
 
-/** Parser/UI key → canonical dimension (FR-5). `keywords`/`raw_query` are ignored. */
+/** Parser/UI key → canonical dimension (FR-5). `keywords`/`raw_query` are ignored. M1: type/dataset_type removed. */
 const DIMENSION_ALIASES: Record<string, FilterDimension> = {
   modality: "modality",
   disease: "disease",
@@ -166,8 +154,6 @@ const DIMENSION_ALIASES: Record<string, FilterDimension> = {
   size: "size",
   dataset_size: "size",
   license: "license",
-  type: "type",
-  dataset_type: "type",
   task: "task",
   format: "format",
   repository: "repository",
@@ -175,10 +161,9 @@ const DIMENSION_ALIASES: Record<string, FilterDimension> = {
   access_tier: "availability",
 };
 
-/**
- * Modality synonym families — mirrored from rankingEngine.js /
- * Neuro-Agents connectors/base.py (stabilization Phase 2/6).
- */
+// ponytail: MODALITY_SYNONYMS kept for backward compat with any remaining
+// non-facet uses (rankingEngine parity). Facet counting no longer uses it —
+// classifyModality() in filter-classifications.ts is the authority.
 const MODALITY_SYNONYMS: Record<string, Set<string>> = {
   fmri: new Set(["fmri", "mri", "functional mri", "functional magnetic resonance imaging"]),
   smri: new Set(["smri", "mri", "structural mri", "structural magnetic resonance imaging"]),
@@ -194,12 +179,8 @@ const MODALITY_SYNONYMS: Record<string, Set<string>> = {
 };
 
 function modalityOverlap(requested: string, declared: string): boolean {
-  const r = String(requested || "")
-    .trim()
-    .toLowerCase();
-  const d = String(declared || "")
-    .trim()
-    .toLowerCase();
+  const r = String(requested || "").trim().toLowerCase();
+  const d = String(declared || "").trim().toLowerCase();
   if (!r || !d) return false;
   if (r === d) return true;
   const famR = MODALITY_SYNONYMS[r];
@@ -296,13 +277,16 @@ export const MASTER_AGE_GROUP_KEY_VALUES: string[] = [
   "Unspecified",
 ];
 
-/** Participants bucket for a subject count (null when the count is absent/invalid). */
+/**
+ * @deprecated Use classifyParticipants from filter-classifications.ts.
+ * Kept only for any callers outside the facet engine.
+ */
 export function participantsBucket(count: number): string | null {
   if (count === null || count < 1) return null;
-  if (count <= 25) return "1–25";
-  if (count < 50) return "26–50";
-  if (count <= 100) return "50–100";
-  return "100+";
+  if (count <= 25)  return "1–25";
+  if (count <= 50)  return "26–50";
+  if (count <= 100) return "51–100";
+  return "101+";
 }
 
 const SIZE_UNIT_MULTIPLIER: Record<string, number> = {
@@ -340,6 +324,7 @@ export const MASTER_AVAILABILITY_KEY_VALUES: string[] = [
   "Unspecified",
 ];
 
+// M3: Size — 5 static buckets
 export const MASTER_SIZE_KEY_VALUES: string[] = [
   "<10 GB",
   "10–100 GB",
@@ -348,14 +333,7 @@ export const MASTER_SIZE_KEY_VALUES: string[] = [
   "Unspecified",
 ];
 
-export const MASTER_TYPE_KEY_VALUES: string[] = [
-  "Clinical Data",
-  "Code & Analysis",
-  "Derived Data",
-  "Processed Data",
-  "Raw Data",
-  "Unspecified",
-];
+// M1: MASTER_TYPE_KEY_VALUES removed.
 
 export const MASTER_LICENSE_KEY_VALUES: string[] = [
   "CC0",
@@ -368,47 +346,43 @@ export const MASTER_LICENSE_KEY_VALUES: string[] = [
   "Unspecified",
 ];
 
+// M2: 7 canonical modality buckets (MRI subsumes fMRI/sMRI/DTI/diffusion)
 export const MASTER_MODALITY_KEY_VALUES: string[] = [
-  "EEG",
-  "fMRI",
-  "fNIRS",
-  "iEEG",
-  "MEG",
   "MRI",
+  "EEG",
+  "IEEG",
   "PET",
-  "sMRI",
+  "MEG",
+  "fNIRS",
   "Unspecified",
 ];
 
+// M6: non-overlapping participant buckets (51–100 not 50–100; 101+ not 100+)
 export const MASTER_PARTICIPANTS_KEY_VALUES: string[] = [
   "1–25",
   "26–50",
-  "50–100",
-  "100+",
+  "51–100",
+  "101+",
   "Unspecified",
 ];
 
+// M4: 5 static year buckets, year>=2026 → "2026+"
 export const MASTER_YEAR_KEY_VALUES: string[] = [
   "Before 2020",
-  "2020",
-  "2021",
-  "2022",
-  "2023",
-  "2024",
-  "2025",
-  "2025+",
+  "2020–2022",
+  "2023–2025",
+  "2026+",
   "Unspecified",
 ];
 
+// M5: 3 species buckets
 export const MASTER_SPECIES_KEY_VALUES: string[] = [
   "Human",
-  "Mouse",
-  "Non-Human Primate",
-  "Other",
-  "Rat",
+  "Animal",
   "Unspecified",
 ];
 
+// M7: 8 canonical + Others + Unspecified
 export const MASTER_DISEASE_KEY_VALUES: string[] = [
   "ADHD",
   "Alzheimer's",
@@ -418,15 +392,15 @@ export const MASTER_DISEASE_KEY_VALUES: string[] = [
   "Healthy",
   "Parkinson's",
   "Schizophrenia",
+  "Others",
   "Unspecified",
 ];
 
-/** Map of static filter dimensions to their pre-seeded master options. Repository is excluded so it remains dynamic. */
+/** Map of static filter dimensions to their pre-seeded master options. Repository excluded (dynamic). M1: type removed. */
 export const STATIC_DIMENSIONS_MAP: Record<string, string[]> = {
   ageGroup: MASTER_AGE_GROUP_KEY_VALUES,
   availability: MASTER_AVAILABILITY_KEY_VALUES,
   size: MASTER_SIZE_KEY_VALUES,
-  type: MASTER_TYPE_KEY_VALUES,
   license: MASTER_LICENSE_KEY_VALUES,
   modality: MASTER_MODALITY_KEY_VALUES,
   participants: MASTER_PARTICIPANTS_KEY_VALUES,
@@ -435,16 +409,16 @@ export const STATIC_DIMENSIONS_MAP: Record<string, string[]> = {
   disease: MASTER_DISEASE_KEY_VALUES,
 };
 
-/** Dataset size bucket label for a byte count. */
+/** @deprecated Use classifySize from filter-classifications.ts. */
 export function sizeBucketLabel(bytes: number): string {
   const gb = bytes / 1024 ** 3;
-  if (gb < 10) return "<10 GB";
+  if (gb < 10)   return "<10 GB";
   if (gb <= 100) return "10–100 GB";
   if (gb <= 500) return "100–500 GB";
   return "500 GB+";
 }
 
-/** Map a raw publication date/year string to a standardized year bucket label (null when absent). */
+// ponytail: yearOf kept for canonicalizeDimensionValue backward compat.
 function yearOf(value: string): string | null {
   const s = String(value ?? "").trim();
   if (!s) return null;
@@ -452,9 +426,10 @@ function yearOf(value: string): string | null {
   if (!m) return null;
   const y = parseInt(m[1], 10);
   if (y < 1900 || y > 2100) return null;
-  if (y < 2020) return "Before 2020";
-  if (y > 2025) return "2025+";
-  return String(y);
+  if (y < 2020)  return "Before 2020";
+  if (y <= 2022) return "2020–2022";
+  if (y <= 2025) return "2023–2025";
+  return "2026+"; // y >= 2026
 }
 
 /** Dedupe a value list case-insensitively, keeping first-seen casing. */
@@ -664,130 +639,96 @@ export function canonicalizeDimensionValue(dimension: FilterDimension, value: st
   return value;
 }
 
+
 /**
- * The dataset's candidate values for a canonical dimension (§8.5 mapping).
+ * The dataset's canonical bucket for a dimension (M2–M7 single-bucket rule).
  *
- * Structured metadata ONLY (Issue 4): facet/filter options must never be
- * tokenized out of free-text content. `task`/`format` are read exclusively
- * from the structured `keywords` array — title/description (which can be HTML
- * or prose) are no longer sources for facet values (Issue 2).
+ * For bucket dimensions (modality/disease/species/year/participants/size) this
+ * returns exactly [bucket] — one element guaranteed — so the facet counter can
+ * use exclusive assignment and SUM(counts) === eligible pool size by construction.
+ *
+ * For non-bucket dimensions (repository/task/format/ageGroup/availability/license)
+ * the original multi-value behavior is preserved: multiple values per dataset
+ * are still valid, and the caller is responsible for correct counting semantics.
  */
 export function dimensionFieldSources(dataset: RawDataset, dimension: FilterDimension): string[] {
-  const sources: string[] = [];
   switch (dimension) {
     case "modality":
-      sources.push(...expandStructuredValue(dataset.modality));
-      break;
-    case "disease": {
-      // Disease / Condition (v0.4): shows VOCABULARY-MEMBER conditions only.
-      // The enriched `disease` field is already canonical; keywords qualify
-      // only when they map onto a known disease term. Incidental keywords
-      // ("ICA", "COBRE", "resting state", …) never surface as diseases — they
-      // belong to the Advanced Keywords group, which reads the same array.
-      for (const v of expandStructuredValue(dataset.disease)) {
-        const lower = String(v).trim().toLowerCase().replace(/'/g, "'");
-        sources.push(DISEASE_CANONICAL_TOKENS[lower] ?? String(v).trim());
-      }
-      for (const v of expandStructuredValue(dataset.keywords)) {
-        const lower = String(v).trim().toLowerCase().replace(/'/g, "'");
-        const canonical = DISEASE_CANONICAL_TOKENS[lower];
-        if (canonical) sources.push(canonical);
-      }
-      break;
-    }
+      // M2: single canonical bucket via classifier (IEEG > EEG precedence)
+      return [classifyModality(dataset.modality)];
+
+    case "disease":
+      // M7: single canonical bucket (8 known | Others | Unspecified)
+      return [classifyDisease(dataset.disease, dataset.keywords)];
+
     case "species":
-      sources.push(...expandStructuredValue(dataset.species));
-      break;
+      // M5: single canonical bucket (Human | Animal | Unspecified)
+      return [classifySpecies(dataset.species)];
+
+    case "year":
+      // M4: single canonical bucket (Before 2020 | 2020–2022 | 2023–2025 | 2026+ | Unspecified)
+      return [classifyYear(dataset.published_at, dataset.publication_year, dataset.date_published)];
+
+    case "participants":
+      // M6: single canonical bucket (1–25 | 26–50 | 51–100 | 101+ | Unspecified)
+      return [classifyParticipants(dataset.subject_count)];
+
+    case "size":
+      // M3: single canonical bucket (<10 GB | 10–100 GB | 100–500 GB | 500 GB+ | Unspecified)
+      return [classifySize(dataset.size_bytes, dataset.size_label)];
+
     case "ageGroup": {
       const raw = [
         ...expandStructuredValue(dataset.age_group),
         ...expandStructuredValue(dataset.age_range),
       ];
+      const normed: string[] = [];
       for (const v of raw) {
         const norm = canonicalizeDimensionValue("ageGroup", v);
-        if (norm) sources.push(norm);
+        if (norm) normed.push(norm);
       }
-      break;
+      return dedupeValues(normed);
     }
+
     case "task":
     case "format": {
-      // Advanced Keywords normalization (v0.4, facet layer only): structured
-      // `keywords` entries are sometimes comma-joined blobs ("fMRI, resting
-      // state, adolescents, pilot"). Splitting them yields single concepts
-      // instead of one long facet. Matching is substring-based, so a split
-      // fragment selects exactly the datasets containing it — the count/click
-      // invariant holds by construction (bidirectional substring also keeps
-      // pre-existing blob-shaped `task=` URLs working).
       const raw = expandStructuredValue(dataset.keywords);
+      const parts: string[] = [];
       for (const k of raw) {
         for (const part of String(k).split(",")) {
           const p = part.trim();
-          if (p) sources.push(p);
+          if (p) parts.push(p);
         }
       }
-      break;
+      return dedupeValues(parts);
     }
-    case "year": {
-      // Publication year from a genuine publication-date field only. Records
-      // without one contribute nothing (no fabrication, no ingestion-time
-      // proxy) — the group auto-hides when the pool has no publication dates.
-      const raw = [
-        ...expandStructuredValue(dataset.published_at),
-        ...expandStructuredValue(dataset.publication_year),
-        ...expandStructuredValue(dataset.date_published),
-      ];
-      for (const v of raw) {
-        const y = yearOf(v);
-        if (y) sources.push(y);
-      }
-      break;
-    }
-    case "participants": {
-      const count = toCount(dataset.subject_count);
-      if (count !== null) {
-        const bucket = participantsBucket(count);
-        if (bucket) sources.push(bucket);
-      }
-      break;
-    }
-    case "size": {
-      const bytes =
-        parseSizeBytes(dataset.size_bytes) ?? parseSizeBytes(dataset.size_label);
-      if (bytes !== null) sources.push(sizeBucketLabel(bytes));
-      break;
-    }
-    case "license":
+
+    case "license": {
+      const normed: string[] = [];
       for (const v of expandStructuredValue(dataset.license)) {
         const norm = normalizeLicenseValue(v);
-        if (norm) sources.push(norm);
+        if (norm) normed.push(norm);
       }
-      break;
-    case "type":
-      // Not populated by the current metadata model → the group auto-hides
-      // ("hide unsupported groups automatically"). Ready for future metadata.
-      sources.push(
-        ...expandStructuredValue(dataset.dataset_type),
-        ...expandStructuredValue(dataset.data_type),
-      );
-      break;
+      return dedupeValues(normed);
+    }
+
     case "repository":
-      sources.push(
+      return dedupeValues([
         ...expandStructuredValue(dataset.source),
         ...expandStructuredValue(dataset.repo),
-      );
-      break;
-    case "availability":
-      sources.push(
+      ]);
+
+    case "availability": {
+      const sources = [
         ...expandStructuredValue(dataset.access_tier),
         ...expandStructuredValue(dataset.access),
-      );
-      break;
+      ];
+      return dedupeValues(sources.map((s) => canonicalizeDimensionValue("availability", s)));
+    }
+
+    default:
+      return [];
   }
-  // Issue 4: normalize structured metadata BEFORE facet generation — split
-  // multi-value strings, drop sentinels, collapse vocabulary synonyms onto one
-  // canonical label, then dedupe. `dimensionFieldSources` feeds BOTH facet
-  // counting and `matchesFilter`, so facets and filtered lists stay consistent.
-  return dedupeValues(sources.map((s) => canonicalizeDimensionValue(dimension, s)));
 }
 
 /**
@@ -889,42 +830,42 @@ export function matchesAllOtherGroups(
 }
 
 /**
- * Dynamic facets (§8.5/§8.6): for each dimension, distinct values present in
- * the pool with counts. Count rule (FR-3/G3): a value's count = number of
- * datasets in the pool for which `matchesFilter(dataset, G, v)` AND all other
- * groups' selections hold — the EXACT predicate applied when `v` is selected,
- * so the count invariant holds by construction even for values that overlap
- * via substring/synonym matching ("MRI" vs "fMRI" each count the same
- * matching datasets). Only values with count > 0 are returned (G4 — zero-count
- * options never render).
+ * Partition-invariant facet counter (M2–M7).
  *
- * Performance (optimized 2026-08-06): the pool is traversed a constant number
- * of times per dimension instead of once per candidate value. Per dimension we
- * (1) precompute every dataset's dimension source values and whether it
- * satisfies every OTHER selected group in a single pass, then (2) count the
- * candidates against only the eligible datasets using the same `anyValueMatches`
- * predicate. This removes the previous repeated `pool.filter(...)` per
- * candidate, which re-ran `dimensionFieldSources` and the other-group checks
- * for every (candidate × dataset) pair — the old worst case was O(N²) pool
- * scans. Results are identical to the previous implementation.
+ * For BUCKET dimensions (modality/disease/species/year/participants/size):
+ *   dimensionFieldSources returns exactly [oneBucket] per dataset.
+ *   Each eligible dataset increments exactly ONE bucket counter.
+ *   SUM(all bucket counts) === eligible pool size. No double-counting possible.
+ *
+ * For NON-BUCKET dimensions (repository/task/format/ageGroup/availability/license):
+ *   Multi-value behavior is preserved (a dataset may appear in multiple values).
+ *   These dimensions never violate partition invariant by design (not claimed).
+ *
+ * Reproduces the old 22+8+1=31 bug case: the old code used anyValueMatches
+ * (multi-label scan) which let a dataset with disease=["Epilepsy","Alzheimer's"]
+ * increment both Epilepsy and Alzheimer's. classifyDisease now picks the
+ * FIRST canonical match and returns exactly one bucket, so the sum is correct.
  */
 export function computeFacets(pool: RawDataset[], filters: ActiveFilters): FacetMap {
-  // Precompute each dataset's source values for every dimension ONCE — the old
-  // version recomputed them inside every (candidate × dataset) predicate.
-  // Shape: [datasetIndex][dimensionIndex] -> source value list.
-  const datasetValues: string[][][] = pool.map((dataset) =>
+  // Precompute per-dataset bucket values once for all dimensions.
+  // For bucket dims this is always a 1-element array.
+  const datasetBuckets: string[][][] = pool.map((dataset) =>
     FILTER_DIMENSIONS.map((dimension) => dimensionFieldSources(dataset, dimension)),
   );
+
+  // Identify bucket dimensions — those with static master lists where
+  // partition invariant applies. For these, use exclusive single-bucket counting.
+  const BUCKET_DIMENSIONS = new Set<FilterDimension>([
+    "modality", "disease", "species", "year", "participants", "size",
+  ]);
 
   const facets: FacetMap = {};
   for (let di = 0; di < FILTER_DIMENSIONS.length; di++) {
     const dimension = FILTER_DIMENSIONS[di];
+    const isBucketDim = BUCKET_DIMENSIONS.has(dimension);
 
-    // Pass 1 — distinct candidate values (first-seen casing, unchanged) and,
-    // per dataset, whether it satisfies every OTHER selected group.
+    // Seed candidates from the master list (static dims always show all buckets).
     const candidates = new Map<string, string>();
-    const eligible = new Array<boolean>(pool.length).fill(false);
-
     const masterValues = STATIC_DIMENSIONS_MAP[dimension];
     if (masterValues) {
       for (const masterVal of masterValues) {
@@ -932,41 +873,49 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
         if (key && !candidates.has(key)) candidates.set(key, masterVal.trim());
       }
     }
-
+    // Also collect any values the pool produces that aren't in the master list.
     for (let i = 0; i < pool.length; i++) {
-      eligible[i] = matchesAllOtherGroups(pool[i], filters, dimension);
-      const values = datasetValues[i][di];
-      for (const value of values) {
+      for (const value of datasetBuckets[i][di]) {
         const key = String(value).trim().toLowerCase();
         if (key && !candidates.has(key)) candidates.set(key, String(value).trim());
       }
     }
-    candidates.set("unspecified", "Unspecified");
+    // Unspecified is always a candidate for bucket dims (may have zero count).
+    if (isBucketDim) candidates.set("unspecified", "Unspecified");
     if (candidates.size === 0) continue;
-    // Display labels (first-seen casing, preserved exactly like before).
-    const labels = [...candidates.values()];
 
-    // Pass 2 — count each candidate over eligible datasets only, using the
-    // identical per-value predicate (`anyValueMatches` == `matchesFilter`'s
-    // inner matching). A dataset contributes at most once per candidate.
+    const labels = [...candidates.values()];
     const counts = new Map<string, number>();
+
     for (let i = 0; i < pool.length; i++) {
-      if (!eligible[i]) continue;
-      const values = datasetValues[i][di];
-      for (const label of labels) {
-        if (anyValueMatches(dimension, label, values)) {
-          counts.set(label, (counts.get(label) ?? 0) + 1);
+      // Skip datasets that don't satisfy the other selected groups.
+      if (!matchesAllOtherGroups(pool[i], filters, dimension)) continue;
+
+      const buckets = datasetBuckets[i][di];
+
+      if (isBucketDim) {
+        // EXCLUSIVE single-bucket assignment: each dataset increments exactly
+        // one counter. buckets is always [oneBucket] for bucket dimensions.
+        const bucket = buckets[0] ?? "Unspecified";
+        counts.set(bucket, (counts.get(bucket) ?? 0) + 1);
+      } else {
+        // Non-bucket dimensions: multi-value as before.
+        for (const label of labels) {
+          if (anyValueMatches(dimension, label, buckets)) {
+            counts.set(label, (counts.get(label) ?? 0) + 1);
+          }
         }
       }
     }
 
     const list: FacetValue[] = [];
     for (const label of labels) {
-      const count = counts.get(label);
-      if (STATIC_DIMENSIONS_MAP[dimension] || label.toLowerCase() === "unspecified") {
-        list.push({ value: label, count: count ?? 0 });
+      const count = counts.get(label) ?? 0;
+      if (masterValues || label.toLowerCase() === "unspecified") {
+        // Static dims: always emit the bucket even at zero count.
+        list.push({ value: label, count });
       } else {
-        if (count !== undefined) list.push({ value: label, count });
+        if (count > 0) list.push({ value: label, count });
       }
     }
     sortFacetValues(dimension, list);
