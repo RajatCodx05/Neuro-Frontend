@@ -400,7 +400,34 @@ export const MASTER_SPECIES_KEY_VALUES: string[] = [
   "Rat",
 ];
 
-/** Map of static filter dimensions to their pre-seeded master options. Disease and Repository are excluded so they remain dynamic. */
+export const MASTER_DISEASE_KEY_VALUES: string[] = [
+  "ADHD",
+  "Alzheimer's",
+  "Amyotrophic lateral sclerosis",
+  "Anxiety",
+  "Autism",
+  "Bipolar",
+  "Chronic pain",
+  "COVID-19",
+  "Dementia",
+  "Depression",
+  "Diabetes",
+  "Epilepsy",
+  "Healthy",
+  "Huntington's",
+  "Insomnia",
+  "Migraine",
+  "Mild cognitive impairment",
+  "Multiple sclerosis",
+  "Obesity",
+  "Parkinson's",
+  "Schizophrenia",
+  "Stroke",
+  "Tinnitus",
+  "Traumatic brain injury",
+];
+
+/** Map of static filter dimensions to their pre-seeded master options. Repository is excluded so it remains dynamic. */
 export const STATIC_DIMENSIONS_MAP: Record<string, string[]> = {
   ageGroup: MASTER_AGE_GROUP_KEY_VALUES,
   availability: MASTER_AVAILABILITY_KEY_VALUES,
@@ -411,6 +438,7 @@ export const STATIC_DIMENSIONS_MAP: Record<string, string[]> = {
   participants: MASTER_PARTICIPANTS_KEY_VALUES,
   year: MASTER_YEAR_KEY_VALUES,
   species: MASTER_SPECIES_KEY_VALUES,
+  disease: MASTER_DISEASE_KEY_VALUES,
 };
 
 /** Dataset size bucket label for a byte count. */
@@ -488,33 +516,6 @@ const MODALITY_CANONICAL_TOKENS: Record<string, string> = {
   fnirs: "fnirs",
   "functional near-infrared spectroscopy": "fnirs",
 };
-
-export const MASTER_DISEASE_KEY_VALUES: string[] = [
-  "ADHD",
-  "Alzheimer's",
-  "Amyotrophic lateral sclerosis",
-  "Anxiety",
-  "Autism",
-  "Bipolar",
-  "Chronic pain",
-  "COVID-19",
-  "Dementia",
-  "Depression",
-  "Diabetes",
-  "Epilepsy",
-  "Healthy",
-  "Huntington's",
-  "Insomnia",
-  "Migraine",
-  "Mild cognitive impairment",
-  "Multiple sclerosis",
-  "Obesity",
-  "Parkinson's",
-  "Schizophrenia",
-  "Stroke",
-  "Tinnitus",
-  "Traumatic brain injury",
-];
 
 /**
  * Issue 4 — canonical disease label for a raw value (token -> "alzheimer",

@@ -29,7 +29,7 @@ async function extractPdfText(file: File): Promise<string> {
       data: new Uint8Array(arrayBuffer),
       useWorkerFetch: false,
       isEvalSupported: false,
-    });
+    } as any);
     const pdf = await loadingTask.promise;
     let fullText = "";
 
