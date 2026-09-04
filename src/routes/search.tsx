@@ -607,8 +607,8 @@ function SearchResults() {
               cached pool, EXCEPT Age Group whose five canonical options are
               static (MASTER_AGE_GROUP_KEY_VALUES); only its counts are dynamic. */}
           {showFilters && activeTab !== "papers" && (
-            <aside className="glass rounded-2xl p-4 lg:sticky lg:top-24 lg:self-start">
-              <div className="flex items-center justify-between pb-2 border-b border-white/5 [.light_&]:border-black/10">
+            <aside className="glass rounded-2xl p-4 lg:sticky lg:top-24 lg:self-start flex flex-col max-h-[calc(100vh-7rem)]">
+              <div className="flex items-center justify-between pb-2 border-b border-white/5 [.light_&]:border-black/10 shrink-0">
                 <div className="font-display text-sm font-semibold">Filters</div>
                 {hasActiveFilters && (
                   <button onClick={resetFilters} className="text-[11px] text-cyan hover:underline inline-flex items-center gap-1">
@@ -616,7 +616,7 @@ function SearchResults() {
                   </button>
                 )}
               </div>
-              <div className="mt-3 space-y-1">
+              <div className="mt-3 space-y-1 overflow-y-auto flex-1 pr-1.5 custom-scrollbar">
                 {FILTER_DIMENSIONS.map((dim) => {
                   // `format` reads the identical `keywords` array as `task` and
                   // is kept only for pre-existing `format=` URLs — never rendered

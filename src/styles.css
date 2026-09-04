@@ -257,3 +257,22 @@ html.light .grid-bg {
   animation: shimmer 2s linear infinite;
 }
 @utility animate-dash { stroke-dasharray: 6 8; animation: dash 20s linear infinite; }
+
+@utility custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(1 0 0 / 0.15) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: oklch(1 0 0 / 0.15);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: oklch(1 0 0 / 0.3);
+}
+
