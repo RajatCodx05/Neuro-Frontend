@@ -473,7 +473,9 @@ function SearchResults() {
             />
             <button
               type="button"
+              disabled={activeTab === "papers"}
               onClick={() => {
+                if (activeTab === "papers") return;
                 const nextShow = !showFilters;
                 setShowFilters(nextShow);
                 navigate({
@@ -485,13 +487,15 @@ function SearchResults() {
                 });
               }}
               className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
-                showFilters
-                  ? "border-cyan/50 bg-cyan/10 text-cyan"
-                  : "border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] text-muted-foreground [.light_&]:text-foreground/80 hover:text-foreground hover:border-cyan/40"
+                activeTab === "papers"
+                  ? "opacity-50 cursor-not-allowed border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] text-muted-foreground"
+                  : showFilters
+                    ? "border-cyan/50 bg-cyan/10 text-cyan"
+                    : "border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] text-muted-foreground [.light_&]:text-foreground/80 hover:text-foreground hover:border-cyan/40"
               }`}
             >
               <SlidersHorizontal className="h-3 w-3" /> Filters
-              {hasActiveFilters && (
+              {activeTab !== "papers" && hasActiveFilters && (
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-cyan text-[10px] font-bold text-slate-950">
                   {Object.values(activeFilters).reduce((acc, curr) => acc + (curr?.length ?? 0), 0)}
                 </span>
@@ -523,9 +527,15 @@ function SearchResults() {
                 <AnimatedDots />
               </span>
             ) : activeTab === "papers" ? (
-              <span className="font-medium text-foreground">
-                {literatureResults.length} research papers found
-              </span>
+              <div className="space-y-1">
+                <span className="font-medium text-foreground">
+                  {literatureResults.length} research papers found
+                </span>
+                <p className="text-xs text-amber-400/90 flex items-center gap-1 font-normal">
+                  <Info className="h-3.5 w-3.5 shrink-0" />
+                  <span>Research papers are under development and will be back soon.</span>
+                </p>
+              </div>
             ) : filteredResults.length > 0 ? (
               <span className="font-medium text-foreground">{filteredResults.length} datasets found</span>
             ) : search.q || hasActiveFilters ? (
@@ -534,7 +544,7 @@ function SearchResults() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {hasActiveFilters && (
+            {activeTab !== "papers" && hasActiveFilters && (
               <button onClick={resetFilters} className="inline-flex items-center gap-1 text-xs text-cyan hover:underline mr-1">
                 <RotateCcw className="h-3 w-3" /> Clear all filters
               </button>
@@ -550,7 +560,7 @@ function SearchResults() {
                 onClick={() => setActiveTab("papers")}
                 className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${activeTab==="papers" ? "bg-cyan text-slate-950 font-semibold" : "border border-white/10 bg-white/5 text-muted-foreground hover:text-foreground"}`}
               >
-                RESEARCH PAPERS {literatureResults.length ? `(${literatureResults.length})` : literatureLoading ? "(...)" : ""}
+                RESEARCH PAPERS/ARTICLES {literatureResults.length ? `(${literatureResults.length})` : literatureLoading ? "(...)" : ""}
               </button>
             </div>
           </div>
@@ -592,11 +602,11 @@ function SearchResults() {
           </div>
         )}
 
-        <div className={`mt-8 grid grid-cols-1 gap-6 ${showFilters ? "lg:grid-cols-[260px_1fr]" : ""}`}>
+        <div className={`mt-8 grid grid-cols-1 gap-6 ${showFilters && activeTab !== "papers" ? "lg:grid-cols-[260px_1fr]" : ""}`}>
           {/* Filters Sidebar — dynamic facets (G4): options are derived from the
               cached pool, EXCEPT Age Group whose five canonical options are
               static (MASTER_AGE_GROUP_KEY_VALUES); only its counts are dynamic. */}
-          {showFilters && (
+          {showFilters && activeTab !== "papers" && (
             <aside className="glass rounded-2xl p-4 lg:sticky lg:top-24 lg:self-start">
               <div className="flex items-center justify-between pb-2 border-b border-white/5 [.light_&]:border-black/10">
                 <div className="font-display text-sm font-semibold">Filters</div>
