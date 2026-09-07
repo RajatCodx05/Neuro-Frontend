@@ -617,13 +617,21 @@ function SearchResults() {
             <div className="flex gap-2">
               <button
                 onClick={() => setActiveTab("datasets")}
-                className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${activeTab==="datasets" ? "bg-cyan text-slate-950 font-semibold" : "border border-white/10 bg-white/5 text-muted-foreground hover:text-foreground"}`}
+                className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
+                  activeTab === "datasets"
+                    ? "bg-cyan text-slate-950 font-semibold [.light_&]:bg-cyan-400 [.light_&]:text-slate-950 [.light_&]:shadow-sm"
+                    : "border border-white/10 [.light_&]:border-slate-200/80 bg-white/5 [.light_&]:bg-slate-100/80 text-muted-foreground [.light_&]:text-slate-600 hover:text-foreground [.light_&]:hover:text-slate-900 [.light_&]:hover:bg-slate-200/80"
+                }`}
               >
                 DATASETS {sourceFilteredResults.length ? `(${sourceFilteredResults.length})` : ""}
               </button>
               <button
                 onClick={() => setActiveTab("papers")}
-                className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${activeTab==="papers" ? "bg-cyan text-slate-950 font-semibold" : "border border-white/10 bg-white/5 text-muted-foreground hover:text-foreground"}`}
+                className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
+                  activeTab === "papers"
+                    ? "bg-cyan text-slate-950 font-semibold [.light_&]:bg-cyan-400 [.light_&]:text-slate-950 [.light_&]:shadow-sm"
+                    : "border border-white/10 [.light_&]:border-slate-200/80 bg-white/5 [.light_&]:bg-slate-100/80 text-muted-foreground [.light_&]:text-slate-600 hover:text-foreground [.light_&]:hover:text-slate-900 [.light_&]:hover:bg-slate-200/80"
+                }`}
               >
                 RESEARCH PAPERS/ARTICLES {literatureResults.length ? `(${literatureResults.length})` : literatureStatus === "loading" ? "(...)" : literatureStatus === "loaded" ? "(0)" : "(On Hold)"}
               </button>
@@ -957,12 +965,12 @@ function SearchResults() {
                             }}
                             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
                               isSaved
-                                ? "bg-cyan/20 border border-cyan/40 text-cyan-300"
-                                : "border border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+                                ? "bg-cyan/20 border border-cyan/40 text-cyan-300 [.light_&]:bg-cyan-500/15 [.light_&]:border-cyan-600/40 [.light_&]:text-cyan-700 [.light_&]:font-semibold"
+                                : "border border-white/10 [.light_&]:border-slate-200/80 bg-white/5 [.light_&]:bg-slate-100/80 text-muted-foreground [.light_&]:text-slate-600 hover:bg-white/10 [.light_&]:hover:bg-slate-200/80 hover:text-foreground [.light_&]:hover:text-slate-900"
                             }`}
                             title={isSaved ? "Unsave research paper" : "Save research paper"}
                           >
-                            <Bookmark className={`h-3.5 w-3.5 ${isSaved ? "fill-cyan-400 text-cyan-400" : ""}`} />
+                            <Bookmark className={`h-3.5 w-3.5 ${isSaved ? "fill-cyan-400 text-cyan-400 [.light_&]:fill-cyan-600 [.light_&]:text-cyan-600" : ""}`} />
                             <span>{isSaved ? "Saved" : "Save"}</span>
                           </button>
                         </div>
@@ -1062,13 +1070,13 @@ function SearchResults() {
                       Access the Data <ExternalLink className="h-3.5 w-3.5" />
                     </button>
                   )}
-                  <Link to="/dataset/$id" params={{ id: d.id }} target="_blank" className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1.5 text-xs hover:bg-white/10 [.light_&]:hover:bg-black/[0.08]">
+                  <Link to="/dataset/$id" params={{ id: d.id }} target="_blank" className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-slate-200/80 bg-white/5 [.light_&]:bg-slate-100/80 px-3 py-1.5 text-xs text-muted-foreground [.light_&]:text-slate-600 hover:bg-white/10 [.light_&]:hover:bg-slate-200/80 [.light_&]:hover:text-slate-900">
                     Expand <ArrowRight className="h-3 w-3" />
                   </Link>
                   {savedIds.has(d.id) ? (
                     <button
                       onClick={() => toggleSaveDataset(d)}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-full border border-green-500/30 px-3 py-1.5 text-xs text-green-500 bg-green-500/10 hover:bg-green-500/20 transition-colors"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-full border border-green-500/30 px-3 py-1.5 text-xs text-green-500 bg-green-500/10 [.light_&]:border-green-600/40 [.light_&]:bg-green-500/15 [.light_&]:text-green-700 [.light_&]:font-semibold hover:bg-green-500/20 transition-colors"
                       title="Click to unsave dataset"
                     >
                       <Check className="h-3.5 w-3.5" /> Saved
@@ -1076,7 +1084,7 @@ function SearchResults() {
                   ) : (
                     <button
                       onClick={() => toggleSaveDataset(d)}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1.5 text-xs hover:bg-white/10 [.light_&]:hover:bg-black/[0.08]"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-slate-200/80 bg-white/5 [.light_&]:bg-slate-100/80 px-3 py-1.5 text-xs text-muted-foreground [.light_&]:text-slate-600 hover:bg-white/10 [.light_&]:hover:bg-slate-200/80 [.light_&]:hover:text-slate-900"
                       title="Save dataset"
                     >
                       <Bookmark className="h-3.5 w-3.5" /> Save
