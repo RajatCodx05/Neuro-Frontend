@@ -969,12 +969,12 @@ export const api = {
     },
   },
   literature: {
-    async search(query: string) {
+    async search(query: string, signal?: AbortSignal) {
       const data = await request<{
         results: LiteratureResult[];
         metrics?: Record<string, unknown>;
         filters?: Record<string, unknown>;
-      }>("/literature/search", { method: "POST", body: JSON.stringify({ query }) });
+      }>("/literature/search", { method: "POST", body: JSON.stringify({ query }), signal });
       return data;
     },
   },
