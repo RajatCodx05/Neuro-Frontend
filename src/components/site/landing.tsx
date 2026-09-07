@@ -439,17 +439,17 @@ export default function Landing() {
               className="relative mx-auto mt-14 max-w-3xl"
             >
               <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-[oklch(0.78_0.16_220/0.5)] via-[oklch(0.86_0.15_200/0.4)] to-[oklch(0.68_0.22_285/0.5)] blur-2xl opacity-60" />
-              <form onSubmit={submit} className="relative glass-strong card-elevated rounded-3xl p-3">
-                <div className="flex items-center gap-2 rounded-2xl bg-[oklch(0.14_0.028_255)]/70 [.light_&]:bg-white/80 [.light_&]:ring-1 [.light_&]:ring-black/5 px-4 py-3">
+              <form onSubmit={submit} className="relative glass-strong card-elevated rounded-3xl p-3 [.light_&]:bg-white/95 [.light_&]:border-slate-200 [.light_&]:shadow-xl [.light_&]:shadow-slate-200/50">
+                <div className="flex items-center gap-2 rounded-2xl bg-[oklch(0.14_0.028_255)]/70 [.light_&]:bg-slate-50/90 [.light_&]:ring-1 [.light_&]:ring-slate-200 px-4 py-3">
                   <Sparkles className="h-4 w-4 text-cyan shrink-0" />
                   <input
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                     onFocus={() => { if (!user) guard(); }}
-                    className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground sm:text-base"
+                    className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground [.light_&]:placeholder:text-slate-400 sm:text-base"
                     placeholder="Find fMRI datasets for Alzheimer's disease..."
                   />
-                  <button type="button" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl hover:bg-white/5" title="voice is currently not available">
+                  <button type="button" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl hover:bg-white/5 [.light_&]:hover:bg-slate-100" title="voice is currently not available">
                     <Mic className="h-4 w-4 opacity-25" />
                   </button>
                   <button type="submit" className="ml-1 inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-sm font-medium text-[oklch(0.15_0.03_258)]">
@@ -457,11 +457,11 @@ export default function Landing() {
                   </button>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 px-3 pb-2 pt-3">
-                  <button type="button" className="inline-flex items-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1 text-xs text-muted-foreground [.light_&]:text-foreground/80 hover:text-foreground hover:border-cyan/40">
+                  <button type="button" className="inline-flex items-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-slate-200 bg-white/5 [.light_&]:bg-slate-100/80 px-3 py-1 text-xs text-muted-foreground [.light_&]:text-slate-600 hover:text-foreground [.light_&]:hover:text-slate-900 hover:border-cyan/40 [.light_&]:hover:border-cyan-500/50 transition-all duration-200">
                     Example Queries <ArrowRight className="h-3 w-3" /> 
                   </button>
                   {suggestions.map((s) => (
-                    <button type="button" key={s} onClick={() => setQ(s)} className="rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1 text-xs text-muted-foreground [.light_&]:text-foreground/80 hover:border-cyan/40 hover:text-foreground">
+                    <button type="button" key={s} onClick={() => setQ(s)} className="rounded-full border border-white/10 [.light_&]:border-slate-200 bg-white/5 [.light_&]:bg-slate-100/80 px-3 py-1 text-xs text-muted-foreground [.light_&]:text-slate-600 hover:border-cyan/40 [.light_&]:hover:border-cyan-500/50 hover:text-foreground [.light_&]:hover:text-slate-900 [.light_&]:hover:bg-slate-200/80 transition-all duration-200">
                       {s}
                     </button>
                   ))}
@@ -471,24 +471,24 @@ export default function Landing() {
             </motion.div>
           </div>
           {/* Seamless fade into stats section */}
-          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-[oklch(0.15_0.028_255)] [.light_&]:to-muted" style={{ zIndex: 1 }} />
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-[oklch(0.15_0.028_255)] [.light_&]:to-slate-100/80" style={{ zIndex: 1 }} />
         </section>
 
         {/* STATS */}
-        <section className="relative border-b border-border bg-[oklch(0.15_0.028_255)] [.light_&]:bg-muted py-10">
+        <section className="relative border-b border-border [.light_&]:border-slate-200/80 bg-[oklch(0.15_0.028_255)] [.light_&]:bg-slate-50/80 py-10">
           <div className="mx-auto max-w-7xl px-6">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6 [.light_&]:divide-x [.light_&]:divide-slate-200/60">
               {dynamicStats.map((s) => (
                 <motion.div
                   key={s.label}
                   initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }} transition={{ duration: 0.5 }}
-                  className="glass rounded-2xl p-4"
+                  className="glass rounded-2xl p-4 [.light_&]:border-slate-200/80 [.light_&]:bg-white/80 [.light_&]:shadow-sm"
                 >
-                  <div className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
+                  <div className="font-display text-2xl font-semibold text-foreground [.light_&]:text-slate-900 sm:text-3xl">
                     <Counter value={s.value} suffix={s.suffix} />
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground">{s.label}</div>
+                  <div className="mt-1 text-xs text-muted-foreground [.light_&]:text-slate-600 font-medium">{s.label}</div>
                 </motion.div>
               ))}
             </div>

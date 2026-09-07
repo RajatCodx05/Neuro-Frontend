@@ -241,7 +241,7 @@ function SavedPage() {
                 const snap = sd.datasetSnapshot;
                 return (
                   <div key={ci.id} className="glass card-elevated flex items-start gap-4 rounded-2xl p-4">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan/40 to-neural/40 text-xs font-bold text-white">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan/40 to-neural/40 text-xs font-bold text-white uppercase">
                       {modalityDisplayLabel((snap.modality ?? "DS").toString()).slice(0, 4)}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -276,7 +276,7 @@ function SavedPage() {
                 const snap = s.dataset_snapshot as Snap;
                 return (
                   <div key={s.id} className="glass flex items-start gap-4 rounded-2xl p-4">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan/20 to-neural/20 text-xs font-bold text-white">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan/20 to-neural/20 text-xs font-bold text-white uppercase">
                       {modalityDisplayLabel((snap.modality ?? "DS").toString()).slice(0, 4)}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -362,7 +362,7 @@ function SavedPage() {
                 const snap = s.dataset_snapshot as Snap;
                 return (
                   <div key={s.id} className="glass card-elevated flex items-start gap-4 rounded-2xl p-4">
-                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan/40 to-neural/40 text-xs font-bold text-white">
+                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan/40 to-neural/40 text-xs font-bold text-white uppercase">
                       {modalityDisplayLabel((snap.modality ?? "DS").toString()).slice(0, 4)}
                     </span>
                     <div className="min-w-0 flex-1">

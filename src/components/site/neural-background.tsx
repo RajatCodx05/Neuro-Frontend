@@ -37,9 +37,9 @@ export function NeuralBackground({ className = "" }: { className?: string }) {
 
     const render = () => {
       const isLight = document.documentElement.classList.contains("light");
-      const lineRGB = isLight ? "20, 30, 50" : "120, 200, 255";
-      const glowRGB = isLight ? "20, 30, 50" : "160, 220, 255";
-      const dotRGB = isLight ? "10, 15, 30" : "220, 240, 255";
+      const lineRGB = isLight ? "30, 41, 59" : "120, 200, 255";
+      const glowRGB = isLight ? "51, 65, 85" : "160, 220, 255";
+      const dotRGB = isLight ? "30, 41, 59" : "220, 240, 255";
 
       ctx.clearRect(0, 0, w, h);
       // connections
@@ -54,7 +54,7 @@ export function NeuralBackground({ className = "" }: { className?: string }) {
           const d2 = dx * dx + dy * dy;
           if (d2 < 140 * 140) {
             const alpha = 1 - Math.sqrt(d2) / 140;
-            ctx.strokeStyle = `rgba(${lineRGB}, ${alpha * (isLight ? 0.35 : 0.25)})`;
+            ctx.strokeStyle = `rgba(${lineRGB}, ${alpha * (isLight ? 0.20 : 0.25)})`;
             ctx.lineWidth = 0.6;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
@@ -66,13 +66,13 @@ export function NeuralBackground({ className = "" }: { className?: string }) {
       // nodes
       for (const p of points) {
         const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 6);
-        g.addColorStop(0, `rgba(${glowRGB}, ${isLight ? 0.6 : 0.9})`);
+        g.addColorStop(0, `rgba(${glowRGB}, ${isLight ? 0.22 : 0.9})`);
         g.addColorStop(1, `rgba(${glowRGB}, 0)`);
         ctx.fillStyle = g;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r * 6, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = `rgba(${dotRGB}, 0.95)`;
+        ctx.fillStyle = `rgba(${dotRGB}, ${isLight ? 0.25 : 0.95})`;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.fill();

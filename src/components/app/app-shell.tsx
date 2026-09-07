@@ -42,7 +42,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="relative min-h-screen">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-30 hidden ${sidebarWidth} flex-col border-r border-sidebar-border bg-sidebar/85 backdrop-blur-xl transition-all duration-200 hover:bg-sidebar-accent/20 md:flex`}>
+      <aside className={`fixed inset-y-0 left-0 z-30 hidden ${sidebarWidth} flex-col border-r border-sidebar-border [.light_&]:border-slate-200/90 [.light_&]:bg-slate-50/95 backdrop-blur-xl transition-all duration-200 hover:bg-sidebar-accent/20 md:flex`}>
         <div className={`flex items-center ${collapsed ? "justify-center" : "justify-between"} px-3 py-5`}>
           <Link to="/" className="flex items-center gap-2">
             <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] glow-cyan shrink-0">
@@ -84,12 +84,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                 to={n.to}
                 title={collapsed ? n.label : undefined}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors ${
-                  active ? "bg-sidebar-accent text-foreground" : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
+                  active
+                    ? "bg-sidebar-accent text-foreground [.light_&]:bg-blue-50 [.light_&]:text-blue-700 [.light_&]:font-medium"
+                    : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground [.light_&]:text-slate-600 [.light_&]:hover:bg-slate-100 [.light_&]:hover:text-slate-900"
                 } ${collapsed ? "justify-center" : ""}`}
               >
-                <n.icon className={`h-4 w-4 shrink-0 ${active ? "text-cyan" : ""}`} />
+                <n.icon className={`h-4 w-4 shrink-0 ${active ? "text-cyan [.light_&]:text-blue-600" : ""}`} />
                 {!collapsed && <span className="truncate">{n.label}</span>}
-                {!collapsed && active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-cyan" />}
+                {!collapsed && active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-cyan [.light_&]:bg-blue-600" />}
               </Link>
             );
           })}
