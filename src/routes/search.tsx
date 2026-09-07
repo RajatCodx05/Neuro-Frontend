@@ -863,7 +863,7 @@ function SearchResults() {
                   <div className="space-y-1 max-w-md">
                     <h3 className="font-display text-lg font-semibold">Research Papers & Articles</h3>
                     <p className="text-sm text-muted-foreground">
-                      Live research-paper search is on hold to save API credits. Click below to start live search for <span className="font-medium text-foreground">&quot;{search.q || originalQuery}&quot;</span>.
+                      Live research-paper search is on hold. Click below to start live search for <span className="font-medium text-foreground">&quot;{search.q || originalQuery}&quot;</span>.
                     </p>
                   </div>
                   <button
