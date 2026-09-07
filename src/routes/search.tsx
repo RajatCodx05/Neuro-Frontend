@@ -829,7 +829,7 @@ function SearchResults() {
                 className="glass card-elevated group flex flex-col gap-4 rounded-2xl p-5 sm:flex-row"
               >
                 <div className="flex flex-col items-center gap-2 shrink-0">
-                  <div className="grid h-16 w-16 place-items-center rounded-xl bg-gradient-to-br from-cyan/40 to-neural/40 font-display text-xs font-bold text-white ring-1 ring-white/10">
+                  <div className="grid h-16 w-16 place-items-center rounded-xl bg-gradient-to-br from-cyan/40 to-neural/40 font-display text-xs font-bold text-white ring-1 ring-white/10 uppercase">
                     {modalityDisplayLabel(d.modality ?? "DS")}
                   </div>
                   {/* Like & Dislike buttons positioned on the left under modality avatar */}
