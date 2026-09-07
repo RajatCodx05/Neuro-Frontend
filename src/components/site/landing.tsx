@@ -470,25 +470,25 @@ export default function Landing() {
 
             </motion.div>
           </div>
-          {/* Seamless fade into stats section — transparent in light mode */}
-          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-[oklch(0.15_0.028_255)] [.light_&]:to-transparent" style={{ zIndex: 1 }} />
+          {/* Seamless fade into stats section — dissolves canvas into clean white */}
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-44 bg-gradient-to-b from-transparent to-[oklch(0.15_0.028_255)] [.light_&]:from-transparent [.light_&]:via-white/70 [.light_&]:to-white" style={{ zIndex: 1 }} />
         </section>
 
         {/* STATS */}
-        <section className="relative border-b border-border [.light_&]:border-slate-200/60 bg-[oklch(0.15_0.028_255)] [.light_&]:bg-transparent py-10">
+        <section className="relative border-b border-border [.light_&]:border-slate-100 bg-[oklch(0.15_0.028_255)] [.light_&]:bg-white py-10">
           <div className="mx-auto max-w-7xl px-6">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6 [.light_&]:divide-x [.light_&]:divide-slate-200/60">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
               {dynamicStats.map((s) => (
                 <motion.div
                   key={s.label}
                   initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }} transition={{ duration: 0.5 }}
-                  className="glass rounded-2xl p-4 [.light_&]:border-slate-200/80 [.light_&]:bg-white/80 [.light_&]:shadow-sm"
+                  className="glass rounded-2xl p-4 [.light_&]:bg-white [.light_&]:border [.light_&]:border-slate-100 [.light_&]:shadow-md [.light_&]:shadow-slate-100/80"
                 >
                   <div className="font-display text-2xl font-semibold text-foreground [.light_&]:text-slate-900 sm:text-3xl">
                     <Counter value={s.value} suffix={s.suffix} />
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground [.light_&]:text-slate-600 font-medium">{s.label}</div>
+                  <div className="mt-1 text-xs text-muted-foreground [.light_&]:text-slate-500 font-medium">{s.label}</div>
                 </motion.div>
               ))}
             </div>
