@@ -552,13 +552,21 @@ function SearchResults() {
             <div className="flex gap-2">
               <button
                 onClick={() => setActiveTab("datasets")}
-                className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${activeTab==="datasets" ? "bg-cyan text-slate-950 font-semibold" : "border border-white/10 bg-white/5 text-muted-foreground hover:text-foreground"}`}
+                className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
+                  activeTab === "datasets"
+                    ? "bg-cyan text-slate-950 font-semibold [.light_&]:bg-cyan-400 [.light_&]:text-slate-950 [.light_&]:shadow-sm"
+                    : "border border-white/10 [.light_&]:border-slate-200/80 bg-white/5 [.light_&]:bg-slate-100/80 text-muted-foreground [.light_&]:text-slate-600 hover:text-foreground [.light_&]:hover:text-slate-900 [.light_&]:hover:bg-slate-200/80"
+                }`}
               >
                 DATASETS {filteredResults.length ? `(${filteredResults.length})` : ""}
               </button>
               <button
                 onClick={() => setActiveTab("papers")}
-                className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${activeTab==="papers" ? "bg-cyan text-slate-950 font-semibold" : "border border-white/10 bg-white/5 text-muted-foreground hover:text-foreground"}`}
+                className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
+                  activeTab === "papers"
+                    ? "bg-cyan text-slate-950 font-semibold [.light_&]:bg-cyan-400 [.light_&]:text-slate-950 [.light_&]:shadow-sm"
+                    : "border border-white/10 [.light_&]:border-slate-200/80 bg-white/5 [.light_&]:bg-slate-100/80 text-muted-foreground [.light_&]:text-slate-600 hover:text-foreground [.light_&]:hover:text-slate-900 [.light_&]:hover:bg-slate-200/80"
+                }`}
               >
                 RESEARCH PAPERS/ARTICLES {literatureResults.length ? `(${literatureResults.length})` : literatureLoading ? "(...)" : ""}
               </button>
