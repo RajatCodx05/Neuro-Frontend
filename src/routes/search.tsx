@@ -886,11 +886,11 @@ function SearchResults() {
                       rel="noreferrer"
                       className="inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-3 py-1.5 text-xs font-medium text-[oklch(0.15_0.03_258)]"
                     >
-                      <ExternalLink className="h-3.5 w-3.5" /> Access the Data
+                      Access the Data <ExternalLink className="h-3.5 w-3.5" />
                     </a>
                   ) : (
                     <button disabled className="inline-flex items-center justify-center gap-1.5 rounded-full bg-neutral-800 px-3 py-1.5 text-xs font-medium text-neutral-400 cursor-not-allowed">
-                      <ExternalLink className="h-3.5 w-3.5" /> Access the Data
+                      Access the Data <ExternalLink className="h-3.5 w-3.5" />
                     </button>
                   )}
                   <Link to="/dataset/$id" params={{ id: d.id }} target="_blank" className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] px-3 py-1.5 text-xs hover:bg-white/10 [.light_&]:hover:bg-black/[0.08]">
