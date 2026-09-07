@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, useMemo, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, SlidersHorizontal, Bookmark, ArrowRight, ChevronDown, Loader2, Check, ExternalLink, RotateCcw, ThumbsUp, ThumbsDown, Info, SearchX } from "lucide-react";
 import Lottie from "lottie-react";
@@ -133,14 +133,36 @@ function SearchResults() {
   // Filter params alone never force it open.
   const [showFilters, setShowFilters] = useState(() => search.filters === "true");
 
+  // Result Source filter state (All / Internal / External)
+  const [sourceFilter, setSourceFilter] = useState<"all" | "internal" | "external">("all");
+
+  const internalCount = useMemo(
+    () => filteredResults.filter((r) => r.retrievalSource === "internal").length,
+    [filteredResults]
+  );
+  const externalCount = useMemo(
+    () => filteredResults.filter((r) => r.retrievalSource === "external").length,
+    [filteredResults]
+  );
+
+  const sourceFilteredResults = useMemo(() => {
+    if (sourceFilter === "internal") {
+      return filteredResults.filter((r) => r.retrievalSource === "internal");
+    }
+    if (sourceFilter === "external") {
+      return filteredResults.filter((r) => r.retrievalSource === "external");
+    }
+    return filteredResults;
+  }, [filteredResults, sourceFilter]);
+
   const urlFilters = parseUrlFilters(search as unknown as Record<string, unknown>);
   const hasActiveFilters = hasAnySelection(activeFilters);
 
   // FR-10 pagination: slices of the already-ranked filtered list. Ranking is
   // never recomputed per page; `page` lives in the URL (G7/G8).
-  const totalPages = Math.max(1, Math.ceil(filteredResults.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(sourceFilteredResults.length / PAGE_SIZE));
   const page = Math.min(Math.max(1, parseInt(search.page || "1", 10) || 1), totalPages);
-  const pageItems = filteredResults.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pageItems = sourceFilteredResults.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   // Load dataset reactions whenever the filtered result set changes
   useEffect(() => {
@@ -536,8 +558,8 @@ function SearchResults() {
                   <span>Research papers are under development and will be back soon.</span>
                 </p>
               </div>
-            ) : filteredResults.length > 0 ? (
-              <span className="font-medium text-foreground">{filteredResults.length} datasets found</span>
+            ) : sourceFilteredResults.length > 0 ? (
+              <span className="font-medium text-foreground">{sourceFilteredResults.length} datasets found</span>
             ) : search.q || hasActiveFilters ? (
               <span><span className="font-medium text-foreground">0</span> datasets found</span>
             ) : null}
@@ -549,12 +571,53 @@ function SearchResults() {
                 <RotateCcw className="h-3 w-3" /> Clear all filters
               </button>
             )}
+
+            {/* User-side Result Source Filter (All / Internal / External) */}
+            {activeTab === "datasets" && filteredResults.length > 0 && (
+              <div className="flex items-center gap-1 rounded-full border border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] p-1 text-xs">
+                <span className="px-2 font-medium text-muted-foreground">Source:</span>
+                <button
+                  type="button"
+                  onClick={() => setSourceFilter("all")}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    sourceFilter === "all"
+                      ? "bg-cyan text-slate-950 font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  All ({filteredResults.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSourceFilter("internal")}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    sourceFilter === "internal"
+                      ? "bg-cyan text-slate-950 font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Internal ({internalCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSourceFilter("external")}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    sourceFilter === "external"
+                      ? "bg-cyan text-slate-950 font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  External ({externalCount})
+                </button>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <button
                 onClick={() => setActiveTab("datasets")}
                 className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${activeTab==="datasets" ? "bg-cyan text-slate-950 font-semibold" : "border border-white/10 bg-white/5 text-muted-foreground hover:text-foreground"}`}
               >
-                DATASETS {filteredResults.length ? `(${filteredResults.length})` : ""}
+                DATASETS {sourceFilteredResults.length ? `(${sourceFilteredResults.length})` : ""}
               </button>
               <button
                 onClick={() => setActiveTab("papers")}
@@ -862,6 +925,16 @@ function SearchResults() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-widest text-muted-foreground">
+                    {d.retrievalSource === "internal" && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 font-semibold text-emerald-400 normal-case tracking-normal">
+                        Source: Internal
+                      </span>
+                    )}
+                    {d.retrievalSource === "external" && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 font-semibold text-amber-400 normal-case tracking-normal">
+                        Source: External
+                      </span>
+                    )}
                     {d.license && <><span>·</span><span>{licenseDisplayLabel(d.license)}</span></>}
                     {(d.access || d.access_tier) && <><span>·</span><span>{d.access || d.access_tier}</span></>}
                   </div>

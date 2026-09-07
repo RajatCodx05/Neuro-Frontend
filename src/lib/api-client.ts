@@ -57,6 +57,7 @@ export type SearchResult = {
   verified: string | null;
   doi: string | null;
   url: string | null;
+  retrievalSource?: "internal" | "external";
 };
 
 export type LiteratureResult = {
@@ -300,6 +301,13 @@ export function cleanSummaryText(raw: string): string {
 
 export const stripHtml = cleanSummaryText;
 
+function mapRetrievalSource(rawSource: unknown): "internal" | "external" | undefined {
+  const s = String(rawSource ?? "").trim().toLowerCase();
+  if (s === "mongodb") return "internal";
+  if (s === "repository" || s === "discovery") return "external";
+  return undefined;
+}
+
 // ponytail: resultSource='cache' means record already in DB — relabel 'web_search' → 'Database'.
 export function mapDataset(data: Record<string, unknown>, resultSource?: string): SearchResult {
   const list = (value: unknown) => (Array.isArray(value) ? value.join(", ") : String(value ?? ""));
@@ -308,6 +316,7 @@ export function mapDataset(data: Record<string, unknown>, resultSource?: string)
     : ((data.trust_tier as string | null) ?? null);
   const rawSource = String(data.source ?? "Dataset");
   const repo = rawSource === "web_search" && resultSource === "cache" ? "Database" : rawSource;
+  const retrievalSource = mapRetrievalSource(data._source);
   // Stability (Expand 404 fix): repository/discovery-tier records come straight
   // from Python without a Mongo `_id` (and `id` is null), so fall back to
   // `source_id` — the backend getById resolves `/datasets/:id` by Mongo `_id`
@@ -331,6 +340,7 @@ export function mapDataset(data: Record<string, unknown>, resultSource?: string)
     verified,
     doi: (data.doi as string | null) ?? null,
     url: (data.url as string | null) ?? null,
+    ...(retrievalSource ? { retrievalSource } : {}),
   };
 }
 
