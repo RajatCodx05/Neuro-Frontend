@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef, type FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, SlidersHorizontal, Bookmark, ArrowRight, ChevronDown, Loader2, Check, ExternalLink, RotateCcw, ThumbsUp, ThumbsDown, Info, SearchX } from "lucide-react";
+import { Sparkles, SlidersHorizontal, Bookmark, ArrowRight, ChevronDown, Loader2, Check, ExternalLink, RotateCcw, ThumbsUp, ThumbsDown, Info, SearchX, FileText, Square, Search } from "lucide-react";
 import Lottie from "lottie-react";
 import lottieLoadingData from "@/assets/lottieflow-loading-07-000000-easey.json";
 import { AppShell } from "@/components/app/app-shell";
@@ -107,6 +107,8 @@ function SearchResults() {
   const [literatureResults, setLiteratureResults] = useState<LiteratureResult[]>([]);
   const [literatureLoading, setLiteratureLoading] = useState(false);
   const [literatureError, setLiteratureError] = useState<string | null>(null);
+  const [literatureStatus, setLiteratureStatus] = useState<"idle" | "loading" | "loaded" | "error">("idle");
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     api.savedPapers.list()
@@ -133,14 +135,36 @@ function SearchResults() {
   // Filter params alone never force it open.
   const [showFilters, setShowFilters] = useState(() => search.filters === "true");
 
+  // Result Source filter state (All / Internal / External)
+  const [sourceFilter, setSourceFilter] = useState<"all" | "internal" | "external">("all");
+
+  const internalCount = useMemo(
+    () => filteredResults.filter((r) => r.retrievalSource === "internal").length,
+    [filteredResults]
+  );
+  const externalCount = useMemo(
+    () => filteredResults.filter((r) => r.retrievalSource === "external").length,
+    [filteredResults]
+  );
+
+  const sourceFilteredResults = useMemo(() => {
+    if (sourceFilter === "internal") {
+      return filteredResults.filter((r) => r.retrievalSource === "internal");
+    }
+    if (sourceFilter === "external") {
+      return filteredResults.filter((r) => r.retrievalSource === "external");
+    }
+    return filteredResults;
+  }, [filteredResults, sourceFilter]);
+
   const urlFilters = parseUrlFilters(search as unknown as Record<string, unknown>);
   const hasActiveFilters = hasAnySelection(activeFilters);
 
   // FR-10 pagination: slices of the already-ranked filtered list. Ranking is
   // never recomputed per page; `page` lives in the URL (G7/G8).
-  const totalPages = Math.max(1, Math.ceil(filteredResults.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(sourceFilteredResults.length / PAGE_SIZE));
   const page = Math.min(Math.max(1, parseInt(search.page || "1", 10) || 1), totalPages);
-  const pageItems = filteredResults.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pageItems = sourceFilteredResults.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   // Load dataset reactions whenever the filtered result set changes
   useEffect(() => {
@@ -178,6 +202,7 @@ function SearchResults() {
   // (initial load / shareable URL reload) or (b) the query text changed
   // (submit). Filter param changes are deliberately NOT in this effect's deps.
   // Literature lane & route-navigation caching — independent, parallel, failure isolated
+  // Dataset search effect — DOES NOT automatically trigger live Tavily research paper search (CHANGE 2).
   useEffect(() => {
     if (!user) return;
     const textQuery = search.q?.trim() || "";
@@ -195,46 +220,81 @@ function SearchResults() {
       runSearch(textQuery, urlFilters);
       if (cached && cached.length > 0) {
         setLiteratureResults(cached);
-        setLiteratureLoading(false);
+        setLiteratureStatus("loaded");
         setLiteratureError(null);
       } else {
-        setLiteratureLoading(true);
+        // HOLD / NOT STARTED: Live literature search requires explicit user click
+        setLiteratureResults([]);
+        setLiteratureStatus("idle");
         setLiteratureError(null);
-        api.literature.search(textQuery)
-          .then((res) => {
-            const papers = res.results ?? [];
-            if (papers.length > 0) literatureCache.set(cacheKey, papers);
-            setLiteratureResults(papers);
-          })
-          .catch((err) => {
-            setLiteratureError(err instanceof Error ? err.message : "Literature search failed");
-            setLiteratureResults([]);
-          })
-          .finally(() => setLiteratureLoading(false));
       }
     } else if (cached && cached.length > 0 && literatureResults.length === 0) {
-      // Re-mounted from route navigation (e.g. returning from /saved) — restore cached research papers instantly!
+      // Re-mounted from route navigation (e.g. returning from /saved) — restore cached research papers
       setLiteratureResults(cached);
-      setLiteratureLoading(false);
+      setLiteratureStatus("loaded");
       setLiteratureError(null);
-    } else if (!cached && literatureResults.length === 0 && textQuery !== "" && !literatureLoading && !literatureError) {
-      // Baseline restored but literature cache missing (e.g. hard reload) — fetch research papers
-      setLiteratureLoading(true);
-      setLiteratureError(null);
-      api.literature.search(textQuery)
-        .then((res) => {
-          const papers = res.results ?? [];
-          if (papers.length > 0) literatureCache.set(cacheKey, papers);
-          setLiteratureResults(papers);
-        })
-        .catch((err) => {
-          setLiteratureError(err instanceof Error ? err.message : "Literature search failed");
-          setLiteratureResults([]);
-        })
-        .finally(() => setLiteratureLoading(false));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.q, user, hasBaseline, originalQuery, mode, runSearch, reset, literatureResults.length]);
+  }, [search.q, user, hasBaseline, originalQuery, mode, runSearch, reset]);
+
+  // Explicit user-driven trigger for live research paper search
+  const startLiteratureSearch = useCallback(() => {
+    const textQuery = search.q?.trim() || originalQuery || "";
+    if (!textQuery) return;
+
+    const cacheKey = textQuery.toLowerCase();
+    const cached = literatureCache.get(cacheKey);
+    if (cached && cached.length > 0) {
+      setLiteratureResults(cached);
+      setLiteratureStatus("loaded");
+      setLiteratureError(null);
+      return;
+    }
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    setLiteratureStatus("loading");
+    setLiteratureLoading(true);
+    setLiteratureError(null);
+
+    api.literature.search(textQuery, controller.signal)
+      .then((res) => {
+        const papers = res.results ?? [];
+        if (papers.length > 0) literatureCache.set(cacheKey, papers);
+        setLiteratureResults(papers);
+        setLiteratureStatus("loaded");
+      })
+      .catch((err) => {
+        if (err.name === "AbortError" || err.message?.includes("aborted")) {
+          setLiteratureStatus("idle");
+          setLiteratureError(null);
+          return;
+        }
+        setLiteratureError(err instanceof Error ? err.message : "Literature search failed");
+        setLiteratureResults([]);
+        setLiteratureStatus("error");
+      })
+      .finally(() => {
+        if (abortControllerRef.current === controller) {
+          abortControllerRef.current = null;
+        }
+        setLiteratureLoading(false);
+      });
+  }, [search.q, originalQuery]);
+
+  // Explicit user-driven cancellation for live research paper search
+  const stopLiteratureSearch = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setLiteratureLoading(false);
+    setLiteratureStatus("idle");
+  }, []);
 
   // Surface pipeline failures the same way the previous debounced effect did.
   useEffect(() => {
@@ -529,15 +589,19 @@ function SearchResults() {
             ) : activeTab === "papers" ? (
               <div className="space-y-1">
                 <span className="font-medium text-foreground">
-                  {literatureResults.length} research papers found
+                  {literatureStatus === "loaded"
+                    ? `${literatureResults.length} research papers found`
+                    : literatureStatus === "loading"
+                    ? "Searching research papers..."
+                    : "Research paper live search is on hold"}
                 </span>
                 <p className="text-xs text-amber-400/90 flex items-center gap-1 font-normal">
                   <Info className="h-3.5 w-3.5 shrink-0" />
-                  <span>Research papers are under development and will be back soon.</span>
+                  <span>Research papers live search is disabled by default to save API credits.</span>
                 </p>
               </div>
-            ) : filteredResults.length > 0 ? (
-              <span className="font-medium text-foreground">{filteredResults.length} datasets found</span>
+            ) : sourceFilteredResults.length > 0 ? (
+              <span className="font-medium text-foreground">{sourceFilteredResults.length} datasets found</span>
             ) : search.q || hasActiveFilters ? (
               <span><span className="font-medium text-foreground">0</span> datasets found</span>
             ) : null}
@@ -549,6 +613,7 @@ function SearchResults() {
                 <RotateCcw className="h-3 w-3" /> Clear all filters
               </button>
             )}
+
             <div className="flex gap-2">
               <button
                 onClick={() => setActiveTab("datasets")}
@@ -558,7 +623,7 @@ function SearchResults() {
                     : "border border-white/10 [.light_&]:border-slate-200/80 bg-white/5 [.light_&]:bg-slate-100/80 text-muted-foreground [.light_&]:text-slate-600 hover:text-foreground [.light_&]:hover:text-slate-900 [.light_&]:hover:bg-slate-200/80"
                 }`}
               >
-                DATASETS {filteredResults.length ? `(${filteredResults.length})` : ""}
+                DATASETS {sourceFilteredResults.length ? `(${sourceFilteredResults.length})` : ""}
               </button>
               <button
                 onClick={() => setActiveTab("papers")}
@@ -568,7 +633,7 @@ function SearchResults() {
                     : "border border-white/10 [.light_&]:border-slate-200/80 bg-white/5 [.light_&]:bg-slate-100/80 text-muted-foreground [.light_&]:text-slate-600 hover:text-foreground [.light_&]:hover:text-slate-900 [.light_&]:hover:bg-slate-200/80"
                 }`}
               >
-                RESEARCH PAPERS/ARTICLES {literatureResults.length ? `(${literatureResults.length})` : literatureLoading ? "(...)" : ""}
+                RESEARCH PAPERS/ARTICLES {literatureResults.length ? `(${literatureResults.length})` : literatureStatus === "loading" ? "(...)" : literatureStatus === "loaded" ? "(0)" : "(On Hold)"}
               </button>
             </div>
           </div>
@@ -625,6 +690,50 @@ function SearchResults() {
                 )}
               </div>
               <div className="mt-3 space-y-1 overflow-y-auto flex-1 pr-1.5 custom-scrollbar">
+                {/* Result Source Filter Section */}
+                <div className="border-b border-white/5 [.light_&]:border-black/10 pb-3 mb-2">
+                  <div className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                    Result Source
+                  </div>
+                  <div className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => setSourceFilter("all")}
+                      className={`w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors ${
+                        sourceFilter === "all"
+                          ? "bg-cyan/15 text-cyan font-semibold"
+                          : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                      }`}
+                    >
+                      <span>All</span>
+                      <span className="text-[11px] opacity-70">({filteredResults.length})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSourceFilter("internal")}
+                      className={`w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors ${
+                        sourceFilter === "internal"
+                          ? "bg-cyan/15 text-cyan font-semibold"
+                          : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                      }`}
+                    >
+                      <span>Internal</span>
+                      <span className="text-[11px] opacity-70">({internalCount})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSourceFilter("external")}
+                      className={`w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors ${
+                        sourceFilter === "external"
+                          ? "bg-cyan/15 text-cyan font-semibold"
+                          : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                      }`}
+                    >
+                      <span>External</span>
+                      <span className="text-[11px] opacity-70">({externalCount})</span>
+                    </button>
+                  </div>
+                </div>
                 {FILTER_DIMENSIONS.map((dim) => {
                   // `format` reads the identical `keywords` array as `task` and
                   // is kept only for pre-existing `format=` URLs — never rendered
@@ -737,78 +846,138 @@ function SearchResults() {
           {/* Results List */}
           <div className="space-y-4">
             {activeTab === "papers" ? (
-              literatureLoading ? (
-                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              literatureStatus === "loading" || literatureLoading ? (
+                <div className="glass rounded-2xl p-8 text-center flex flex-col items-center justify-center space-y-4">
                   <LottieSearchLoader className="h-12 w-12" />
-                  <span className="mt-4 text-sm">Searching Research Papers<AnimatedDots /></span>
+                  <div className="space-y-1">
+                    <h3 className="font-display text-base font-semibold flex items-center justify-center gap-2">
+                      Searching Research Papers<AnimatedDots />
+                    </h3>
+                    <p className="text-xs text-muted-foreground">Querying literature databases (OpenAlex & Tavily)...</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={stopLiteratureSearch}
+                    className="inline-flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-xs font-medium text-rose-400 hover:bg-rose-500/20 transition-colors"
+                  >
+                    <Square className="h-3.5 w-3.5 fill-current" /> Stop Search
+                  </button>
+                </div>
+              ) : literatureStatus === "idle" ? (
+                <div className="glass rounded-2xl p-8 text-center flex flex-col items-center justify-center space-y-4">
+                  <div className="rounded-full bg-cyan/10 p-4 text-cyan">
+                    <FileText className="h-8 w-8" />
+                  </div>
+                  <div className="space-y-1 max-w-md">
+                    <h3 className="font-display text-lg font-semibold">Research Papers & Articles</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Live research-paper search is on hold to save API credits. Click below to start live search for <span className="font-medium text-foreground">&quot;{search.q || originalQuery}&quot;</span>.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={startLiteratureSearch}
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-5 py-2.5 text-sm font-medium text-[oklch(0.15_0.03_258)] shadow-lg transition-all hover:opacity-95"
+                  >
+                    <Search className="h-4 w-4" /> Search Research Papers
+                  </button>
                 </div>
               ) : literatureError ? (
-                <div className="py-12 text-center text-sm text-muted-foreground">{literatureError}</div>
+                <div className="glass rounded-2xl p-8 text-center flex flex-col items-center justify-center space-y-4">
+                  <div className="text-sm text-rose-400">{literatureError}</div>
+                  <button
+                    type="button"
+                    onClick={startLiteratureSearch}
+                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-foreground hover:bg-white/10"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" /> Try Again
+                  </button>
+                </div>
               ) : literatureResults.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="glass rounded-2xl p-8 text-center flex flex-col items-center justify-center space-y-4">
                   <SearchX className="h-8 w-8 text-muted-foreground/50" />
-                  <p className="mt-3 text-sm text-muted-foreground">No sufficiently relevant research papers were found.</p>
+                  <p className="text-sm text-muted-foreground">No sufficiently relevant research papers were found.</p>
+                  <button
+                    type="button"
+                    onClick={startLiteratureSearch}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    <RotateCcw className="h-3 w-3" /> Search Again
+                  </button>
                 </div>
               ) : (
-                literatureResults.map((p, i) => {
-                  const pId = api.savedPapers.getPaperId(p);
-                  const isSaved = savedPaperIds.has(pId);
-                  return (
-                    <article key={`${p.doi || p.url || p.title}-${i}`} className="glass card-elevated flex flex-col justify-between rounded-2xl p-5">
-                      <div>
-                        <h3 className="font-display text-base font-semibold">{p.title}</h3>
-                        {p.authors.length > 0 && (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {p.authors.slice(0, 4).join(", ")}{p.authors.length > 4 ? " et al" : ""}
-                            {p.journal ? ` · ${p.journal}` : ""}
-                            {p.year ? ` · ${p.year}` : ""}
-                          </p>
-                        )}
-                        {p.abstract && <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{cleanSummaryText(p.abstract).slice(0, 400)}</p>}
-                        <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
-                          {p.doi && <span className="rounded-full border border-white/10 px-2 py-0.5">DOI: {p.doi}</span>}
-                          {p.citation_count != null && <span className="rounded-full border border-white/10 px-2 py-0.5">{p.citation_count} citations</span>}
-                          <span className="rounded-full border border-white/10 px-2 py-0.5 capitalize">{p.provider}</span>
-                        </div>
-                      </div>
-                      <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-xs text-muted-foreground">Showing live literature search results</span>
+                    <button
+                      type="button"
+                      onClick={startLiteratureSearch}
+                      className="inline-flex items-center gap-1 text-xs text-cyan hover:underline"
+                    >
+                      <RotateCcw className="h-3 w-3" /> Refresh Results
+                    </button>
+                  </div>
+                  {literatureResults.map((p, i) => {
+                    const pId = api.savedPapers.getPaperId(p);
+                    const isSaved = savedPaperIds.has(pId);
+                    return (
+                      <article key={`${p.doi || p.url || p.title}-${i}`} className="glass card-elevated flex flex-col justify-between rounded-2xl p-5">
                         <div>
-                          {p.url && (
-                            <a href={p.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-cyan hover:underline">
-                              View Paper <ExternalLink className="h-3 w-3" />
-                            </a>
+                          <h3 className="font-display text-base font-semibold">{p.title}</h3>
+                          {p.authors.length > 0 && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {p.authors.slice(0, 4).join(", ")}{p.authors.length > 4 ? " et al" : ""}
+                              {p.journal ? ` · ${p.journal}` : ""}
+                              {p.year ? ` · ${p.year}` : ""}
+                            </p>
                           )}
+                          {p.abstract && <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{cleanSummaryText(p.abstract).slice(0, 400)}</p>}
+                          <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+                            {p.doi && <span className="rounded-full border border-white/10 px-2 py-0.5">DOI: {p.doi}</span>}
+                            {p.citation_count != null && <span className="rounded-full border border-white/10 px-2 py-0.5">{p.citation_count} citations</span>}
+                            <span className="rounded-full border border-white/10 px-2 py-0.5 capitalize">{p.provider}</span>
+                          </div>
                         </div>
-                        <button
-                          onClick={async () => {
-                            if (isSaved) {
-                              await api.savedPapers.delete(pId);
-                              setSavedPaperIds((prev) => {
-                                const next = new Set(prev);
-                                next.delete(pId);
-                                return next;
-                              });
-                              toast.success("Research paper unsaved");
-                            } else {
-                              await api.savedPapers.save(p);
-                              setSavedPaperIds((prev) => new Set(prev).add(pId));
-                              toast.success("Research paper saved");
-                            }
-                          }}
-                          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                            isSaved
-                              ? "bg-cyan/20 border border-cyan/40 text-cyan-300"
-                              : "border border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground"
-                          }`}
-                          title={isSaved ? "Unsave research paper" : "Save research paper"}
-                        >
-                          <Bookmark className={`h-3.5 w-3.5 ${isSaved ? "fill-cyan-400 text-cyan-400" : ""}`} />
-                          <span>{isSaved ? "Saved" : "Save"}</span>
-                        </button>
-                      </div>
-                    </article>
-                  );
-                })
+                        <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3">
+                          <div>
+                            {p.url && (
+                              <a href={p.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-cyan hover:underline">
+                                View Paper <ExternalLink className="h-3 w-3" />
+                              </a>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (isSaved) {
+                                await api.savedPapers.delete(pId);
+                                setSavedPaperIds((prev) => {
+                                  const next = new Set(prev);
+                                  next.delete(pId);
+                                  return next;
+                                });
+                                toast.success("Research paper unsaved");
+                              } else {
+                                await api.savedPapers.save(p);
+                                setSavedPaperIds((prev) => new Set(prev).add(pId));
+                                toast.success("Research paper saved");
+                              }
+                            }}
+                            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+                              isSaved
+                                ? "bg-cyan/20 border border-cyan/40 text-cyan-300"
+                                : "border border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+                            }`}
+                            title={isSaved ? "Unsave research paper" : "Save research paper"}
+                          >
+                            <Bookmark className={`h-3.5 w-3.5 ${isSaved ? "fill-cyan-400 text-cyan-400" : ""}`} />
+                            <span>{isSaved ? "Saved" : "Save"}</span>
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
               )
             ) : (
               <>
