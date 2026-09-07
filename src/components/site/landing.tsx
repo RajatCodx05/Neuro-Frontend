@@ -470,12 +470,12 @@ export default function Landing() {
 
             </motion.div>
           </div>
-          {/* Seamless fade into stats section */}
-          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-[oklch(0.15_0.028_255)] [.light_&]:to-slate-100/80" style={{ zIndex: 1 }} />
+          {/* Seamless fade into stats section — transparent in light mode */}
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-[oklch(0.15_0.028_255)] [.light_&]:to-transparent" style={{ zIndex: 1 }} />
         </section>
 
         {/* STATS */}
-        <section className="relative border-b border-border [.light_&]:border-slate-200/80 bg-[oklch(0.15_0.028_255)] [.light_&]:bg-slate-50/80 py-10">
+        <section className="relative border-b border-border [.light_&]:border-slate-200/60 bg-[oklch(0.15_0.028_255)] [.light_&]:bg-transparent py-10">
           <div className="mx-auto max-w-7xl px-6">
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6 [.light_&]:divide-x [.light_&]:divide-slate-200/60">
               {dynamicStats.map((s) => (
