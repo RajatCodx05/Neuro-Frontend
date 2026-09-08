@@ -4,7 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Sparkles, Mic, SlidersHorizontal, ArrowRight, ArrowUpRight, Play,
   CheckCircle2, Shield, Zap, Database, Activity, Bookmark, Share2,
-  MessageSquare, Wand2, Search, BrainCircuit, Waves, Download,
+  MessageSquare, Wand2, BrainCircuit, Waves, Download,
   Rocket, Bell, BellRing, LogIn, UserPlus, LogOut, Settings, ShieldCheck,
   Megaphone, Volume2, VolumeX, X, ThumbsUp, ThumbsDown
 } from "lucide-react";
@@ -688,9 +688,6 @@ export default function Landing() {
                 <div className="mt-8 flex flex-wrap justify-center gap-3">
                   <Link to="/" search={{ q: "" }} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-5 py-3 text-sm font-medium text-[oklch(0.15_0.03_258)] glow-cyan">
                     Start Searching <ArrowRight className="h-4 w-4" />
-                  </Link>
-                  <Link to="/" className="inline-flex items-center gap-2 rounded-full glass px-5 py-3 text-sm hover:bg-white/10">
-                    Open Dashboard <Search className="h-4 w-4" />
                   </Link>
                 </div>
               </div>
