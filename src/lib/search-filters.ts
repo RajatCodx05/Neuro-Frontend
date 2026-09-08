@@ -1110,7 +1110,8 @@ export function modalityDisplayLabel(value: string): string {
       .map((part) => modalityDisplayLabel(part))
       .join(", ");
   }
-  const lower = v.toLowerCase();
+  const canonical = MODALITY_CANONICAL_TOKENS[v.toLowerCase()];
+  if (!canonical) return facetDisplayLabel(v);
   const display: Record<string, string> = {
     meg: "MEG",
     eeg: "EEG",
@@ -1124,8 +1125,5 @@ export function modalityDisplayLabel(value: string): string {
     nirs: "NIRS",
     fnirs: "fNIRS",
   };
-  if (display[lower]) return display[lower];
-  const canonical = MODALITY_CANONICAL_TOKENS[lower];
-  if (canonical && display[canonical.toLowerCase()]) return display[canonical.toLowerCase()];
-  return facetDisplayLabel(v);
+  return display[canonical] ?? facetDisplayLabel(v);
 }
