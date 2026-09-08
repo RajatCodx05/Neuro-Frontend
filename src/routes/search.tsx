@@ -844,7 +844,7 @@ function SearchResults() {
           )}
 
           {/* Results List */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             {activeTab === "papers" ? (
               literatureStatus === "loading" || literatureLoading ? (
                 <div className="glass rounded-2xl p-8 text-center flex flex-col items-center justify-center space-y-4">
@@ -1003,38 +1003,11 @@ function SearchResults() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: Math.min(i, 5) * 0.06 }}
-                className="glass card-elevated group flex flex-col gap-4 rounded-2xl p-5 sm:flex-row"
+                className="relative glass card-elevated group flex flex-col gap-4 rounded-2xl p-5 sm:flex-row"
               >
                 <div className="flex flex-col items-center gap-2 shrink-0">
                   <div className="grid h-16 w-16 place-items-center rounded-xl bg-gradient-to-br from-cyan/40 to-neural/40 font-display text-xs font-bold text-white ring-1 ring-white/10 uppercase">
                     {modalityDisplayLabel(d.modality ?? "DS")}
-                  </div>
-                  {/* Like & Dislike buttons positioned on the left under modality avatar */}
-                  <div className="flex w-16 items-center justify-between gap-1">
-                    <button
-                      onClick={() => handleLikeOrNone(d.id, "like")}
-                      className={`flex-1 inline-flex items-center justify-center gap-0.5 rounded-full border px-1 py-0.5 text-[10px] font-medium transition-colors ${
-                        reactions[d.id]?.userReaction === "like"
-                          ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-400"
-                          : "border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] text-muted-foreground hover:bg-white/10 hover:text-foreground"
-                      }`}
-                      title="Like dataset"
-                    >
-                      <ThumbsUp className="h-3 w-3" />
-                      <span>{reactions[d.id]?.likes || 0}</span>
-                    </button>
-                    <button
-                      onClick={() => handleDislikeClick(d.id, d.name ?? d.id)}
-                      className={`flex-1 inline-flex items-center justify-center gap-0.5 rounded-full border px-1 py-0.5 text-[10px] font-medium transition-colors ${
-                        reactions[d.id]?.userReaction === "dislike"
-                          ? "border-rose-500/50 bg-rose-500/15 text-rose-400"
-                          : "border-white/10 [.light_&]:border-black/15 bg-white/5 [.light_&]:bg-black/[0.04] text-muted-foreground hover:bg-white/10 hover:text-foreground"
-                      }`}
-                      title="Report an issue with this dataset"
-                    >
-                      <ThumbsDown className="h-3 w-3" />
-                      <span>{reactions[d.id]?.dislikes || 0}</span>
-                    </button>
                   </div>
                 </div>
                 <div className="min-w-0 flex-1">
@@ -1090,6 +1063,37 @@ function SearchResults() {
                       <Bookmark className="h-3.5 w-3.5" /> Save
                     </button>
                   )}
+                </div>
+
+                {/* Floating Like & Dislike badge on the bottom-right border */}
+                <div className="absolute -bottom-3 right-5 z-10 inline-flex items-center gap-1 rounded-full border border-white/10 [.light_&]:border-black/10 bg-[oklch(0.20_0.03_258)] [.light_&]:bg-white px-2 py-0.5 shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => handleLikeOrNone(d.id, "like")}
+                    className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                      reactions[d.id]?.userReaction === "like"
+                        ? "text-cyan-400 font-semibold"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    title="Like dataset"
+                  >
+                    <ThumbsUp className="h-3 w-3" />
+                    <span>{reactions[d.id]?.likes || 0}</span>
+                  </button>
+                  <span className="h-2.5 w-[1px] bg-white/10 [.light_&]:bg-black/10" />
+                  <button
+                    type="button"
+                    onClick={() => handleDislikeClick(d.id, d.name ?? d.id)}
+                    className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                      reactions[d.id]?.userReaction === "dislike"
+                        ? "text-rose-400 font-semibold"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    title="Report an issue with this dataset"
+                  >
+                    <ThumbsDown className="h-3 w-3" />
+                    <span>{reactions[d.id]?.dislikes || 0}</span>
+                  </button>
                 </div>
               </motion.article>
             ))}
