@@ -4,7 +4,7 @@ import {
   Brain, LayoutDashboard, Users, Database, ShieldCheck, Sparkles, BarChart3,
   Megaphone, Server, HardDrive, Coins, ScrollText, LifeBuoy,
   LogOut, User as UserIcon, PanelLeft, PanelLeftClose, ArrowLeft, Sun, Moon,
-  ChevronsUpDown, X,
+  ChevronsUpDown, X, Search,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
@@ -37,6 +37,7 @@ const groups: NavGroup[] = [
     label: "Infrastructure & ops",
     items: [
       { icon: Server, label: "Infrastructure", to: "/admin/infrastructure" },
+      { icon: Search, label: "Search logs", to: "/admin/searches" },
       { icon: Sparkles, label: "Agent activity", to: "/admin/agents" },
       { icon: Coins, label: "Token usage", to: "/admin/tokens" },
     ],

@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api-client";
+import { useState } from "react";
+import { api, type AdminExternalLog } from "@/lib/api-client";
 import { AdminPageHeader } from "@/components/app/admin-shell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from "recharts";
-import { HardDrive, Activity, AlertTriangle, CheckCircle2, BarChart3 } from "lucide-react";
+import { HardDrive, Activity, AlertTriangle, CheckCircle2, BarChart3, ChevronLeft, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/admin/infrastructure")({
   head: () => ({ meta: [{ title: "Admin · Infrastructure — NeuroSearch AI" }] }),
@@ -367,7 +368,186 @@ function InfraPage() {
             </div>
           </div>
       </div>
+
+      {/* Phase 8 — External API activity */}
+      <ExternalApiSection />
     </>
+  );
+}
+
+const EXT_PAGE_SIZE = 25;
+
+function fmtMs(ms: number) {
+  if (ms < 1000) return `${Math.round(ms)} ms`;
+  return `${(ms / 1000).toFixed(2)} s`;
+}
+
+function getInitialRequestId(): string {
+  if (typeof window === "undefined") return "";
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = params.get("requestId");
+  if (fromUrl) return fromUrl;
+  try {
+    const ss = sessionStorage.getItem("admin_requestId_filter");
+    if (ss) { sessionStorage.removeItem("admin_requestId_filter"); return ss; }
+  } catch {}
+  return "";
+}
+
+function ExternalApiSection() {
+  const initialRid = getInitialRequestId();
+  const [serviceFilter, setServiceFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [requestIdFilter, setRequestIdFilter] = useState(initialRid);
+  const [requestIdInput, setRequestIdInput] = useState(initialRid);
+  const [page, setPage] = useState(1);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["ext-logs", serviceFilter, statusFilter, requestIdFilter, page],
+    queryFn: () => api.admin.externalLogs.list({
+      service: serviceFilter || undefined,
+      status: (statusFilter as "success" | "error") || undefined,
+      requestId: requestIdFilter || undefined,
+      limit: EXT_PAGE_SIZE,
+      offset: (page - 1) * EXT_PAGE_SIZE,
+    }),
+    staleTime: 15_000,
+  });
+
+  // summary comes from backend aggregate over the FULL filtered dataset, not just this page
+  const summary = data?.summary;
+  const items: AdminExternalLog[] = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / EXT_PAGE_SIZE));
+
+  return (
+    <div className="px-6 pb-8 md:px-8">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground">External API activity</h2>
+
+      {/* Summary stats — always over full filtered dataset */}
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+        {[
+          { label: "Total calls", value: isLoading ? null : (summary?.count ?? 0).toLocaleString() },
+          { label: "Errors", value: isLoading ? null : (summary?.errors ?? 0).toLocaleString() },
+          { label: "Avg duration", value: isLoading ? null : (summary?.avgMs != null ? fmtMs(summary.avgMs) : "—") },
+          { label: "Max duration", value: isLoading ? null : (summary?.maxMs != null ? fmtMs(summary.maxMs) : "—") },
+          { label: "Min duration", value: isLoading ? null : (summary?.minMs != null ? fmtMs(summary.minMs) : "—") },
+        ].map(({ label, value }) => (
+          <div key={label} className="glass rounded-2xl p-4">
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
+            <div className="mt-1.5 font-display text-xl font-semibold">
+              {value == null ? <Skeleton className="h-6 w-14 rounded" /> : value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="glass mb-4 flex flex-wrap items-center gap-3 rounded-2xl p-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground shrink-0">Service:</span>
+          <select value={serviceFilter} onChange={(e) => { setServiceFilter(e.target.value); setPage(1); }}
+            className="rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-foreground outline-none focus:border-cyan/50 cursor-pointer">
+            <option value="" className="bg-[oklch(0.18_0.02_258)]">All services</option>
+            <option value="tavily" className="bg-[oklch(0.18_0.02_258)]">tavily</option>
+            <option value="openneuro" className="bg-[oklch(0.18_0.02_258)]">openneuro</option>
+            <option value="dandi" className="bg-[oklch(0.18_0.02_258)]">dandi</option>
+            <option value="zenodo" className="bg-[oklch(0.18_0.02_258)]">zenodo</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground shrink-0">Status:</span>
+          <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            className="rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-foreground outline-none focus:border-cyan/50 cursor-pointer">
+            <option value="" className="bg-[oklch(0.18_0.02_258)]">All</option>
+            <option value="success" className="bg-[oklch(0.18_0.02_258)]">success</option>
+            <option value="error" className="bg-[oklch(0.18_0.02_258)]">error</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2 flex-1 min-w-48">
+          <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground shrink-0">Request ID:</span>
+          <input
+            value={requestIdInput}
+            onChange={(e) => setRequestIdInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && (setRequestIdFilter(requestIdInput.trim()), setPage(1))}
+            placeholder="Filter by request ID…"
+            className="flex-1 rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 text-sm font-mono outline-none placeholder:text-muted-foreground/60"
+          />
+          <button onClick={() => { setRequestIdFilter(requestIdInput.trim()); setPage(1); }} className="rounded-xl bg-cyan/10 px-3 py-1.5 text-sm font-medium text-cyan hover:bg-cyan/20 transition shrink-0">Apply</button>
+          {requestIdFilter && <button onClick={() => { setRequestIdInput(""); setRequestIdFilter(""); setPage(1); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="glass overflow-hidden rounded-2xl">
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between gap-2 border-b border-white/5 [.light_&]:border-black/5 px-4 py-3">
+            <span className="text-xs text-muted-foreground">
+              {(page - 1) * EXT_PAGE_SIZE + 1}–{Math.min(page * EXT_PAGE_SIZE, total)} of {total.toLocaleString()}
+            </span>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1 || isLoading}
+                className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-white/10 [.light_&]:hover:bg-black/10 hover:text-foreground disabled:pointer-events-none disabled:opacity-30">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="px-2 text-xs text-muted-foreground">{page} / {totalPages}</span>
+              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages || isLoading}
+                className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-white/10 [.light_&]:hover:bg-black/10 hover:text-foreground disabled:pointer-events-none disabled:opacity-30">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+        <table className="w-full text-sm">
+          <thead className="text-xs uppercase tracking-widest text-muted-foreground">
+            <tr className="border-b border-white/5 [.light_&]:border-black/5">
+              <th className="px-4 py-3 text-left">When</th>
+              <th className="px-4 py-3 text-left">Service</th>
+              <th className="px-4 py-3 text-left">Operation</th>
+              <th className="px-4 py-3 text-right">Duration</th>
+              <th className="px-4 py-3 text-center">HTTP</th>
+              <th className="px-4 py-3 text-left">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5 [.light_&]:divide-black/5">
+            {isLoading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <tr key={i}>
+                  <td className="px-4 py-3"><Skeleton className="h-3 w-28 rounded" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-4 w-16 rounded font-mono" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-4 w-20 rounded" /></td>
+                  <td className="px-4 py-3"><div className="flex justify-end"><Skeleton className="h-4 w-12 rounded" /></div></td>
+                  <td className="px-4 py-3"><div className="flex justify-center"><Skeleton className="h-4 w-8 rounded" /></div></td>
+                  <td className="px-4 py-3"><Skeleton className="h-4 w-14 rounded" /></td>
+                </tr>
+              ))
+            ) : items.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">
+                  No external API calls recorded yet.
+                </td>
+              </tr>
+            ) : (
+              items.map((l) => (
+                <tr key={l._id} className="hover:bg-white/[0.02] transition">
+                  <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                    {new Date(l.createdAt).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs text-cyan">{l.service}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{l.operation}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{fmtMs(l.durationMs)}</td>
+                  <td className="px-4 py-3 text-center tabular-nums text-muted-foreground">{l.httpStatus ?? "—"}</td>
+                  <td className={`px-4 py-3 text-xs ${l.status === "success" ? "text-emerald-400" : "text-rose-400"}`}>
+                    {l.status}
+                    {l.error && <div className="text-[10px] text-rose-400/80 truncate max-w-[140px]">{l.error}</div>}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 

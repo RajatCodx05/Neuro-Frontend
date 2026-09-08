@@ -20,6 +20,7 @@ import { Route as DatasetIdRouteImport } from './routes/dataset.$id'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as AdminTokensRouteImport } from './routes/admin/tokens'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
+import { Route as AdminSearchesRouteImport } from './routes/admin/searches'
 import { Route as AdminRepositoriesRouteImport } from './routes/admin/repositories'
 import { Route as AdminModerationRouteImport } from './routes/admin/moderation'
 import { Route as AdminInfrastructureRouteImport } from './routes/admin/infrastructure'
@@ -88,6 +89,11 @@ const AdminTokensRoute = AdminTokensRouteImport.update({
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminSearchesRoute = AdminSearchesRouteImport.update({
+  id: '/searches',
+  path: '/searches',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminRepositoriesRoute = AdminRepositoriesRouteImport.update({
@@ -187,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/admin/infrastructure': typeof AdminInfrastructureRoute
   '/admin/moderation': typeof AdminModerationRoute
   '/admin/repositories': typeof AdminRepositoriesRoute
+  '/admin/searches': typeof AdminSearchesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/tokens': typeof AdminTokensRoute
   '/admin/users': typeof AdminUsersRoute
@@ -213,6 +220,7 @@ export interface FileRoutesByTo {
   '/admin/infrastructure': typeof AdminInfrastructureRoute
   '/admin/moderation': typeof AdminModerationRoute
   '/admin/repositories': typeof AdminRepositoriesRoute
+  '/admin/searches': typeof AdminSearchesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/tokens': typeof AdminTokensRoute
   '/admin/users': typeof AdminUsersRoute
@@ -242,6 +250,7 @@ export interface FileRoutesById {
   '/admin/infrastructure': typeof AdminInfrastructureRoute
   '/admin/moderation': typeof AdminModerationRoute
   '/admin/repositories': typeof AdminRepositoriesRoute
+  '/admin/searches': typeof AdminSearchesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/tokens': typeof AdminTokensRoute
   '/admin/users': typeof AdminUsersRoute
@@ -271,6 +280,7 @@ export interface FileRouteTypes {
     | '/admin/infrastructure'
     | '/admin/moderation'
     | '/admin/repositories'
+    | '/admin/searches'
     | '/admin/settings'
     | '/admin/tokens'
     | '/admin/users'
@@ -297,6 +307,7 @@ export interface FileRouteTypes {
     | '/admin/infrastructure'
     | '/admin/moderation'
     | '/admin/repositories'
+    | '/admin/searches'
     | '/admin/settings'
     | '/admin/tokens'
     | '/admin/users'
@@ -325,6 +336,7 @@ export interface FileRouteTypes {
     | '/admin/infrastructure'
     | '/admin/moderation'
     | '/admin/repositories'
+    | '/admin/searches'
     | '/admin/settings'
     | '/admin/tokens'
     | '/admin/users'
@@ -419,6 +431,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/admin/settings'
       preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/searches': {
+      id: '/admin/searches'
+      path: '/searches'
+      fullPath: '/admin/searches'
+      preLoaderRoute: typeof AdminSearchesRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/repositories': {
@@ -560,6 +579,7 @@ interface AdminRouteRouteChildren {
   AdminInfrastructureRoute: typeof AdminInfrastructureRoute
   AdminModerationRoute: typeof AdminModerationRoute
   AdminRepositoriesRoute: typeof AdminRepositoriesRoute
+  AdminSearchesRoute: typeof AdminSearchesRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminTokensRoute: typeof AdminTokensRoute
   AdminUsersRoute: typeof AdminUsersRoute
@@ -576,6 +596,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminInfrastructureRoute: AdminInfrastructureRoute,
   AdminModerationRoute: AdminModerationRoute,
   AdminRepositoriesRoute: AdminRepositoriesRoute,
+  AdminSearchesRoute: AdminSearchesRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminTokensRoute: AdminTokensRoute,
   AdminUsersRoute: AdminUsersRoute,

@@ -141,6 +141,152 @@ export type AdminAnalytics = {
   };
 };
 
+// ── Phase 8 Observability types ───────────────────────────────────────────────
+
+export type AdminSearchItem = {
+  _id: string;
+  requestId: string | null;
+  rawQuery: string;
+  resultSource: 'cache' | 'fallback' | 'merged' | 'out_of_domain';
+  resultCount: number;
+  provenance: {
+    mongodb_dataset?: number;
+    mongodb_catalog?: number;
+    repository?: number;
+    discovery?: number;
+  } | null;
+  timings: {
+    totalMs?: number | null;
+    queryParsingMs?: number | null;
+    datasetRetrievalMs?: number | null;
+    catalogRetrievalMs?: number | null;
+    repositoryMs?: number | null;
+    discoveryMs?: number | null;
+    rankingMs?: number | null;
+  } | null;
+  filters?: Record<string, unknown> | null;
+  createdAt: string;
+};
+
+export type AdminAgentItem = {
+  _id: string;
+  requestId: string | null;
+  queryId: string | null;
+  agent: string;
+  provider: string | null;
+  model: string | null;
+  query: string;
+  durationMs: number;
+  resultCount: number;
+  status: 'success' | 'error';
+  errorMessage: string | null;
+  createdAt: string;
+};
+
+export type AdminTokenCost = {
+  totalCost: number | null;
+  inputCost: number | null;
+  outputCost: number | null;
+  isEstimated: boolean;
+  costAvailable: boolean;
+  pricingAvailable: boolean;
+  reason: string | null;
+  currency: string;
+};
+
+export type AdminTokenItem = {
+  _id: string;
+  requestId: string | null;
+  userEmail: string;
+  agent: string;
+  provider: string | null;
+  model: string;
+  tokens: number;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  totalTokens: number | null;
+  usageType: 'actual' | 'estimated' | null;
+  status: 'success' | 'error';
+  createdAt: string;
+  cost: AdminTokenCost;
+};
+
+export type AdminExternalLog = {
+  _id: string;
+  requestId: string | null;
+  service: string;
+  operation: string;
+  endpoint: string | null;
+  durationMs: number;
+  status: 'success' | 'error';
+  httpStatus: number | null;
+  error: string | null;
+  createdAt: string;
+};
+
+export type AdminExternalLogSummary = {
+  count: number;
+  avgMs: number;
+  maxMs: number;
+  minMs: number;
+  errors: number;
+};
+
+export type AdminCostRecord = {
+  totalCost: number | null;
+  llmCost: number | null;
+  externalCost: number | null;
+  searchCount: number;
+  actualSearches: number;
+  estimatedSearches: number;
+  costAvailable: boolean;
+  pricingAvailable: boolean;
+  currency: string;
+  period?: string;
+};
+
+export type AdminCostBreakdown = {
+  period: { from: string | null; to: string | null };
+  totals: { searchCount: number; calculableSearchCount: number; llmCost: number; externalCost: number; totalCost: number; calculableTotalCost: number; currency: string };
+  coverage: { totalSearches: number; searchesWithCalculableCost: number; searchesWithEstimatedCost: number; searchesWithUnavailableCost: number; calculableEstimatedCount: number; percentCalculable: number; percentEstimated: number; percentUnavailable: number };
+  averages: { avgCostPerSearch: number | null; avgLlmPerSearch: number | null; avgExternalPerSearch: number | null; overallAvgCostPerSearch: number | null; assumedCostPerSearch: number | null };
+  breakdown: {
+    byProvider: Array<{ provider: string; llmCost: number; count: number; costAvailableCount: number; unavailableCount: number; percentage: number }>;
+    byModel: Array<{ model: string; provider: string; llmCost: number; count: number; costAvailableCount: number; percentage: number }>;
+    byAgent: Array<{ agent: string; llmCost: number; count: number; costAvailableCount: number; percentage: number }>;
+    byService: Array<{ service: string; externalCost: number; count: number; costAvailableCount: number; unavailableCount: number; percentage: number }>;
+    byUsageType: { actual: { cost: number; count: number }; estimated: { cost: number; count: number }; unknown: { cost: number; count: number } };
+    byCostType: { llm: { cost: number; percentage: number; count: number }; external: { cost: number; percentage: number; count: number } };
+  };
+  drivers: { topModel: { model: string; provider: string; llmCost: number; percentage: number } | null; topAgent: { agent: string; llmCost: number; percentage: number } | null; topProvider: { provider: string; llmCost: number; percentage: number } | null; topService: { service: string; externalCost: number; percentage: number } | null };
+  daily: Array<{ date: string; searchCount: number; llmCost: number; externalCost: number; totalCost: number; byProvider: Record<string, number>; byModel: Record<string, number> }>;
+  meta: { llmRecordCount: number; externalRecordCount: number; calculableLlmCost: number; calculableExternalCost: number };
+};
+
+export type AdminCostScaling = {
+  period: { from: string | null; to: string | null };
+  measured: { totals: AdminCostBreakdown['totals']; coverage: AdminCostBreakdown['coverage']; averages: AdminCostBreakdown['averages'] };
+  assumptions: { historicalPeriod: { from: string | null; to: string | null }; historicalTotalSearches: number; historicalCalculableSearches: number; historicalCalculableCost: number; historicalCoveragePercent: number; avgCostPerSearch: number | null; avgLlmPerSearch: number | null; avgExternalPerSearch: number | null; formula: string; note: string };
+  scenarios: number[];
+  projections: Array<{ searchesPerDay: number; projectedDailyCost: number; projectedMonthlyCost: number; projectedLlmDailyCost: number; projectedExternalDailyCost: number; currency: string; assumedCostPerSearch: number }>;
+  insufficient: boolean;
+  insufficientReasons: string[];
+  warnings: string[];
+  drivers: AdminCostBreakdown['drivers'];
+  breakdown: AdminCostBreakdown['breakdown'];
+};
+
+export type AdminSearchDetail = {
+  requestId: string;
+  queryLog: AdminSearchItem | null;
+  agentLogs: AdminAgentItem[];
+  tokenUsages: (AdminTokenItem & { cost: AdminTokenCost })[];
+  externalLogs: AdminExternalLog[];
+  cost: AdminCostRecord | null;
+  timings: AdminSearchItem['timings'];
+  provenance: AdminSearchItem['provenance'];
+};
+
 function getAnonKey(): string {
   if (typeof window === "undefined") return "anon_ssr";
   let key = localStorage.getItem("neuro_anon_key");
@@ -303,7 +449,7 @@ export const stripHtml = cleanSummaryText;
 
 function mapRetrievalSource(rawSource: unknown): "internal" | "external" | undefined {
   const s = String(rawSource ?? "").trim().toLowerCase();
-  if (s === "mongodb") return "internal";
+  if (s === "mongodb" || s === "mongodb_dataset" || s === "mongodb_catalog" || s === "catalog") return "internal";
   if (s === "repository" || s === "discovery") return "external";
   return undefined;
 }
@@ -768,13 +914,111 @@ const admin = {
     mongo: () => request<Record<string, unknown>>('/admin/infra/mongo'),
     redis: () => request<Record<string, unknown>>('/admin/infra/redis'),
     storage: () => request<Record<string, unknown>>('/admin/infra/storage'),
-    tokens: async () => {
-      const values = await request<Record<string, unknown>[]>('/admin/tokens');
-      return values.map((v) => ({ ...v, id: idOf(v) }));
+    // ponytail: backward-compat — no params → array; with params → paginated { items, total, limit, offset }
+    tokens: async (params?: { requestId?: string; provider?: string; model?: string; agent?: string; usageType?: string; status?: string; from?: string; to?: string; limit?: number; offset?: number }) => {
+      if (!params || Object.keys(params).length === 0) {
+        const values = await request<Record<string, unknown>[]>('/admin/tokens');
+        return values.map((v) => ({ ...v, id: idOf(v) }));
+      }
+      const q = new URLSearchParams();
+      if (params.requestId) q.set('requestId', params.requestId);
+      if (params.provider) q.set('provider', params.provider);
+      if (params.model) q.set('model', params.model);
+      if (params.agent) q.set('agent', params.agent);
+      if (params.usageType) q.set('usageType', params.usageType);
+      if (params.status) q.set('status', params.status);
+      if (params.from) q.set('from', params.from);
+      if (params.to) q.set('to', params.to);
+      if (params.limit != null) q.set('limit', String(params.limit));
+      if (params.offset != null) q.set('offset', String(params.offset));
+      return request<{ items: AdminTokenItem[]; total: number; limit: number; offset: number }>(`/admin/tokens?${q}`);
     },
-    agents: async () => {
-      const values = await request<Record<string, unknown>[]>('/admin/agents');
-      return values.map((v) => ({ ...v, id: idOf(v) }));
+    agents: async (params?: { requestId?: string; agent?: string; provider?: string; status?: string; from?: string; to?: string; limit?: number; offset?: number }) => {
+      if (!params || Object.keys(params).length === 0) {
+        const values = await request<Record<string, unknown>[]>('/admin/agents');
+        return values.map((v) => ({ ...v, id: idOf(v) }));
+      }
+      const q = new URLSearchParams();
+      if (params.requestId) q.set('requestId', params.requestId);
+      if (params.agent) q.set('agent', params.agent);
+      if (params.provider) q.set('provider', params.provider);
+      if (params.status) q.set('status', params.status);
+      if (params.from) q.set('from', params.from);
+      if (params.to) q.set('to', params.to);
+      if (params.limit != null) q.set('limit', String(params.limit));
+      if (params.offset != null) q.set('offset', String(params.offset));
+      return request<{ items: AdminAgentItem[]; total: number; limit: number; offset: number }>(`/admin/agents?${q}`);
+    },
+  },
+  // Phase 8 — Search Observability
+  searches: {
+    list: (params?: { from?: string; to?: string; resultSource?: string; q?: string; limit?: number; offset?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.from) qs.set('from', params.from);
+      if (params?.to) qs.set('to', params.to);
+      if (params?.resultSource) qs.set('resultSource', params.resultSource);
+      if (params?.q) qs.set('q', params.q);
+      if (params?.limit != null) qs.set('limit', String(params.limit));
+      if (params?.offset != null) qs.set('offset', String(params.offset));
+      const queryStr = qs.toString() ? `?${qs}` : '';
+      return request<{ items: AdminSearchItem[]; total: number; limit: number; offset: number }>(`/admin/searches${queryStr}`);
+    },
+    detail: (requestId: string) =>
+      request<AdminSearchDetail>(`/admin/searches/${encodeURIComponent(requestId)}`),
+  },
+  // Phase 8 — External API Logs
+  externalLogs: {
+    list: (params?: { service?: string; status?: string; from?: string; to?: string; requestId?: string; limit?: number; offset?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.service) qs.set('service', params.service);
+      if (params?.status) qs.set('status', params.status);
+      if (params?.from) qs.set('from', params.from);
+      if (params?.to) qs.set('to', params.to);
+      if (params?.requestId) qs.set('requestId', params.requestId);
+      if (params?.limit != null) qs.set('limit', String(params.limit));
+      if (params?.offset != null) qs.set('offset', String(params.offset));
+      const queryStr = qs.toString() ? `?${qs}` : '';
+      return request<{ items: AdminExternalLog[]; total: number; limit: number; offset: number; summary: AdminExternalLogSummary }>(`/admin/external-logs${queryStr}`);
+    },
+  },
+  // Phase 6/8/11 — Cost Intelligence
+  cost: {
+    summary: (params?: { from?: string; to?: string; groupBy?: 'day' | 'month' }) => {
+      const qs = new URLSearchParams();
+      if (params?.from) qs.set('from', params.from);
+      if (params?.to) qs.set('to', params.to);
+      if (params?.groupBy) qs.set('groupBy', params.groupBy);
+      return request<AdminCostRecord>(`/admin/cost/summary${qs.toString() ? `?${qs}` : ''}`);
+    },
+    byRequest: (requestId: string) =>
+      request<AdminCostRecord>(`/admin/cost/request/${encodeURIComponent(requestId)}`),
+    daily: (params?: { date?: string; from?: string; to?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.date) qs.set('date', params.date);
+      if (params?.from) qs.set('from', params.from);
+      if (params?.to) qs.set('to', params.to);
+      return request<AdminCostRecord>(`/admin/cost/daily${qs.toString() ? `?${qs}` : ''}`);
+    },
+    monthly: (params?: { month?: string; from?: string; to?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.month) qs.set('month', params.month);
+      if (params?.from) qs.set('from', params.from);
+      if (params?.to) qs.set('to', params.to);
+      return request<AdminCostRecord>(`/admin/cost/monthly${qs.toString() ? `?${qs}` : ''}`);
+    },
+    pricing: () => request<{ llm: Record<string, unknown>; external: Record<string, unknown>; note: string }>('/admin/cost/pricing'),
+    breakdown: (params?: { from?: string; to?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.from) qs.set('from', params.from);
+      if (params?.to) qs.set('to', params.to);
+      return request<AdminCostBreakdown>(`/admin/cost/breakdown${qs.toString() ? `?${qs}` : ''}`);
+    },
+    scaling: (params?: { from?: string; to?: string; scenarios?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.from) qs.set('from', params.from);
+      if (params?.to) qs.set('to', params.to);
+      if (params?.scenarios) qs.set('scenarios', params.scenarios);
+      return request<AdminCostScaling>(`/admin/cost/scaling${qs.toString() ? `?${qs}` : ''}`);
     },
   },
   announcements: {
