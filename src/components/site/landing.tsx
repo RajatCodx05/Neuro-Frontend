@@ -593,9 +593,9 @@ export default function Landing() {
                         </div>
                       </div>
                       <div className="flex flex-1 flex-col p-5">
-                        <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{d.source} · {d.datasetId}</div>
-                        <h3 className="mt-1 font-display text-lg font-semibold leading-snug text-foreground">{d.title}</h3>
-                        <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{d.description || "No description available."}</p>
+                        <div className="text-[11px] uppercase tracking-widest text-muted-foreground [.light_&]:text-slate-500 [.light_&]:font-bold">{d.source} · {d.datasetId}</div>
+                        <h3 className="mt-1 font-display text-lg font-semibold leading-snug text-foreground [.light_&]:text-slate-900">{d.title}</h3>
+                        <p className="mt-2 line-clamp-2 text-sm text-muted-foreground [.light_&]:text-slate-700">{d.description || "No description available."}</p>
                         <dl className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                           <Meta k="Region" v={d.region || "N/A"} />
                           <Meta k="Species" v={speciesStr} />
@@ -604,11 +604,11 @@ export default function Landing() {
                           <Meta k="Subjects" v={d.subjects != null ? String(d.subjects) : "N/A"} />
                           <Meta k="Study Design" v={d.studyDesign || "N/A"} />
                         </dl>
-                        <div className="mt-5 flex items-center gap-2 border-t border-white/5 pt-4">
-                          <Link to="/dataset/$id" params={{ id: d.datasetId }} target="_blank" className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium hover:bg-white/10">
+                        <div className="mt-5 flex items-center gap-2 border-t border-white/5 [.light_&]:border-black/10 pt-4">
+                          <Link to="/dataset/$id" params={{ id: d.datasetId }} target="_blank" className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium hover:bg-white/10 [.light_&]:border [.light_&]:border-slate-200 [.light_&]:bg-slate-100 [.light_&]:text-slate-700 [.light_&]:hover:bg-slate-200">
                             <Rocket className="h-3 w-3" /> Visit
                           </Link>
-                          <Link to="/dataset/$id" params={{ id: d.datasetId }} target="_blank" className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">
+                          <Link to="/dataset/$id" params={{ id: d.datasetId }} target="_blank" className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground [.light_&]:border-slate-200 [.light_&]:bg-slate-100/60 [.light_&]:text-slate-600 [.light_&]:hover:text-slate-900">
                             Details <ArrowRight className="h-3 w-3" />
                           </Link>
 
@@ -618,8 +618,8 @@ export default function Landing() {
                               onClick={() => handleLike(d.datasetId, rxn.userReaction)}
                               className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition ${
                                 rxn.userReaction === "like"
-                                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                                  : "bg-white/5 text-muted-foreground hover:text-foreground"
+                                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 [.light_&]:bg-emerald-500/15 [.light_&]:text-emerald-700 [.light_&]:border-emerald-600/30 font-semibold"
+                                  : "bg-white/5 text-muted-foreground hover:text-foreground [.light_&]:bg-slate-100 [.light_&]:border [.light_&]:border-slate-200 [.light_&]:text-slate-600 [.light_&]:hover:text-slate-900"
                               }`}
                               title="Like dataset"
                             >
@@ -631,8 +631,8 @@ export default function Landing() {
                               onClick={() => handleDislikeClick(d.datasetId, d.title, rxn.userReaction)}
                               className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition ${
                                 rxn.userReaction === "dislike"
-                                  ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
-                                  : "bg-white/5 text-muted-foreground hover:text-foreground"
+                                  ? "bg-rose-500/20 text-rose-400 border border-rose-500/40 [.light_&]:bg-rose-500/15 [.light_&]:text-rose-700 [.light_&]:border-rose-600/30 font-semibold"
+                                  : "bg-white/5 text-muted-foreground hover:text-foreground [.light_&]:bg-slate-100 [.light_&]:border [.light_&]:border-slate-200 [.light_&]:text-slate-600 [.light_&]:hover:text-slate-900"
                               }`}
                               title="Dislike dataset"
                             >
@@ -785,8 +785,8 @@ function Badge({ children, variant = "default" }: { children: React.ReactNode; v
 function Meta({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex flex-col">
-      <dt className="text-[10px] uppercase tracking-widest text-muted-foreground/70">{k}</dt>
-      <dd className="text-xs text-foreground/90">{v}</dd>
+      <dt className="text-[10px] uppercase tracking-widest text-muted-foreground/70 [.light_&]:text-slate-600 [.light_&]:font-bold">{k}</dt>
+      <dd className="text-xs text-foreground/90 [.light_&]:text-slate-900 [.light_&]:font-semibold">{v}</dd>
     </div>
   );
 }
