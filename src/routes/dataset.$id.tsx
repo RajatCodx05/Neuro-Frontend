@@ -13,12 +13,15 @@ import {
   Database,
   Layers,
   ShieldCheck,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
 import { useSearchState } from "@/lib/search-state";
-import { api, type SearchResult } from "@/lib/api-client";
+import { api, type DatasetReactionSummary, type SearchResult } from "@/lib/api-client";
 import { licenseDisplayLabel, modalityDisplayLabel } from "@/lib/search-filters";
+import { DislikeFeedbackModal, type DislikeReasonId } from "@/components/app/DislikeFeedbackModal";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dataset/$id")({
@@ -216,6 +219,13 @@ function DatasetPage() {
   const [d, setD] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
+  const [reactionSummary, setReactionSummary] = useState<DatasetReactionSummary>({
+    datasetId: id,
+    likes: 0,
+    dislikes: 0,
+    userReaction: null,
+  });
+  const [dislikeModalOpen, setDislikeModalOpen] = useState(false);
   const { filteredResults } = useSearchState();
   // Read the latest search pool without re-triggering the fetch effect.
   const filteredResultsRef = useRef(filteredResults);
@@ -262,6 +272,89 @@ function DatasetPage() {
       })
       .finally(() => setLoading(false));
   }, [id, user]);
+
+  const fetchReactionSummary = (datasetId: string) => {
+    api.datasets.reactions
+      .getBatch([datasetId])
+      .then((batch) => {
+        if (batch[datasetId]) setReactionSummary(batch[datasetId]);
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    if (id) {
+      fetchReactionSummary(id);
+    }
+  }, [id, user]);
+
+  const handleLikeClick = async () => {
+    if (!user) {
+      navigate({ to: "/auth", search: { redirect: `/dataset/${id}`, mode: "login" } });
+      return;
+    }
+    const newReaction = reactionSummary.userReaction === "like" ? null : "like";
+    setReactionSummary((prev) => {
+      let likes = prev.likes;
+      let dislikes = prev.dislikes;
+      if (prev.userReaction === "like") likes--;
+      else if (prev.userReaction === "dislike") dislikes--;
+
+      if (newReaction === "like") likes++;
+      return { ...prev, likes: Math.max(0, likes), dislikes: Math.max(0, dislikes), userReaction: newReaction };
+    });
+
+    try {
+      const updated = await api.datasets.reactions.toggle(id, newReaction);
+      setReactionSummary(updated);
+    } catch {
+      toast.error("Failed to update reaction");
+      fetchReactionSummary(id);
+    }
+  };
+
+  const handleDislikeClick = () => {
+    if (!user) {
+      navigate({ to: "/auth", search: { redirect: `/dataset/${id}`, mode: "login" } });
+      return;
+    }
+    if (reactionSummary.userReaction === "dislike") {
+      setReactionSummary((prev) => ({
+        ...prev,
+        dislikes: Math.max(0, prev.dislikes - 1),
+        userReaction: null,
+      }));
+      api.datasets.reactions
+        .toggle(id, null)
+        .then(setReactionSummary)
+        .catch(() => {
+          fetchReactionSummary(id);
+        });
+    } else {
+      setDislikeModalOpen(true);
+    }
+  };
+
+  const handleDislikeSubmit = async (reason: DislikeReasonId, comment: string | null) => {
+    setReactionSummary((prev) => {
+      let likes = prev.likes;
+      let dislikes = prev.dislikes;
+      if (prev.userReaction === "like") likes--;
+      if (prev.userReaction === "dislike") dislikes--;
+      dislikes++;
+      return { ...prev, likes: Math.max(0, likes), dislikes: Math.max(0, dislikes), userReaction: "dislike" };
+    });
+    try {
+      const updated = await api.datasets.reactions.toggle(id, "dislike", reason, comment ?? undefined);
+      setReactionSummary(updated);
+      toast.success("Feedback submitted. Thank you!");
+    } catch {
+      toast.error("Failed to submit feedback");
+      fetchReactionSummary(id);
+    } finally {
+      setDislikeModalOpen(false);
+    }
+  };
 
   const save = async () => {
     if (!user) {
@@ -345,38 +438,71 @@ function DatasetPage() {
             <h1 className="mt-2 font-display text-2xl font-semibold sm:text-3xl leading-snug text-foreground [.light_&]:text-slate-900">
               {d.name}
             </h1>
-            <div className="mt-6 flex flex-wrap gap-2.5">
-              {isSaved ? (
+            <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap gap-2.5">
+                {isSaved ? (
+                  <button
+                    disabled
+                    className="inline-flex items-center gap-1.5 rounded-full border border-green-500/30 px-4 py-2 text-xs font-medium text-green-400 bg-green-500/10 [.light_&]:border-green-600/40 [.light_&]:text-green-700 [.light_&]:bg-green-500/15 cursor-default"
+                  >
+                    <Check className="h-3.5 w-3.5" /> Saved
+                  </button>
+                ) : (
+                  <button
+                    onClick={save}
+                    className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium [.light_&]:border [.light_&]:border-slate-200 [.light_&]:bg-slate-100 [.light_&]:text-slate-700 [.light_&]:hover:bg-slate-200 transition-colors"
+                  >
+                    <Bookmark className="h-3.5 w-3.5" /> Save
+                  </button>
+                )}
                 <button
-                  disabled
-                  className="inline-flex items-center gap-1.5 rounded-full border border-green-500/30 px-4 py-2 text-xs font-medium text-green-400 bg-green-500/10 [.light_&]:border-green-600/40 [.light_&]:text-green-700 [.light_&]:bg-green-500/15 cursor-default"
-                >
-                  <Check className="h-3.5 w-3.5" /> Saved
-                </button>
-              ) : (
-                <button
-                  onClick={save}
+                  onClick={share}
                   className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium [.light_&]:border [.light_&]:border-slate-200 [.light_&]:bg-slate-100 [.light_&]:text-slate-700 [.light_&]:hover:bg-slate-200 transition-colors"
                 >
-                  <Bookmark className="h-3.5 w-3.5" /> Save
+                  <Share2 className="h-3.5 w-3.5" /> Share
                 </button>
-              )}
-              <button
-                onClick={share}
-                className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium [.light_&]:border [.light_&]:border-slate-200 [.light_&]:bg-slate-100 [.light_&]:text-slate-700 [.light_&]:hover:bg-slate-200 transition-colors"
-              >
-                <Share2 className="h-3.5 w-3.5" /> Share
-              </button>
-              {d.url && (
-                <a
-                  href={d.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium hover:bg-white/10 transition-colors text-cyan [.light_&]:border [.light_&]:border-cyan-500/30 [.light_&]:bg-cyan-500/10 [.light_&]:text-cyan-700 [.light_&]:hover:bg-cyan-500/20"
+                {d.url && (
+                  <a
+                    href={d.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium hover:bg-white/10 transition-colors text-cyan [.light_&]:border [.light_&]:border-cyan-500/30 [.light_&]:bg-cyan-500/10 [.light_&]:text-cyan-700 [.light_&]:hover:bg-cyan-500/20"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" /> Access the Data
+                  </a>
+                )}
+              </div>
+
+              {/* Rating / Reaction buttons on the bottom-right side of the upper hero box */}
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-slate-200 bg-white/5 [.light_&]:bg-slate-100/90 px-3 py-1.5 text-xs shadow-sm self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={handleLikeClick}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${
+                    reactionSummary.userReaction === "like"
+                      ? "text-cyan-400 [.light_&]:text-cyan-700 font-semibold"
+                      : "text-muted-foreground [.light_&]:text-slate-600 hover:text-foreground [.light_&]:hover:text-slate-900"
+                  }`}
+                  title="Like dataset rating"
                 >
-                  <ExternalLink className="h-3.5 w-3.5" /> Access the Data
-                </a>
-              )}
+                  <ThumbsUp className="h-3.5 w-3.5" />
+                  <span>{reactionSummary.likes}</span>
+                </button>
+                <span className="h-3 w-[1px] bg-white/10 [.light_&]:bg-slate-300" />
+                <button
+                  type="button"
+                  onClick={handleDislikeClick}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${
+                    reactionSummary.userReaction === "dislike"
+                      ? "text-rose-400 [.light_&]:text-rose-700 font-semibold"
+                      : "text-muted-foreground [.light_&]:text-slate-600 hover:text-foreground [.light_&]:hover:text-slate-900"
+                  }`}
+                  title="Report an issue / Dislike dataset"
+                >
+                  <ThumbsDown className="h-3.5 w-3.5" />
+                  <span>{reactionSummary.dislikes}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -530,6 +656,13 @@ function DatasetPage() {
           </div>
         </div>
       </div>
+      {dislikeModalOpen && (
+        <DislikeFeedbackModal
+          datasetName={d.name}
+          onSubmit={handleDislikeSubmit}
+          onCancel={() => setDislikeModalOpen(false)}
+        />
+      )}
     </AppShell>
   );
 }

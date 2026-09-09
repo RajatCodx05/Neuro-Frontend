@@ -1064,37 +1064,6 @@ function SearchResults() {
                     </button>
                   )}
                 </div>
-
-                {/* Floating Like & Dislike badge on the bottom-right border */}
-                <div className="absolute -bottom-3 right-5 z-10 inline-flex items-center gap-1 rounded-full border border-white/10 [.light_&]:border-black/10 bg-[oklch(0.20_0.03_258)] [.light_&]:bg-white px-2 py-0.5 shadow-sm">
-                  <button
-                    type="button"
-                    onClick={() => handleLikeOrNone(d.id, "like")}
-                    className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
-                      reactions[d.id]?.userReaction === "like"
-                        ? "text-cyan-400 font-semibold"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    title="Like dataset"
-                  >
-                    <ThumbsUp className="h-3 w-3" />
-                    <span>{reactions[d.id]?.likes || 0}</span>
-                  </button>
-                  <span className="h-2.5 w-[1px] bg-white/10 [.light_&]:bg-black/10" />
-                  <button
-                    type="button"
-                    onClick={() => handleDislikeClick(d.id, d.name ?? d.id)}
-                    className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
-                      reactions[d.id]?.userReaction === "dislike"
-                        ? "text-rose-400 font-semibold"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    title="Report an issue with this dataset"
-                  >
-                    <ThumbsDown className="h-3 w-3" />
-                    <span>{reactions[d.id]?.dislikes || 0}</span>
-                  </button>
-                </div>
               </motion.article>
             ))}
 
