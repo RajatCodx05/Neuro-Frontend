@@ -42,18 +42,18 @@ import {
  */
 
 // FIXED filter categories + dynamic values (v0.4 / M1–M7):
-// M1: Dataset Type has been removed. All other groups remain in fixed order.
+// Filter ordering strictly aligned with Neuroscience platform specification (Image 2).
 export const FILTER_DIMENSIONS = [
-  "ageGroup",      // Age Group
-  "availability",  // Availability
-  "size",          // Dataset Size          (M3: backend-connected)
-  "disease",       // Disease / Condition   (M7: +Others+Unspecified)
-  "license",       // License
   "modality",      // Modality              (M2: 7 buckets)
+  "repository",    // Repository
+  "disease",       // Disease / Condition   (M7: +Others+Unspecified)
+  "size",          // Dataset Size          (M3: backend-connected)
+  "species",       // Species               (M5: 3 buckets)
+  "ageGroup",      // Age Group
   "participants",  // Participants          (M6: backend-connected)
   "year",          // Publication Year      (M4: backend-connected, 2026+)
-  "repository",    // Repository
-  "species",       // Species               (M5: 3 buckets)
+  "availability",  // Availability
+  "license",       // License
   "task",          // Advanced Keywords
   "format",        // Data Format (hidden; URL backward compat)
 ] as const;
@@ -124,17 +124,17 @@ export const FILTER_DIMENSION_LABELS: Record<FilterDimension, string> = {
 
 // All dimensions synchronized through URL params (M1: type removed)
 export const URL_DIMENSIONS: FilterDimension[] = [
-  "repository",
   "modality",
+  "repository",
   "disease",
+  "size",
   "species",
   "ageGroup",
-  "year",
   "participants",
-  "size",
+  "year",
+  "availability",
   "license",
   "task",
-  "availability",
   "format",
 ];
 
