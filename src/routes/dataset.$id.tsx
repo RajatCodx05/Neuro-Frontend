@@ -342,28 +342,28 @@ function DatasetPage() {
                 </span>
               )}
             </div> */}
-            <h1 className="mt-2 font-display text-2xl font-semibold sm:text-3xl leading-snug">
+            <h1 className="mt-2 font-display text-2xl font-semibold sm:text-3xl leading-snug text-foreground [.light_&]:text-slate-900">
               {d.name}
             </h1>
             <div className="mt-6 flex flex-wrap gap-2.5">
               {isSaved ? (
                 <button
                   disabled
-                  className="inline-flex items-center gap-1.5 rounded-full border border-green-500/30 px-4 py-2 text-xs font-medium text-green-400 bg-green-500/10 cursor-default"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-green-500/30 px-4 py-2 text-xs font-medium text-green-400 bg-green-500/10 [.light_&]:border-green-600/40 [.light_&]:text-green-700 [.light_&]:bg-green-500/15 cursor-default"
                 >
                   <Check className="h-3.5 w-3.5" /> Saved
                 </button>
               ) : (
                 <button
                   onClick={save}
-                  className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium hover:bg-white/10 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium [.light_&]:border [.light_&]:border-slate-200 [.light_&]:bg-slate-100 [.light_&]:text-slate-700 [.light_&]:hover:bg-slate-200 transition-colors"
                 >
                   <Bookmark className="h-3.5 w-3.5" /> Save
                 </button>
               )}
               <button
                 onClick={share}
-                className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium hover:bg-white/10 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium [.light_&]:border [.light_&]:border-slate-200 [.light_&]:bg-slate-100 [.light_&]:text-slate-700 [.light_&]:hover:bg-slate-200 transition-colors"
               >
                 <Share2 className="h-3.5 w-3.5" /> Share
               </button>
@@ -372,7 +372,7 @@ function DatasetPage() {
                   href={d.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium hover:bg-white/10 transition-colors text-cyan"
+                  className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium hover:bg-white/10 transition-colors text-cyan [.light_&]:border [.light_&]:border-cyan-500/30 [.light_&]:bg-cyan-500/10 [.light_&]:text-cyan-700 [.light_&]:hover:bg-cyan-500/20"
                 >
                   <ExternalLink className="h-3.5 w-3.5" /> Access the Data
                 </a>
@@ -410,12 +410,12 @@ function DatasetPage() {
                     {specs.map(([label, value, isModality]) => (
                       <div
                         key={label}
-                        className="rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2.5 transition-colors hover:border-white/10 min-w-0"
+                        className="rounded-xl border border-white/5 [.light_&]:border-slate-200/80 bg-white/[0.02] [.light_&]:bg-slate-100/70 px-3 py-2.5 transition-colors hover:border-white/10 [.light_&]:hover:border-slate-300 min-w-0"
                       >
-                        <div className="text-[9px] uppercase tracking-widest text-muted-foreground font-mono truncate">
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground [.light_&]:text-slate-600 font-mono [.light_&]:font-sans [.light_&]:font-bold truncate">
                           {label}
                         </div>
-                        <div className={`mt-1 text-[11px] font-medium text-foreground break-words leading-snug ${isModality || value === "N/A" ? "" : "capitalize"}`}>
+                        <div className={`mt-1 text-[11px] font-medium text-foreground [.light_&]:text-slate-900 [.light_&]:font-semibold break-words leading-snug ${isModality || value === "N/A" ? "" : "capitalize"}`}>
                           {isModality && value !== "N/A" ? modalityDisplayLabel(value) : value}
                         </div>
                       </div>
@@ -428,7 +428,7 @@ function DatasetPage() {
             {/* Structured Overview & Description Section */}
             <Section title="Overview & Description">
               {descriptionBlocks.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">
+                <p className="text-sm text-muted-foreground [.light_&]:text-slate-500 italic">
                   No detailed description available for this dataset.
                 </p>
               ) : (
@@ -436,8 +436,8 @@ function DatasetPage() {
                   {descriptionBlocks.map((block, idx) => {
                     if (block.type === "heading") {
                       return (
-                        <div key={idx} className="border-b border-white/10 pb-2 pt-3 first:pt-0">
-                          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <div key={idx} className="border-b border-white/10 [.light_&]:border-black/10 pb-2 pt-3 first:pt-0">
+                          <h3 className="text-sm font-semibold text-foreground [.light_&]:text-slate-900 flex items-center gap-2">
                             <FileText className="h-4 w-4 text-cyan shrink-0" />
                             <span>{block.text}</span>
                           </h3>
@@ -450,7 +450,7 @@ function DatasetPage() {
                           {block.items.map((item, itemIdx) => (
                             <li
                               key={itemIdx}
-                              className="text-sm leading-relaxed text-muted-foreground flex items-start gap-2.5"
+                              className="text-sm leading-relaxed text-muted-foreground [.light_&]:text-slate-700 flex items-start gap-2.5"
                             >
                               <span className="inline-block h-1.5 w-1.5 rounded-full bg-cyan shrink-0 mt-2" />
                               <span>{item}</span>
@@ -462,7 +462,7 @@ function DatasetPage() {
                     return (
                       <p
                         key={idx}
-                        className="text-sm leading-relaxed text-muted-foreground text-justify sm:text-left break-words"
+                        className="text-sm leading-relaxed text-muted-foreground [.light_&]:text-slate-700 text-justify sm:text-left break-words"
                       >
                         {block.text}
                       </p>
@@ -483,25 +483,25 @@ function DatasetPage() {
                   {d.repo.slice(0, 3)}
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-foreground">{d.repo}</div>
+                  <div className="text-sm font-medium text-foreground [.light_&]:text-slate-900 [.light_&]:font-semibold">{d.repo}</div>
                 </div>
               </div>
             </Section>
 
             <Section title="Access & Licensing">
               <div className="space-y-2.5 text-xs">
-                <div className="flex justify-between py-1.5 border-b border-white/5">
-                  <span className="text-muted-foreground">License</span>
-                  <span className="font-medium text-foreground">{licenseDisplayLabel(d.license ?? "Open Data")}</span>
+                <div className="flex justify-between py-1.5 border-b border-white/5 [.light_&]:border-black/10">
+                  <span className="text-muted-foreground [.light_&]:text-slate-600 [.light_&]:font-medium">License</span>
+                  <span className="font-medium text-foreground [.light_&]:text-slate-900 [.light_&]:font-semibold">{licenseDisplayLabel(d.license ?? "Open Data")}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-white/5">
-                  <span className="text-muted-foreground">Access Tier</span>
-                  <span className="font-medium text-foreground uppercase">{d.access ?? "Open"}</span>
+                <div className="flex justify-between py-1.5 border-b border-white/5 [.light_&]:border-black/10">
+                  <span className="text-muted-foreground [.light_&]:text-slate-600 [.light_&]:font-medium">Access Tier</span>
+                  <span className="font-medium text-foreground [.light_&]:text-slate-900 [.light_&]:font-semibold uppercase">{d.access ?? "Open"}</span>
                 </div>
                 {d.doi && (
-                  <div className="flex justify-between py-1.5 border-b border-white/5">
-                    <span className="text-muted-foreground">DOI</span>
-                    <span className="truncate max-w-[150px] font-mono text-cyan">{d.doi}</span>
+                  <div className="flex justify-between py-1.5 border-b border-white/5 [.light_&]:border-black/10">
+                    <span className="text-muted-foreground [.light_&]:text-slate-600 [.light_&]:font-medium">DOI</span>
+                    <span className="truncate max-w-[150px] font-mono text-cyan [.light_&]:text-cyan-700 [.light_&]:font-semibold">{d.doi}</span>
                   </div>
                 )}
               </div>
@@ -509,18 +509,18 @@ function DatasetPage() {
 
             {/* Citation Box */}
             <Section title="Citation & Reference">
-              <div className="rounded-xl bg-white/5 p-4 font-mono text-xs text-muted-foreground">
+              <div className="rounded-xl bg-white/5 [.light_&]:bg-slate-100/90 border border-white/5 [.light_&]:border-slate-200 p-4 font-mono text-xs text-muted-foreground [.light_&]:text-slate-700">
                 Author, A. et al. ({new Date().getFullYear()}).{" "}
-                <span className="text-foreground">{d.name}</span>. {d.repo}.
+                <span className="text-foreground [.light_&]:text-slate-900 [.light_&]:font-semibold">{d.name}</span>. {d.repo}.
                 {d.doi ? ` doi:${d.doi}` : ""}
-                <div className="mt-3 border-t border-white/5 pt-2.5">
+                <div className="mt-3 border-t border-white/5 [.light_&]:border-slate-200/80 pt-2.5">
                   <button
                     onClick={() => {
                       const text = `Author, A. et al. (${new Date().getFullYear()}). ${d.name}. ${d.repo}.${d.doi ? ` doi:${d.doi}` : ""}`;
                       navigator.clipboard.writeText(text);
                       toast.success("Citation copied to clipboard");
                     }}
-                    className="inline-flex items-center gap-1.5 text-xs text-cyan hover:underline font-sans"
+                    className="inline-flex items-center gap-1.5 text-xs text-cyan [.light_&]:text-cyan-700 hover:underline font-sans [.light_&]:font-semibold"
                   >
                     <Copy className="h-3 w-3" /> Copy Citation
                   </button>
@@ -537,7 +537,7 @@ function DatasetPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="glass card-elevated rounded-2xl p-5 sm:p-6">
-      <div className="text-xs uppercase tracking-widest text-muted-foreground font-mono">
+      <div className="text-xs uppercase tracking-widest text-muted-foreground [.light_&]:text-slate-600 font-mono [.light_&]:font-sans [.light_&]:font-semibold">
         {title}
       </div>
       <div className="mt-3.5">{children}</div>
