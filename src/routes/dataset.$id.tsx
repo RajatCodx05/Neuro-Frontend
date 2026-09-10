@@ -534,9 +534,9 @@ function DatasetPage() {
                 )}
                 <button
                   onClick={handleAddToCollectionClick}
-                  className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-semibold text-cyan [.light_&]:border [.light_&]:border-slate-200 [.light_&]:bg-slate-100 [.light_&]:text-cyan-700 [.light_&]:hover:bg-slate-200 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 px-4 py-2 text-xs font-semibold text-cyan bg-cyan-500/5 hover:bg-cyan-500/10 [.light_&]:border-cyan-500/30 [.light_&]:bg-cyan-500/10 [.light_&]:text-cyan-700 [.light_&]:hover:bg-cyan-500/20 transition-colors"
                 >
-                  <Plus className="h-3.5 w-3.5" /> Add
+                  <FolderPlus className="h-3.5 w-3.5 text-cyan-500 [.light_&]:text-cyan-600" /> Add
                 </button>
                 <button
                   onClick={share}
