@@ -526,12 +526,12 @@ function DatasetPage() {
                   ["Species",            val(d.species),                     false],
                   ["Disease / Condition",val(d.disease),                     false],
                   ["Tasks",              val((d as Record<string, unknown>).tasks), false],
-                  ["Brain Region",       val(d.region),                      false],
+                  // ["Brain Region",       val(d.region),                      false],
                   ["Age Group",          val(d.ageGroup),                    false],
                   ["Participants",       d.subjects != null ? `${d.subjects.toLocaleString()}` : "N/A", false],
                   ["Dataset Size",       val(d.size),                        false],
                   ["Publication Year",   val((d as Record<string, unknown>).publicationYear), false],
-                  ["Study Design",       val((d as Record<string, unknown>).studyDesign), false],
+                  // ["Study Design",       val((d as Record<string, unknown>).studyDesign), false],
                 ];
                 return (
                   <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 lg:grid-cols-5">

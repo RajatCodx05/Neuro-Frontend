@@ -1020,6 +1020,7 @@ function SearchResults() {
                   </Link>
                   {d.description && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{d.description}</p>}
                   <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                    {d.repo && <Chip>{d.repo}</Chip>}
                     {d.subjects != null && <Chip>{d.subjects} subjects</Chip>}
                     {d.size && <Chip>{d.size}</Chip>}
                     {d.region && <Chip>{d.region}</Chip>}
