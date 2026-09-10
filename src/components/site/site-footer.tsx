@@ -29,17 +29,17 @@ export function SiteFooter() {
           { title: "Company", items: ["About", "Contact", "Privacy"] },
         ].map((col) => (
           <div key={col.title}>
-            <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{col.title}</div>
+            <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground [.light_&]:text-slate-600 [.light_&]:font-bold">{col.title}</div>
             <ul className="mt-4 space-y-2 text-sm">
               {col.items.map((i) => (
-                <li key={i}><Link to="/" className="text-foreground/80 hover:text-foreground transition-colors">{i}</Link></li>
+                <li key={i}><Link to="/" className="text-foreground/80 [.light_&]:text-slate-700 hover:text-foreground [.light_&]:hover:text-slate-900 transition-colors">{i}</Link></li>
               ))}
             </ul>
           </div>
         ))}
       </div>
       <div className="mx-auto max-w-7xl px-6 pb-6">
-        <div className="mx-auto max-w-xl rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-center text-sm text-yellow-200 backdrop-blur">
+        <div className="mx-auto max-w-xl rounded-xl border border-amber-500/30 bg-amber-500/10 [.light_&]:border-amber-400/60 [.light_&]:bg-amber-50/90 px-4 py-3 text-center text-sm font-medium text-amber-200 [.light_&]:text-amber-950 [.light_&]:font-semibold backdrop-blur">
           Footer Section is currently under development and will be available soon.
         </div>
       </div>
