@@ -22,7 +22,7 @@ const nav = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, loading: authLoading, signOut } = useAuth();
   const { theme, toggle: toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -120,7 +120,17 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         {/* Profile container — bottom */}
         <div className="border-t border-sidebar-border p-3">
-          {user ? (
+          {authLoading ? (
+            <div className={`flex items-center gap-3 rounded-xl p-2 ${collapsed ? "justify-center" : ""}`}>
+              <div className="h-8 w-8 rounded-full bg-sidebar-accent/60 animate-pulse shrink-0" />
+              {!collapsed && (
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <div className="h-3.5 w-24 rounded bg-sidebar-accent/60 animate-pulse" />
+                  <div className="h-2.5 w-32 rounded bg-sidebar-accent/40 animate-pulse" />
+                </div>
+              )}
+            </div>
+          ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className={`flex w-full items-center gap-3 rounded-xl p-2 hover:bg-sidebar-accent transition-colors ${collapsed ? "justify-center" : ""}`}>
@@ -206,7 +216,15 @@ export function AppShell({ children }: { children: ReactNode }) {
               <HelpCircle className="h-4 w-4" /> Help & Docs
             </Link>
             <div className="mt-2 border-t border-sidebar-border pt-3">
-              {user ? (
+              {authLoading ? (
+                <div className="flex items-center gap-3 rounded-xl p-2">
+                  <div className="h-8 w-8 rounded-full bg-sidebar-accent/60 animate-pulse shrink-0" />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <div className="h-3.5 w-24 rounded bg-sidebar-accent/60 animate-pulse" />
+                    <div className="h-2.5 w-32 rounded bg-sidebar-accent/40 animate-pulse" />
+                  </div>
+                </div>
+              ) : user ? (
                 <button onClick={handleSignOut} className="flex w-full items-center gap-3 rounded-xl p-2 hover:bg-sidebar-accent transition-colors">
                   <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-neural to-electric text-xs font-semibold text-white">
                     {initials}

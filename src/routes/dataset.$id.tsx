@@ -227,14 +227,6 @@ function DatasetPage() {
       .getById(id)
       .then((res) => {
         setD(res);
-        if (user) {
-          api.savedDatasets
-            .list()
-            .then((list) => {
-              setIsSaved(list.some((item) => item.dataset_id === res.id));
-            })
-            .catch(() => {});
-        }
       })
       .catch(async (err) => {
         // Expand fix: repository-tier / discovery records are returned by search
@@ -261,7 +253,17 @@ function DatasetPage() {
         }
       })
       .finally(() => setLoading(false));
-  }, [id, user]);
+  }, [id]);
+
+  useEffect(() => {
+    if (!user || !d?.id) return;
+    api.savedDatasets
+      .list()
+      .then((list) => {
+        setIsSaved(list.some((item) => item.dataset_id === d.id || item.id === d.id));
+      })
+      .catch(() => {});
+  }, [user, d?.id]);
 
   const save = async () => {
     if (!user) {
