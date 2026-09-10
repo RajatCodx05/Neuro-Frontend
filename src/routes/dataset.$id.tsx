@@ -549,7 +549,7 @@ function DatasetPage() {
                     href={d.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium hover:bg-white/10 transition-colors text-cyan [.light_&]:border [.light_&]:border-cyan-500/30 [.light_&]:bg-cyan-500/10 [.light_&]:text-cyan-700 [.light_&]:hover:bg-cyan-500/20"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-xs font-medium text-[oklch(0.15_0.03_258)] hover:opacity-90 transition-opacity shadow-sm"
                   >
                     <ExternalLink className="h-3.5 w-3.5" /> Access the Data
                   </a>
