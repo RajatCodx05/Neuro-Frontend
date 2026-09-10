@@ -326,22 +326,22 @@ function SavedPage() {
         <div className="flex items-end justify-between">
           <div>
             <h1 className="font-display text-3xl font-semibold">Saved &amp; Collections</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Your Saved datasets and Collections.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Your Saved Datasets and Collections.</p>
           </div>
         </div>
 
         <div className="mt-6 inline-flex rounded-full border border-white/10 bg-white/5 p-1 text-sm">
           <button onClick={() => setTab("saved")}
             className={`rounded-full px-4 py-1.5 transition-colors ${tab === "saved" ? "bg-white/10 text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
-            <Bookmark className="mr-1.5 inline h-3.5 w-3.5" />Saved datasets
-          </button>
-          <button onClick={() => setTab("papers")}
-            className={`rounded-full px-4 py-1.5 transition-colors ${tab === "papers" ? "bg-white/10 text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
-            <FileText className="mr-1.5 inline h-3.5 w-3.5" />Research Paper/Article
+            <Bookmark className="mr-1.5 inline h-3.5 w-3.5" />Saved Datasets
           </button>
           <button onClick={() => setTab("collections")}
             className={`rounded-full px-4 py-1.5 transition-colors ${tab === "collections" ? "bg-white/10 text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
             <FolderOpen className="mr-1.5 inline h-3.5 w-3.5" />Collections
+          </button>
+          <button onClick={() => setTab("papers")}
+            className={`rounded-full px-4 py-1.5 transition-colors ${tab === "papers" ? "bg-white/10 text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
+            <FileText className="mr-1.5 inline h-3.5 w-3.5" />Research Paper
           </button>
         </div>
 
