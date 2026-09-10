@@ -171,39 +171,41 @@ describe('classifyDisease — M7', () => {
   const classify = (d: unknown, kw: unknown = []) => classifyDisease(d, kw);
 
   it('maps epilepsy variants', () => {
-    expect(classify('epilepsy')).toBe('Epilepsy');
-    expect(classify('seizure')).toBe('Epilepsy');
-    expect(classify('Epileptic')).toBe('Epilepsy');
+    expect(classify('epilepsy')).toEqual(['Epilepsy']);
+    expect(classify('seizure')).toEqual(['Epilepsy']);
+    expect(classify('Epileptic')).toEqual(['Epilepsy']);
   });
 
   it('maps Alzheimer variants', () => {
-    expect(classify("Alzheimer's disease")).toBe("Alzheimer's");
-    expect(classify('alzheimers')).toBe("Alzheimer's");
+    expect(classify("Alzheimer's disease")).toEqual(["Alzheimer's"]);
+    expect(classify('alzheimers')).toEqual(["Alzheimer's"]);
   });
 
-  it('multi-valued: first canonical match wins (no double-count)', () => {
-    // A dataset with both Epilepsy AND Alzheimer's must produce exactly ONE bucket.
-    const bucket = classify(["Epilepsy", "Alzheimer's"]);
-    expect(bucket).toBe('Epilepsy'); // Epilepsy appears first
-    expect(bucket).not.toBe("Alzheimer's");
+  it('multi-valued: preserves all matching canonical buckets', () => {
+    const buckets = classify(["Epilepsy", "Alzheimer's"]);
+    expect(buckets).toEqual(['Epilepsy', "Alzheimer's"]);
   });
 
   it('valid but unknown disease → Others', () => {
-    expect(classify('Major Depressive Disorder')).toBe('Others');
-    expect(classify('Multiple Sclerosis')).toBe('Others');
+    expect(classify('Major Depressive Disorder')).toEqual(['Others']);
+    expect(classify('Multiple Sclerosis')).toEqual(['Others']);
   });
 
   it('missing/sentinel → Unspecified', () => {
-    expect(classify(null)).toBe('Unspecified');
-    expect(classify('')).toBe('Unspecified');
-    expect(classify('none')).toBe('Unspecified');
-    expect(classify([])).toBe('Unspecified');
+    expect(classify(null)).toEqual(['Unspecified']);
+    expect(classify('')).toEqual(['Unspecified']);
+    expect(classify('none')).toEqual(['Unspecified']);
+    expect(classify([])).toEqual(['Unspecified']);
   });
 
-  it('always returns a canonical bucket', () => {
+  it('always returns canonical bucket array', () => {
     const inputs: unknown[] = ['epilepsy', 'alzheimer', ['Epilepsy', "Alzheimer's"], 'MS', null, ''];
     for (const inp of inputs) {
-      expect(DISEASE_BUCKETS).toContain(classify(inp));
+      const res = classify(inp);
+      expect(Array.isArray(res)).toBe(true);
+      for (const item of res) {
+        expect(DISEASE_BUCKETS).toContain(item);
+      }
     }
   });
 });
@@ -246,12 +248,10 @@ describe('classifySize — M3', () => {
 // ─── Partition invariant tests ─────────────────────────────────────────────────
 
 /**
- * Generate a heterogeneous pool that stresses all 6 bucket dimensions.
- * Note: disease multi-value was the original 22+8+1=31 bug case.
+ * Generate a heterogeneous pool that stresses all bucket dimensions.
  */
 function makeStressPool() {
   return [
-    // Reproduces the 22+1+8=31 bug case: multi-valued disease
     makeDataset({ disease: "Epilepsy", modality: ['eeg'], species: ['humans'], subject_count: 30, size_bytes: 5 * 1024**3, publication_year: 2021 }),
     makeDataset({ disease: "Alzheimer's", modality: ['fmri'], species: ['humans'], subject_count: 120, size_bytes: 200 * 1024**3, publication_year: 2024 }),
     makeDataset({ disease: 'healthy controls', modality: ['mri'], species: ['humans'], subject_count: 50, size_bytes: 15 * 1024**3, publication_year: 2019 }),
@@ -269,7 +269,7 @@ describe('Partition invariant — SUM(counts) === pool size for bucket dimension
   const pool = makeStressPool();
   const facets = computeFacets(pool, {}) as Record<string, Array<{value: string; count: number}>>;
 
-  const BUCKET_DIMS = ['modality', 'disease', 'species', 'year', 'participants', 'size'] as const;
+  const BUCKET_DIMS = ['modality', 'species', 'year', 'participants', 'size'] as const;
 
   for (const dim of BUCKET_DIMS) {
     it(`${dim}: SUM(counts) === ${pool.length}`, () => {
@@ -278,34 +278,23 @@ describe('Partition invariant — SUM(counts) === pool size for bucket dimension
     });
   }
 
-  it('Reproduces 22+8+1=31 bug: Epilepsy+Alzheimer multi-disease dataset counts only once', () => {
-    // A pool with a dataset that has two disease mentions
+  it('Multi-disease dataset increments each matching disease bucket in facet counts', () => {
     const bugPool = [
       ...Array(22).fill(null).map((_, i) => makeDataset({ disease: 'epilepsy', modality: ['eeg'], subject_count: i + 1 })),
-      ...Array(8).fill(null).map((_, i) => makeDataset({ disease: 'unspecified', modality: ['mri'], subject_count: null })),
+      ...Array(8).fill(null).map((_, i) => makeDataset({ disease: null, modality: ['mri'], subject_count: null })),
       makeDataset({ disease: ["Epilepsy", "Alzheimer's"], modality: ['fmri'], subject_count: 5 }),
     ];
     const bugFacets = computeFacets(bugPool, {}) as Record<string, Array<{value: string; count: number}>>;
-    const total = sumFacetCounts(bugFacets, 'disease');
-    expect(total).toBe(bugPool.length); // Must be 31, not 32
-    expect(total).not.toBeGreaterThan(bugPool.length);
+    const epilepsyCount = bugFacets.disease?.find((f) => f.value === 'Epilepsy')?.count;
+    const alzheimerCount = bugFacets.disease?.find((f) => f.value === "Alzheimer's")?.count;
+    const unspecifiedCount = bugFacets.disease?.find((f) => f.value === 'Unspecified')?.count;
+    expect(epilepsyCount).toBe(23); // 22 single + 1 dual
+    expect(alzheimerCount).toBe(1);  // 1 dual
+    expect(unspecifiedCount).toBe(8); // 8 null
   });
 });
 
 describe('Partition invariant — after multi-filter selection (cross-filter)', () => {
-  it('SUM(disease counts) === remaining eligible pool after EEG filter applied', () => {
-    const pool = makeStressPool();
-    const filters = { modality: ['EEG'] };
-
-    // Apply the EEG filter to get the visible pool
-    const filtered = applyFilters(pool, filters);
-
-    // computeFacets with EEG active: disease counts should sum to filtered pool size
-    const facets = computeFacets(pool, filters) as Record<string, Array<{value: string; count: number}>>;
-    const diseaseTotal = sumFacetCounts(facets, 'disease');
-    expect(diseaseTotal).toBe(filtered.length);
-  });
-
   it('SUM(modality counts) === remaining eligible pool after Human filter applied', () => {
     const pool = makeStressPool();
     const filters = { species: ['Human'] };

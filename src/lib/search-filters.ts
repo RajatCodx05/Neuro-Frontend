@@ -631,8 +631,8 @@ export function dimensionFieldSources(dataset: RawDataset, dimension: FilterDime
       return [classifyModality(dataset.modality)];
 
     case "disease":
-      // M7: single canonical bucket (8 known | Others | Unspecified)
-      return [classifyDisease(dataset.disease, dataset.keywords)];
+      // M7: multi-bucket (8 known | Others | Unspecified)
+      return classifyDisease(dataset.disease, dataset.keywords);
 
     case "species":
       // M5: single canonical bucket (Human | Animal | Unspecified)
@@ -663,7 +663,22 @@ export function dimensionFieldSources(dataset: RawDataset, dimension: FilterDime
       return dedupeValues(normed);
     }
 
-    case "task":
+    case "task": {
+      const raw = [
+        ...expandStructuredValue(dataset.task),
+        ...expandStructuredValue(dataset.tasks),
+        ...expandStructuredValue(dataset.keywords),
+      ];
+      const parts: string[] = [];
+      for (const k of raw) {
+        for (const part of String(k).split(",")) {
+          const p = part.trim();
+          if (p) parts.push(p);
+        }
+      }
+      return dedupeValues(parts);
+    }
+
     case "format": {
       const raw = expandStructuredValue(dataset.keywords);
       const parts: string[] = [];
@@ -828,8 +843,9 @@ export function computeFacets(pool: RawDataset[], filters: ActiveFilters): Facet
 
   // Identify bucket dimensions — those with static master lists where
   // partition invariant applies. For these, use exclusive single-bucket counting.
+  // ponytail: disease is multi-bucket, so it counts in the multi-value branch.
   const BUCKET_DIMENSIONS = new Set<FilterDimension>([
-    "modality", "disease", "species", "year", "participants", "size",
+    "modality", "species", "year", "participants", "size",
   ]);
 
   const facets: FacetMap = {};

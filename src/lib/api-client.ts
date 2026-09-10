@@ -479,7 +479,7 @@ export function mapDataset(data: Record<string, unknown>, resultSource?: string)
     region: (data.region as string | null) ?? null,
     species: list(data.species) || null,
     ageGroup: (data.age_group as string | null) ?? null,
-    disease: (data.disease as string | null) ?? null,
+    disease: list(data.disease) || null,
     license: (data.license as string | null) ?? null,
     access: (data.access_tier as string | null) ?? null,
     access_tier: (data.access_tier as string | null) ?? null,
