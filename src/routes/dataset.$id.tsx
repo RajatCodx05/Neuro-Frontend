@@ -534,7 +534,7 @@ function DatasetPage() {
                   // ["Study Design",       val((d as Record<string, unknown>).studyDesign), false],
                 ];
                 return (
-                  <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 lg:grid-cols-5">
+                  <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
                     {specs.map(([label, value, isModality]) => (
                       <div
                         key={label}
