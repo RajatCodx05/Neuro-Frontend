@@ -117,21 +117,21 @@ function HelpPage() {
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
         {/* Hero */}
         <div className="mb-10">
-          <h1 className="font-display text-3xl font-semibold">Help & Docs</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="font-display text-3xl font-semibold [.light_&]:text-slate-900">Help &amp; Docs</h1>
+          <p className="mt-1 text-sm text-muted-foreground [.light_&]:text-slate-600 [.light_&]:font-medium">
             Everything you need to know about using NeuroSearch AI.
           </p>
         </div>
 
         {/* Introduction */}
-        <div className="glass card-elevated rounded-2xl p-6">
+        <div className="glass card-elevated rounded-2xl p-6 [.light_&]:border-slate-200/80 [.light_&]:bg-slate-50/70">
           <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan/40 to-neural/40">
-              <Search className="h-5 w-5 text-cyan" />
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan/40 to-neural/40 [.light_&]:from-cyan-500/20 [.light_&]:to-cyan-600/20">
+              <Search className="h-5 w-5 text-cyan [.light_&]:text-cyan-700" />
             </span>
             <div>
-              <div className="font-display text-base font-semibold">What is NeuroSearch AI?</div>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <div className="font-display text-base font-semibold [.light_&]:text-slate-900">What is NeuroSearch AI?</div>
+              <p className="mt-1 text-sm text-muted-foreground [.light_&]:text-slate-700">
                 NeuroSearch AI is an AI-powered research and search platform that lets you search
                 datasets, save results, and organize them into collections. Whether you are an academic researcher, industry researcher, healthcare professional, or data/AI engineer, NeuroSearch AI helps you discover
                 and manage data efficiently.
@@ -142,19 +142,19 @@ function HelpPage() {
 
         {/* How it works */}
         <section className="mt-10">
-          <h2 className="font-display text-xl font-semibold">How it works</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h2 className="font-display text-xl font-semibold [.light_&]:text-slate-900">How it works</h2>
+          <p className="mt-1 text-sm text-muted-foreground [.light_&]:text-slate-600 [.light_&]:font-medium">
             Get started in four simple steps.
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((s) => (
-              <div key={s.number} className="glass card-elevated rounded-2xl p-5">
-                <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-xs font-bold text-cyan">
+              <div key={s.number} className="glass card-elevated rounded-2xl p-5 [.light_&]:border-slate-200/80 [.light_&]:bg-slate-50/70">
+                <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 [.light_&]:bg-slate-200/80 text-xs font-bold text-cyan [.light_&]:text-cyan-700">
                   {s.number}
                 </span>
-                <s.icon className="mt-4 h-5 w-5 text-cyan" />
-                <div className="mt-2 font-display text-base font-semibold">{s.title}</div>
-                <p className="mt-1 text-sm text-muted-foreground">{s.desc}</p>
+                <s.icon className="mt-4 h-5 w-5 text-cyan [.light_&]:text-cyan-600" />
+                <div className="mt-2 font-display text-base font-semibold [.light_&]:text-slate-900">{s.title}</div>
+                <p className="mt-1 text-sm text-muted-foreground [.light_&]:text-slate-700">{s.desc}</p>
               </div>
             ))}
           </div>
@@ -162,36 +162,36 @@ function HelpPage() {
 
         {/* Guides */}
         <section className="mt-10">
-          <h2 className="font-display text-xl font-semibold">Guides</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h2 className="font-display text-xl font-semibold [.light_&]:text-slate-900">Guides</h2>
+          <p className="mt-1 text-sm text-muted-foreground [.light_&]:text-slate-600 [.light_&]:font-medium">
             Step-by-step instructions for common tasks.
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="glass card-elevated rounded-2xl p-6">
-              <div className="flex items-center gap-2 text-cyan">
+            <div className="glass card-elevated rounded-2xl p-6 [.light_&]:border-slate-200/80 [.light_&]:bg-slate-50/70">
+              <div className="flex items-center gap-2 text-cyan [.light_&]:text-cyan-700">
                 <Bookmark className="h-5 w-5" />
-                <div className="text-xs uppercase tracking-widest">Guide</div>
+                <div className="text-xs uppercase tracking-widest [.light_&]:font-bold">Guide</div>
               </div>
-              <div className="mt-3 font-display text-base font-semibold">How do I save data?</div>
-              <ol className="mt-3 list-inside list-decimal space-y-1.5 text-sm text-muted-foreground">
+              <div className="mt-3 font-display text-base font-semibold [.light_&]:text-slate-900">How do I save data?</div>
+              <ol className="mt-3 list-inside list-decimal space-y-1.5 text-sm text-muted-foreground [.light_&]:text-slate-700">
                 <li>Find a result you want to keep from the search results or dataset detail page.</li>
                 <li>Click the bookmark icon on that result.</li>
                 <li>The item is instantly saved to your account.</li>
-                <li>View all saved items under <strong>Saved &amp; Collections</strong> in the sidebar.</li>
+                <li>View all saved items under <strong className="[.light_&]:text-slate-900 [.light_&]:font-bold">Saved &amp; Collections</strong> in the sidebar.</li>
               </ol>
             </div>
-            <div className="glass card-elevated rounded-2xl p-6">
-              <div className="flex items-center gap-2 text-cyan">
+            <div className="glass card-elevated rounded-2xl p-6 [.light_&]:border-slate-200/80 [.light_&]:bg-slate-50/70">
+              <div className="flex items-center gap-2 text-cyan [.light_&]:text-cyan-700">
                 <FolderOpen className="h-5 w-5" />
-                <div className="text-xs uppercase tracking-widest">Guide</div>
+                <div className="text-xs uppercase tracking-widest [.light_&]:font-bold">Guide</div>
               </div>
-              <div className="mt-3 font-display text-base font-semibold">
+              <div className="mt-3 font-display text-base font-semibold [.light_&]:text-slate-900">
                 How do I create a Collection?
               </div>
-              <ol className="mt-3 list-inside list-decimal space-y-1.5 text-sm text-muted-foreground">
-                <li>Go to <strong>Saved &amp; Collections</strong> in the sidebar.</li>
-                <li>Switch to the <strong>Collections</strong> tab.</li>
-                <li>Enter a name for your collection and click <strong>Create</strong>.</li>
+              <ol className="mt-3 list-inside list-decimal space-y-1.5 text-sm text-muted-foreground [.light_&]:text-slate-700">
+                <li>Go to <strong className="[.light_&]:text-slate-900 [.light_&]:font-bold">Saved &amp; Collections</strong> in the sidebar.</li>
+                <li>Switch to the <strong className="[.light_&]:text-slate-900 [.light_&]:font-bold">Collections</strong> tab.</li>
+                <li>Enter a name for your collection and click <strong className="[.light_&]:text-slate-900 [.light_&]:font-bold">Create</strong>.</li>
                 <li>Add saved items into your collection to keep research organized by topic.</li>
               </ol>
             </div>
@@ -200,18 +200,18 @@ function HelpPage() {
 
         {/* FAQs */}
         <section className="mt-10">
-          <h2 className="font-display text-xl font-semibold">Frequently asked questions</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h2 className="font-display text-xl font-semibold [.light_&]:text-slate-900">Frequently asked questions</h2>
+          <p className="mt-1 text-sm text-muted-foreground [.light_&]:text-slate-600 [.light_&]:font-medium">
             Quick answers to the most common questions.
           </p>
-          <div className="mt-4 glass card-elevated rounded-2xl divide-y divide-white/5">
+          <div className="mt-4 glass card-elevated rounded-2xl divide-y divide-white/5 [.light_&]:divide-slate-200 [.light_&]:border-slate-200/80 [.light_&]:bg-slate-50/70">
             <Accordion type="multiple" className="px-6">
               {faqs.map((faq, i) => (
-                <AccordionItem key={i} value={`faq-${i}`}>
-                  <AccordionTrigger className="text-sm font-medium">
+                <AccordionItem key={i} value={`faq-${i}`} className="[.light_&]:border-slate-200">
+                  <AccordionTrigger className="text-sm font-medium [.light_&]:text-slate-900 [.light_&]:font-semibold">
                     {faq.q}
                   </AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground">
+                  <AccordionContent className="text-sm text-muted-foreground [.light_&]:text-slate-700">
                     {faq.a}
                   </AccordionContent>
                 </AccordionItem>
@@ -222,14 +222,14 @@ function HelpPage() {
 
         {/* Support */}
         <section className="mt-10">
-          <div className="glass card-elevated rounded-2xl border border-cyan/20 bg-gradient-to-br from-cyan/5 to-transparent p-6">
+          <div className="glass card-elevated rounded-2xl border border-cyan/20 bg-gradient-to-br from-cyan/5 to-transparent [.light_&]:border-cyan-500/30 [.light_&]:bg-cyan-500/10 p-6">
             <div className="flex items-center gap-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cyan/20">
-                <Mail className="h-5 w-5 text-cyan" />
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cyan/20 [.light_&]:bg-cyan-500/20">
+                <Mail className="h-5 w-5 text-cyan [.light_&]:text-cyan-700" />
               </span>
               <div>
-                <div className="font-display text-base font-semibold">Still need help?</div>
-                <p className="mt-0.5 text-sm text-muted-foreground">
+                <div className="font-display text-base font-semibold [.light_&]:text-slate-900">Still need help?</div>
+                <p className="mt-0.5 text-sm text-muted-foreground [.light_&]:text-slate-700">
                   Our team typically responds within 1–2 business days.
                 </p>
               </div>
@@ -238,7 +238,7 @@ function HelpPage() {
             {!showForm ? (
               <button
                 onClick={() => setShowForm(true)}
-                className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-5 py-2.5 text-sm font-medium text-[oklch(0.15_0.03_258)] transition hover:opacity-90"
+                className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-5 py-2.5 text-sm font-medium text-[oklch(0.15_0.03_258)] transition hover:opacity-90 shadow-sm"
               >
                 <Mail className="h-4 w-4" />
                 Submit a support ticket
@@ -246,8 +246,8 @@ function HelpPage() {
             ) : (
               <form onSubmit={handleSubmit} className="mt-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs font-semibold uppercase tracking-widest text-cyan">New support ticket</div>
-                  <button type="button" onClick={() => { setShowForm(false); setSubject(""); setMessage(""); }} className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground hover:bg-white/10 hover:text-foreground transition">
+                  <div className="text-xs font-semibold uppercase tracking-widest text-cyan [.light_&]:text-cyan-700">New support ticket</div>
+                  <button type="button" onClick={() => { setShowForm(false); setSubject(""); setMessage(""); }} className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground [.light_&]:text-slate-600 hover:bg-white/10 [.light_&]:hover:bg-slate-200 hover:text-foreground transition">
                     <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -256,7 +256,7 @@ function HelpPage() {
                   onChange={(e) => setSubject(e.target.value)}
                   placeholder="Subject"
                   required
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/70 focus:border-cyan/50"
+                  className="w-full rounded-xl border border-white/10 [.light_&]:border-slate-300 bg-white/5 [.light_&]:bg-white px-3 py-2 text-sm outline-none text-foreground [.light_&]:text-slate-900 placeholder:text-muted-foreground/70 [.light_&]:placeholder:text-slate-400 focus:border-cyan/50"
                 />
                 <textarea
                   value={message}
@@ -264,16 +264,16 @@ function HelpPage() {
                   placeholder="Describe your issue or question..."
                   rows={4}
                   required
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/70 focus:border-cyan/50 resize-none"
+                  className="w-full rounded-xl border border-white/10 [.light_&]:border-slate-300 bg-white/5 [.light_&]:bg-white px-3 py-2 text-sm outline-none text-foreground [.light_&]:text-slate-900 placeholder:text-muted-foreground/70 [.light_&]:placeholder:text-slate-400 focus:border-cyan/50 resize-none"
                 />
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-[11px] text-muted-foreground">
-                    {user?.email ? <>Ticket will be sent from <strong>{user.email}</strong></> : 'Sign in to submit a ticket'}
+                  <span className="text-[11px] text-muted-foreground [.light_&]:text-slate-600">
+                    {user?.email ? <>Ticket will be sent from <strong className="[.light_&]:text-slate-900">{user.email}</strong></> : 'Sign in to submit a ticket'}
                   </span>
                   <button
                     type="submit"
                     disabled={sending || !subject.trim() || !message.trim()}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-xs font-medium text-[oklch(0.15_0.03_258)] transition hover:opacity-90 disabled:opacity-40"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-4 py-2 text-xs font-medium text-[oklch(0.15_0.03_258)] transition hover:opacity-90 disabled:opacity-40 shadow-sm"
                   >
                     {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                     {sending ? 'Sending...' : 'Send'}
