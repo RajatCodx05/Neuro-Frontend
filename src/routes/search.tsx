@@ -641,17 +641,17 @@ function SearchResults() {
 
         {/* FR-7: conflicting filter selection — never silently re-runs search. */}
         {conflict && (
-          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm">
-            <Info className="h-4 w-4 shrink-0 text-amber-400" />
-            <span className="flex-1 min-w-0 text-amber-100/90">
-              Your selection <span className="font-medium text-amber-200">{conflict.values.join(", ")}</span> on{" "}
-              <span className="font-medium text-amber-200">{FILTER_DIMENSION_LABELS[conflict.dimension]}</span>{" "}
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 [.light_&]:border-amber-400/60 [.light_&]:bg-amber-50/90 px-4 py-3 text-sm">
+            <Info className="h-4 w-4 shrink-0 text-amber-400 [.light_&]:text-amber-700" />
+            <span className="flex-1 min-w-0 text-amber-100/90 [.light_&]:text-amber-950">
+              Your selection <span className="font-medium text-amber-200 [.light_&]:text-amber-900 [.light_&]:font-bold">{conflict.values.join(", ")}</span> on{" "}
+              <span className="font-medium text-amber-200 [.light_&]:text-amber-900 [.light_&]:font-bold">{FILTER_DIMENSION_LABELS[conflict.dimension]}</span>{" "}
               conflicts with what the AI understood from your query. Filters apply to the current results only —
               search again to look beyond them?
             </span>
             <button
               onClick={() => void expandSearch()}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-3 py-1.5 text-xs font-medium text-[oklch(0.15_0.03_258)]"
+              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-3 py-1.5 text-xs font-semibold text-[oklch(0.15_0.03_258)] hover:opacity-90 transition-opacity shadow-sm"
             >
               Search again using these filters <ArrowRight className="h-3 w-3" />
             </button>
@@ -660,15 +660,15 @@ function SearchResults() {
 
         {/* FR-6: filtered pool at/below the low watermark — explicit expanded search. */}
         {restrictHint && !conflict && (
-          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-cyan/30 bg-cyan/10 px-4 py-3 text-sm">
-            <Info className="h-4 w-4 shrink-0 text-cyan" />
-            <span className="flex-1 min-w-0 text-foreground/90">
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-cyan/30 bg-cyan/10 [.light_&]:border-cyan-400/50 [.light_&]:bg-cyan-50/90 px-4 py-3 text-sm">
+            <Info className="h-4 w-4 shrink-0 text-cyan [.light_&]:text-cyan-700" />
+            <span className="flex-1 min-w-0 text-foreground/90 [.light_&]:text-slate-900">
               Showing {filteredResults.length} of the original {baselineCount} results. Filters apply to the
               current results only — search the entire database using these filters?
             </span>
             <button
               onClick={() => void expandSearch()}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-3 py-1.5 text-xs font-medium text-[oklch(0.15_0.03_258)]"
+              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] px-3 py-1.5 text-xs font-semibold text-[oklch(0.15_0.03_258)] hover:opacity-90 transition-opacity shadow-sm"
             >
               Search entire database <ArrowRight className="h-3 w-3" />
             </button>
