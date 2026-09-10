@@ -121,9 +121,7 @@ function SearchResults() {
   const [dislikeTarget, setDislikeTarget] = useState<{ id: string; name: string } | null>(null);
   const [msgIndex, setMsgIndex] = useState(0);
   const loadingMessages = [
-    "Searching Datasets for You",
-    "Scanning Neural Pathways",
-    "Analyzing the Results"
+    "Searching Datasets for You"
   ];
 
   // v0.3 G1: streaming is driven by the state machine — the pipeline runs only
