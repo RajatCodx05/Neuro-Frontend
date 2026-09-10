@@ -13,12 +13,15 @@ import {
   Database,
   Layers,
   ShieldCheck,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
 import { useSearchState } from "@/lib/search-state";
-import { api, type SearchResult } from "@/lib/api-client";
+import { api, type DatasetReactionSummary, type SearchResult } from "@/lib/api-client";
 import { licenseDisplayLabel, modalityDisplayLabel } from "@/lib/search-filters";
+import { DislikeFeedbackModal, type DislikeReasonId } from "@/components/app/DislikeFeedbackModal";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dataset/$id")({
@@ -216,6 +219,13 @@ function DatasetPage() {
   const [d, setD] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
+  const [reactionSummary, setReactionSummary] = useState<DatasetReactionSummary>({
+    datasetId: id,
+    likes: 0,
+    dislikes: 0,
+    userReaction: null,
+  });
+  const [dislikeModalOpen, setDislikeModalOpen] = useState(false);
   const { filteredResults } = useSearchState();
   // Read the latest search pool without re-triggering the fetch effect.
   const filteredResultsRef = useRef(filteredResults);
@@ -264,6 +274,89 @@ function DatasetPage() {
       })
       .catch(() => {});
   }, [user, d?.id]);
+
+  const fetchReactionSummary = (datasetId: string) => {
+    api.datasets.reactions
+      .getBatch([datasetId])
+      .then((batch) => {
+        if (batch[datasetId]) setReactionSummary(batch[datasetId]);
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    if (id) {
+      fetchReactionSummary(id);
+    }
+  }, [id, user]);
+
+  const handleLikeClick = async () => {
+    if (!user) {
+      navigate({ to: "/auth", search: { redirect: `/dataset/${id}`, mode: "login" } });
+      return;
+    }
+    const newReaction = reactionSummary.userReaction === "like" ? null : "like";
+    setReactionSummary((prev) => {
+      let likes = prev.likes;
+      let dislikes = prev.dislikes;
+      if (prev.userReaction === "like") likes--;
+      else if (prev.userReaction === "dislike") dislikes--;
+
+      if (newReaction === "like") likes++;
+      return { ...prev, likes: Math.max(0, likes), dislikes: Math.max(0, dislikes), userReaction: newReaction };
+    });
+
+    try {
+      const updated = await api.datasets.reactions.toggle(id, newReaction);
+      setReactionSummary(updated);
+    } catch {
+      toast.error("Failed to update reaction");
+      fetchReactionSummary(id);
+    }
+  };
+
+  const handleDislikeClick = () => {
+    if (!user) {
+      navigate({ to: "/auth", search: { redirect: `/dataset/${id}`, mode: "login" } });
+      return;
+    }
+    if (reactionSummary.userReaction === "dislike") {
+      setReactionSummary((prev) => ({
+        ...prev,
+        dislikes: Math.max(0, prev.dislikes - 1),
+        userReaction: null,
+      }));
+      api.datasets.reactions
+        .toggle(id, null)
+        .then(setReactionSummary)
+        .catch(() => {
+          fetchReactionSummary(id);
+        });
+    } else {
+      setDislikeModalOpen(true);
+    }
+  };
+
+  const handleDislikeSubmit = async (reason: DislikeReasonId, comment: string | null) => {
+    setReactionSummary((prev) => {
+      let likes = prev.likes;
+      let dislikes = prev.dislikes;
+      if (prev.userReaction === "like") likes--;
+      if (prev.userReaction === "dislike") dislikes--;
+      dislikes++;
+      return { ...prev, likes: Math.max(0, likes), dislikes: Math.max(0, dislikes), userReaction: "dislike" };
+    });
+    try {
+      const updated = await api.datasets.reactions.toggle(id, "dislike", reason, comment ?? undefined);
+      setReactionSummary(updated);
+      toast.success("Feedback submitted. Thank you!");
+    } catch {
+      toast.error("Failed to submit feedback");
+      fetchReactionSummary(id);
+    } finally {
+      setDislikeModalOpen(false);
+    }
+  };
 
   const save = async () => {
     if (!user) {
@@ -344,41 +437,74 @@ function DatasetPage() {
                 </span>
               )}
             </div> */}
-            <h1 className="mt-2 font-display text-2xl font-semibold sm:text-3xl leading-snug">
+            <h1 className="mt-2 font-display text-2xl font-semibold sm:text-3xl leading-snug text-foreground [.light_&]:text-slate-900">
               {d.name}
             </h1>
-            <div className="mt-6 flex flex-wrap gap-2.5">
-              {isSaved ? (
+            <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap gap-2.5">
+                {isSaved ? (
+                  <button
+                    disabled
+                    className="inline-flex items-center gap-1.5 rounded-full border border-green-500/30 px-4 py-2 text-xs font-medium text-green-400 bg-green-500/10 [.light_&]:border-green-600/40 [.light_&]:text-green-700 [.light_&]:bg-green-500/15 cursor-default"
+                  >
+                    <Check className="h-3.5 w-3.5" /> Saved
+                  </button>
+                ) : (
+                  <button
+                    onClick={save}
+                    className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium [.light_&]:border [.light_&]:border-slate-200 [.light_&]:bg-slate-100 [.light_&]:text-slate-700 [.light_&]:hover:bg-slate-200 transition-colors"
+                  >
+                    <Bookmark className="h-3.5 w-3.5" /> Save
+                  </button>
+                )}
                 <button
-                  disabled
-                  className="inline-flex items-center gap-1.5 rounded-full border border-green-500/30 px-4 py-2 text-xs font-medium text-green-400 bg-green-500/10 cursor-default"
+                  onClick={share}
+                  className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium [.light_&]:border [.light_&]:border-slate-200 [.light_&]:bg-slate-100 [.light_&]:text-slate-700 [.light_&]:hover:bg-slate-200 transition-colors"
                 >
-                  <Check className="h-3.5 w-3.5" /> Saved
+                  <Share2 className="h-3.5 w-3.5" /> Share
                 </button>
-              ) : (
+                {d.url && (
+                  <a
+                    href={d.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium hover:bg-white/10 transition-colors text-cyan [.light_&]:border [.light_&]:border-cyan-500/30 [.light_&]:bg-cyan-500/10 [.light_&]:text-cyan-700 [.light_&]:hover:bg-cyan-500/20"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" /> Access the Data
+                  </a>
+                )}
+              </div>
+
+              {/* Rating / Reaction buttons on the bottom-right side of the upper hero box */}
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 [.light_&]:border-slate-200 bg-white/5 [.light_&]:bg-slate-100/90 px-3 py-1.5 text-xs shadow-sm self-start sm:self-auto">
                 <button
-                  onClick={save}
-                  className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium hover:bg-white/10 transition-colors"
+                  type="button"
+                  onClick={handleLikeClick}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${
+                    reactionSummary.userReaction === "like"
+                      ? "text-cyan-400 [.light_&]:text-cyan-700 font-semibold"
+                      : "text-muted-foreground [.light_&]:text-slate-600 hover:text-foreground [.light_&]:hover:text-slate-900"
+                  }`}
+                  title="Like dataset rating"
                 >
-                  <Bookmark className="h-3.5 w-3.5" /> Save
+                  <ThumbsUp className="h-3.5 w-3.5" />
+                  <span>{reactionSummary.likes}</span>
                 </button>
-              )}
-              <button
-                onClick={share}
-                className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium hover:bg-white/10 transition-colors"
-              >
-                <Share2 className="h-3.5 w-3.5" /> Share
-              </button>
-              {d.url && (
-                <a
-                  href={d.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium hover:bg-white/10 transition-colors text-cyan"
+                <span className="h-3 w-[1px] bg-white/10 [.light_&]:bg-slate-300" />
+                <button
+                  type="button"
+                  onClick={handleDislikeClick}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${
+                    reactionSummary.userReaction === "dislike"
+                      ? "text-rose-400 [.light_&]:text-rose-700 font-semibold"
+                      : "text-muted-foreground [.light_&]:text-slate-600 hover:text-foreground [.light_&]:hover:text-slate-900"
+                  }`}
+                  title="Report an issue / Dislike dataset"
                 >
-                  <ExternalLink className="h-3.5 w-3.5" /> Access the Data
-                </a>
-              )}
+                  <ThumbsDown className="h-3.5 w-3.5" />
+                  <span>{reactionSummary.dislikes}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -412,12 +538,12 @@ function DatasetPage() {
                     {specs.map(([label, value, isModality]) => (
                       <div
                         key={label}
-                        className="rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2.5 transition-colors hover:border-white/10 min-w-0"
+                        className="rounded-xl border border-white/5 [.light_&]:border-slate-200/80 bg-white/[0.02] [.light_&]:bg-slate-100/70 px-3 py-2.5 transition-colors hover:border-white/10 [.light_&]:hover:border-slate-300 min-w-0"
                       >
-                        <div className="text-[9px] uppercase tracking-widest text-muted-foreground font-mono truncate">
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground [.light_&]:text-slate-600 font-mono [.light_&]:font-sans [.light_&]:font-bold truncate">
                           {label}
                         </div>
-                        <div className={`mt-1 text-[11px] font-medium text-foreground break-words leading-snug ${isModality || value === "N/A" ? "" : "capitalize"}`}>
+                        <div className={`mt-1 text-[11px] font-medium text-foreground [.light_&]:text-slate-900 [.light_&]:font-semibold break-words leading-snug ${isModality || value === "N/A" ? "" : "capitalize"}`}>
                           {isModality && value !== "N/A" ? modalityDisplayLabel(value) : value}
                         </div>
                       </div>
@@ -430,7 +556,7 @@ function DatasetPage() {
             {/* Structured Overview & Description Section */}
             <Section title="Overview & Description">
               {descriptionBlocks.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">
+                <p className="text-sm text-muted-foreground [.light_&]:text-slate-500 italic">
                   No detailed description available for this dataset.
                 </p>
               ) : (
@@ -438,8 +564,8 @@ function DatasetPage() {
                   {descriptionBlocks.map((block, idx) => {
                     if (block.type === "heading") {
                       return (
-                        <div key={idx} className="border-b border-white/10 pb-2 pt-3 first:pt-0">
-                          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <div key={idx} className="border-b border-white/10 [.light_&]:border-black/10 pb-2 pt-3 first:pt-0">
+                          <h3 className="text-sm font-semibold text-foreground [.light_&]:text-slate-900 flex items-center gap-2">
                             <FileText className="h-4 w-4 text-cyan shrink-0" />
                             <span>{block.text}</span>
                           </h3>
@@ -452,7 +578,7 @@ function DatasetPage() {
                           {block.items.map((item, itemIdx) => (
                             <li
                               key={itemIdx}
-                              className="text-sm leading-relaxed text-muted-foreground flex items-start gap-2.5"
+                              className="text-sm leading-relaxed text-muted-foreground [.light_&]:text-slate-700 flex items-start gap-2.5"
                             >
                               <span className="inline-block h-1.5 w-1.5 rounded-full bg-cyan shrink-0 mt-2" />
                               <span>{item}</span>
@@ -464,7 +590,7 @@ function DatasetPage() {
                     return (
                       <p
                         key={idx}
-                        className="text-sm leading-relaxed text-muted-foreground text-justify sm:text-left break-words"
+                        className="text-sm leading-relaxed text-muted-foreground [.light_&]:text-slate-700 text-justify sm:text-left break-words"
                       >
                         {block.text}
                       </p>
@@ -485,25 +611,25 @@ function DatasetPage() {
                   {d.repo.slice(0, 3)}
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-foreground">{d.repo}</div>
+                  <div className="text-sm font-medium text-foreground [.light_&]:text-slate-900 [.light_&]:font-semibold">{d.repo}</div>
                 </div>
               </div>
             </Section>
 
             <Section title="Access & Licensing">
               <div className="space-y-2.5 text-xs">
-                <div className="flex justify-between py-1.5 border-b border-white/5">
-                  <span className="text-muted-foreground">License</span>
-                  <span className="font-medium text-foreground">{licenseDisplayLabel(d.license ?? "Open Data")}</span>
+                <div className="flex justify-between py-1.5 border-b border-white/5 [.light_&]:border-black/10">
+                  <span className="text-muted-foreground [.light_&]:text-slate-600 [.light_&]:font-medium">License</span>
+                  <span className="font-medium text-foreground [.light_&]:text-slate-900 [.light_&]:font-semibold">{licenseDisplayLabel(d.license ?? "Open Data")}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-white/5">
-                  <span className="text-muted-foreground">Access Tier</span>
-                  <span className="font-medium text-foreground uppercase">{d.access ?? "Open"}</span>
+                <div className="flex justify-between py-1.5 border-b border-white/5 [.light_&]:border-black/10">
+                  <span className="text-muted-foreground [.light_&]:text-slate-600 [.light_&]:font-medium">Access Tier</span>
+                  <span className="font-medium text-foreground [.light_&]:text-slate-900 [.light_&]:font-semibold uppercase">{d.access ?? "Open"}</span>
                 </div>
                 {d.doi && (
-                  <div className="flex justify-between py-1.5 border-b border-white/5">
-                    <span className="text-muted-foreground">DOI</span>
-                    <span className="truncate max-w-[150px] font-mono text-cyan">{d.doi}</span>
+                  <div className="flex justify-between py-1.5 border-b border-white/5 [.light_&]:border-black/10">
+                    <span className="text-muted-foreground [.light_&]:text-slate-600 [.light_&]:font-medium">DOI</span>
+                    <span className="truncate max-w-[150px] font-mono text-cyan [.light_&]:text-cyan-700 [.light_&]:font-semibold">{d.doi}</span>
                   </div>
                 )}
               </div>
@@ -511,18 +637,18 @@ function DatasetPage() {
 
             {/* Citation Box */}
             <Section title="Citation & Reference">
-              <div className="rounded-xl bg-white/5 p-4 font-mono text-xs text-muted-foreground">
+              <div className="rounded-xl bg-white/5 [.light_&]:bg-slate-100/90 border border-white/5 [.light_&]:border-slate-200 p-4 font-mono text-xs text-muted-foreground [.light_&]:text-slate-700">
                 Author, A. et al. ({new Date().getFullYear()}).{" "}
-                <span className="text-foreground">{d.name}</span>. {d.repo}.
+                <span className="text-foreground [.light_&]:text-slate-900 [.light_&]:font-semibold">{d.name}</span>. {d.repo}.
                 {d.doi ? ` doi:${d.doi}` : ""}
-                <div className="mt-3 border-t border-white/5 pt-2.5">
+                <div className="mt-3 border-t border-white/5 [.light_&]:border-slate-200/80 pt-2.5">
                   <button
                     onClick={() => {
                       const text = `Author, A. et al. (${new Date().getFullYear()}). ${d.name}. ${d.repo}.${d.doi ? ` doi:${d.doi}` : ""}`;
                       navigator.clipboard.writeText(text);
                       toast.success("Citation copied to clipboard");
                     }}
-                    className="inline-flex items-center gap-1.5 text-xs text-cyan hover:underline font-sans"
+                    className="inline-flex items-center gap-1.5 text-xs text-cyan [.light_&]:text-cyan-700 hover:underline font-sans [.light_&]:font-semibold"
                   >
                     <Copy className="h-3 w-3" /> Copy Citation
                   </button>
@@ -532,6 +658,13 @@ function DatasetPage() {
           </div>
         </div>
       </div>
+      {dislikeModalOpen && (
+        <DislikeFeedbackModal
+          datasetName={d.name}
+          onSubmit={handleDislikeSubmit}
+          onCancel={() => setDislikeModalOpen(false)}
+        />
+      )}
     </AppShell>
   );
 }
@@ -539,7 +672,7 @@ function DatasetPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="glass card-elevated rounded-2xl p-5 sm:p-6">
-      <div className="text-xs uppercase tracking-widest text-muted-foreground font-mono">
+      <div className="text-xs uppercase tracking-widest text-muted-foreground [.light_&]:text-slate-600 font-mono [.light_&]:font-sans [.light_&]:font-semibold">
         {title}
       </div>
       <div className="mt-3.5">{children}</div>
