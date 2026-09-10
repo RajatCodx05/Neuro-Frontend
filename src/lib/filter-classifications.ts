@@ -185,24 +185,30 @@ function matchDiseaseToken(token: string): typeof DISEASE_CANONICAL[number] | nu
 }
 
 /**
- * Classify a dataset into exactly one Disease bucket.
+ * Classify a dataset into one or more Disease buckets (multi-bucket).
  * rawDisease: structured disease field (string or array).
  * rawKeywords: keywords array (secondary evidence).
+ *
+ * ponytail: collect all matching canonical buckets without early-exit.
  */
-export function classifyDisease(rawDisease: unknown, rawKeywords: unknown): DiseaseBucket {
+export function classifyDisease(rawDisease: unknown, rawKeywords: unknown): DiseaseBucket[] {
+  const matches = new Set<DiseaseBucket>();
+
   const diseaseValues = expandRaw(rawDisease);
   for (const v of diseaseValues) {
     const match = matchDiseaseToken(v);
-    if (match) return match;
+    if (match) matches.add(match);
   }
   const kwValues = expandRaw(rawKeywords);
   for (const v of kwValues) {
     const match = matchDiseaseToken(v);
-    if (match) return match;
+    if (match) matches.add(match);
   }
+
+  if (matches.size > 0) return Array.from(matches);
   // Has content but didn't match canonical → Others
-  if (diseaseValues.length > 0) return "Others";
-  return "Unspecified";
+  if (diseaseValues.length > 0) return ["Others"];
+  return ["Unspecified"];
 }
 
 // ─── M5: Species ─────────────────────────────────────────────────────────────

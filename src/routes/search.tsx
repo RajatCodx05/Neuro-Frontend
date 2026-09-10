@@ -633,7 +633,7 @@ function SearchResults() {
                     : "border border-white/10 [.light_&]:border-slate-200/80 bg-white/5 [.light_&]:bg-slate-100/80 text-muted-foreground [.light_&]:text-slate-600 hover:text-foreground [.light_&]:hover:text-slate-900 [.light_&]:hover:bg-slate-200/80"
                 }`}
               >
-                RESEARCH PAPERS/ARTICLES {literatureResults.length ? `(${literatureResults.length})` : literatureStatus === "loading" ? "(...)" : literatureStatus === "loaded" ? "(0)" : "(On Hold)"}
+                RESEARCH PAPERS {literatureResults.length ? `(${literatureResults.length})` : literatureStatus === "loading" ? "(...)" : literatureStatus === "loaded" ? "(0)" : "(On Hold)"}
               </button>
             </div>
           </div>
