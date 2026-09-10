@@ -5,7 +5,7 @@ type Ctx = { theme: Theme; toggle: () => void; setTheme: (t: Theme) => void };
 
 const THEME_STORAGE_KEY = "neuro_theme";
 
-const ThemeCtx = createContext<Ctx>({ theme: "dark", toggle: () => {}, setTheme: () => {} });
+const ThemeCtx = createContext<Ctx>({ theme: "light", toggle: () => {}, setTheme: () => {} });
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
@@ -13,7 +13,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       const saved = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
       if (saved === "light" || saved === "dark") return saved;
     }
-    return "dark";
+    return "light";
   });
 
   useEffect(() => {
