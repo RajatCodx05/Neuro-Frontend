@@ -15,13 +15,17 @@ import {
   ShieldCheck,
   ThumbsUp,
   ThumbsDown,
+  FolderPlus,
+  FolderOpen,
+  Plus,
 } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
 import { useSearchState } from "@/lib/search-state";
-import { api, type DatasetReactionSummary, type SearchResult } from "@/lib/api-client";
+import { api, type DatasetReactionSummary, type SearchResult, type Collection, type SavedDataset } from "@/lib/api-client";
 import { licenseDisplayLabel, modalityDisplayLabel } from "@/lib/search-filters";
 import { DislikeFeedbackModal, type DislikeReasonId } from "@/components/app/DislikeFeedbackModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dataset/$id")({
@@ -226,6 +230,12 @@ function DatasetPage() {
     userReaction: null,
   });
   const [dislikeModalOpen, setDislikeModalOpen] = useState(false);
+  const [addColDialogOpen, setAddColDialogOpen] = useState(false);
+  const [userCollections, setUserCollections] = useState<Collection[]>([]);
+  const [collectionsLoading, setCollectionsLoading] = useState(false);
+  const [addingToColId, setAddingToColId] = useState<string | null>(null);
+  const [newColName, setNewColName] = useState("");
+  const [creatingCol, setCreatingCol] = useState(false);
   const { filteredResults } = useSearchState();
   // Read the latest search pool without re-triggering the fetch effect.
   const filteredResultsRef = useRef(filteredResults);
@@ -385,6 +395,71 @@ function DatasetPage() {
     toast.success("Copied to Clipboard");
   };
 
+  const handleAddToCollectionClick = async () => {
+    if (!user) {
+      navigate({ to: "/auth", search: { redirect: `/dataset/${id}`, mode: "login" } });
+      return;
+    }
+    if (!d) return;
+    setAddColDialogOpen(true);
+    setCollectionsLoading(true);
+    try {
+      if (!isSaved) {
+        await api.savedDatasets.upsert({ dataset_id: d.id, dataset_snapshot: JSON.parse(JSON.stringify(d)) });
+        setIsSaved(true);
+      }
+      const list = await api.collections.list();
+      setUserCollections(list);
+    } catch {
+      toast.error("Failed to load collections");
+    } finally {
+      setCollectionsLoading(false);
+    }
+  };
+
+  const handleSelectCollection = async (col: Collection) => {
+    if (!d) return;
+    setAddingToColId(col.id);
+    try {
+      const savedList = await api.savedDatasets.list();
+      const savedRecord = savedList.find((item) => item.dataset_id === d.id || item.id === d.id);
+      if (!savedRecord) {
+        throw new Error("Dataset is not saved in your library yet.");
+      }
+      await api.collections.addItem(col.id, savedRecord.id);
+      toast.success(`Added to collection "${col.name}"`);
+      setAddColDialogOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add to collection");
+    } finally {
+      setAddingToColId(null);
+    }
+  };
+
+  const handleCreateAndAddToCollection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newColName.trim() || !d) return;
+    setCreatingCol(true);
+    try {
+      const created = await api.collections.create(newColName.trim());
+      setNewColName("");
+      setUserCollections((prev) => [...prev, created]);
+      const savedList = await api.savedDatasets.list();
+      const savedRecord = savedList.find((item) => item.dataset_id === d.id || item.id === d.id);
+      if (savedRecord) {
+        await api.collections.addItem(created.id, savedRecord.id);
+        toast.success(`Created collection "${created.name}" and added dataset`);
+      } else {
+        toast.success(`Created collection "${created.name}"`);
+      }
+      setAddColDialogOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create collection");
+    } finally {
+      setCreatingCol(false);
+    }
+  };
+
   if (loading) {
     return (
       <AppShell>
@@ -457,6 +532,12 @@ function DatasetPage() {
                     <Bookmark className="h-3.5 w-3.5" /> Save
                   </button>
                 )}
+                <button
+                  onClick={handleAddToCollectionClick}
+                  className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-semibold text-cyan [.light_&]:border [.light_&]:border-slate-200 [.light_&]:bg-slate-100 [.light_&]:text-cyan-700 [.light_&]:hover:bg-slate-200 transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add
+                </button>
                 <button
                   onClick={share}
                   className="inline-flex items-center gap-1.5 rounded-full glass px-4 py-2 text-xs font-medium [.light_&]:border [.light_&]:border-slate-200 [.light_&]:bg-slate-100 [.light_&]:text-slate-700 [.light_&]:hover:bg-slate-200 transition-colors"
@@ -665,6 +746,73 @@ function DatasetPage() {
           onCancel={() => setDislikeModalOpen(false)}
         />
       )}
+      <Dialog open={addColDialogOpen} onOpenChange={setAddColDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-slate-900 border-slate-800 text-slate-100 [.light_&]:bg-white [.light_&]:border-slate-200 [.light_&]:text-slate-900">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-semibold text-slate-100 [.light_&]:text-slate-900">
+              <FolderPlus className="h-4 w-4 text-cyan-500" /> Add to Collection
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="mt-2 space-y-4">
+            <form onSubmit={handleCreateAndAddToCollection} className="flex gap-2">
+              <input
+                type="text"
+                placeholder="New collection name..."
+                value={newColName}
+                onChange={(e) => setNewColName(e.target.value)}
+                className="flex-1 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:border-cyan-500 focus:outline-none [.light_&]:border-slate-300 [.light_&]:bg-slate-50 [.light_&]:text-slate-900 [.light_&]:placeholder:text-slate-400"
+              />
+              <button
+                type="submit"
+                disabled={creatingCol || !newColName.trim()}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-50 transition-colors"
+              >
+                {creatingCol ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                Create & Add
+              </button>
+            </form>
+
+            <div className="border-t border-slate-800 [.light_&]:border-slate-200 pt-3">
+              <span className="text-xs font-medium text-slate-400 [.light_&]:text-slate-500 uppercase tracking-wider">
+                Select Existing Collection
+              </span>
+              {collectionsLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                </div>
+              ) : userCollections.length === 0 ? (
+                <p className="mt-2 text-xs text-slate-400 [.light_&]:text-slate-500">
+                  No collections created yet. Create one above!
+                </p>
+              ) : (
+                <div className="mt-2.5 max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                  {userCollections.map((col) => (
+                    <button
+                      key={col.id}
+                      onClick={() => handleSelectCollection(col)}
+                      disabled={addingToColId === col.id}
+                      className="w-full flex items-center justify-between rounded-lg p-2.5 text-xs text-slate-200 hover:bg-slate-800/80 [.light_&]:text-slate-800 [.light_&]:hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-700/50 [.light_&]:hover:border-slate-300"
+                    >
+                      <div className="flex items-center gap-2">
+                        <FolderOpen className="h-4 w-4 text-cyan-400 [.light_&]:text-cyan-600" />
+                        <span className="font-medium">{col.name}</span>
+                      </div>
+                      {addingToColId === col.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
+                      ) : (
+                        <span className="text-[11px] text-cyan-400 [.light_&]:text-cyan-600 font-medium">
+                          + Select
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
