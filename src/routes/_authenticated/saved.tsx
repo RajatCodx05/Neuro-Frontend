@@ -39,6 +39,8 @@ function SavedPage() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addDialogDatasetId, setAddDialogDatasetId] = useState<string | null>(null);
   const [addToColId, setAddToColId] = useState<string | null>(null);
+  const [dialogNewColName, setDialogNewColName] = useState("");
+  const [dialogCreatingCol, setDialogCreatingCol] = useState(false);
 
   const load = async () => {
     if (!user) return;
@@ -177,6 +179,26 @@ function SavedPage() {
   const openAddDialog = (savedDatasetId: string) => {
     setAddDialogDatasetId(savedDatasetId);
     setAddDialogOpen(true);
+  };
+
+  const createAndAddToCollectionFromDialog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dialogNewColName.trim() || !addDialogDatasetId) return;
+    const name = dialogNewColName.trim();
+    setDialogCreatingCol(true);
+    try {
+      const created = await api.collections.create(name);
+      setDialogNewColName("");
+      setCollections((prev) => [...prev, created]);
+      await api.collections.addItem(created.id, addDialogDatasetId);
+      toast.success(`Created collection "${created.name}" and added dataset`);
+      setAddDialogOpen(false);
+      setAddDialogDatasetId(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create collection");
+    } finally {
+      setDialogCreatingCol(false);
+    }
   };
 
   const removeFromCollection = async (savedDatasetId: string) => {
@@ -536,39 +558,77 @@ function SavedPage() {
 
 
       {/* Add to Collection Dialog */}
-      <Dialog open={addDialogOpen} onOpenChange={(open) => { if (!open) { setAddDialogOpen(false); setAddDialogDatasetId(null); } }}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog
+        open={addDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAddDialogOpen(false);
+            setAddDialogDatasetId(null);
+            setDialogNewColName("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md bg-slate-900 border-slate-800 text-slate-100 [.light_&]:bg-white [.light_&]:border-slate-200 [.light_&]:text-slate-900">
           <DialogHeader>
-            <DialogTitle>Add to Collection</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-base font-semibold text-slate-100 [.light_&]:text-slate-900">
+              <FolderPlus className="h-4 w-4 text-cyan-500" /> Add to Collection
+            </DialogTitle>
           </DialogHeader>
-          {collections.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 py-6 text-center">
-              <FolderOpen className="h-10 w-10 text-muted-foreground/50" />
-              <div>
-                <p className="text-sm font-medium text-amber-400">No Collections</p>
-                <p className="mt-1 text-xs text-muted-foreground">Create a Collection first to organize your saved datasets.</p>
-              </div>
+
+          <div className="mt-2 space-y-4">
+            {/* Create Collection Form */}
+            <form onSubmit={createAndAddToCollectionFromDialog} className="flex gap-2">
+              <input
+                type="text"
+                placeholder="New collection name..."
+                value={dialogNewColName}
+                onChange={(e) => setDialogNewColName(e.target.value)}
+                className="flex-1 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:border-cyan-500 focus:outline-none [.light_&]:border-slate-300 [.light_&]:bg-slate-50 [.light_&]:text-slate-900 [.light_&]:placeholder:text-slate-400"
+              />
+              <button
+                type="submit"
+                disabled={dialogCreatingCol || !dialogNewColName.trim()}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-50 transition-colors shrink-0"
+              >
+                {dialogCreatingCol ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                Create & Add
+              </button>
+            </form>
+
+            <div className="border-t border-slate-800 [.light_&]:border-slate-200 pt-3">
+              <span className="text-xs font-medium text-slate-400 [.light_&]:text-slate-500 uppercase tracking-wider">
+                Select Existing Collection
+              </span>
+              {collections.length === 0 ? (
+                <p className="mt-2 text-xs text-slate-400 [.light_&]:text-slate-500">
+                  No collections created yet. Create one above!
+                </p>
+              ) : (
+                <div className="mt-2.5 max-h-48 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
+                  {collections.map((col) => (
+                    <button
+                      key={col.id}
+                      onClick={() => addToCollectionFromDialog(col.id)}
+                      disabled={addToColId === col.id}
+                      className="w-full flex items-center justify-between rounded-lg p-2.5 text-xs text-slate-200 hover:bg-slate-800/80 [.light_&]:text-slate-800 [.light_&]:hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-700/50 [.light_&]:hover:border-slate-300"
+                    >
+                      <div className="flex items-center gap-2">
+                        <FolderOpen className="h-4 w-4 text-cyan-400 [.light_&]:text-cyan-600" />
+                        <span className="font-medium">{col.name}</span>
+                      </div>
+                      {addToColId === col.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
+                      ) : (
+                        <span className="text-[11px] text-cyan-400 [.light_&]:text-cyan-600 font-medium">
+                          + Select
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="space-y-2 py-2">
-              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground px-1">Choose a collection</p>
-              {collections.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => addToCollectionFromDialog(c.id)}
-                  disabled={addToColId === c.id}
-                  className="flex w-full items-center gap-3 rounded-xl border border-white/10 px-4 py-3 text-left text-sm transition-colors hover:border-cyan/30 hover:bg-white/5 disabled:opacity-50"
-                >
-                  <FolderOpen className="h-4 w-4 shrink-0 text-cyan" />
-                  <span className="flex-1 font-medium">{c.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {c.itemCount != null ? `${c.itemCount} item${c.itemCount !== 1 ? "s" : ""}` : ""}
-                  </span>
-                  {addToColId === c.id && <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan" />}
-                </button>
-              ))}
-            </div>
-          )}
+          </div>
         </DialogContent>
       </Dialog>
     </AppShell>
