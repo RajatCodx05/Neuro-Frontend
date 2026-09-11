@@ -126,9 +126,11 @@ function SearchResults() {
     "Analyzing the Results"
   ];
 
-  // v0.3 G1: streaming is driven by the state machine — the pipeline runs only
-  // on submit / initial load / explicit "Search entire database".
-  const streaming = mode === "searching" || mode === "expanding";
+  // Differentiate between fresh search loading (center loader, cleared results)
+  // and filter-triggered "Search again using these filters" / expanded loading (top-left inline loader, preserved results)
+  const isFreshLoading = mode === "searching";
+  const isFilterSearchAgainLoading = mode === "expanding";
+  const streaming = isFreshLoading || isFilterSearchAgainLoading;
 
   // Issue 3: the sidebar is CLOSED by default and opens only when the user
   // presses the "Filters" button (which persists `filters=true` in the URL).
@@ -581,12 +583,12 @@ function SearchResults() {
         {/* Single row: X datasets found on left | Tabs on right */}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
           <div>
-            {streaming ? (
+            {isFilterSearchAgainLoading ? (
               <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
                 <LottieSearchLoader className="h-4 w-4" /> {loadingMessages[msgIndex]}
                 <AnimatedDots />
               </span>
-            ) : activeTab === "papers" ? (
+            ) : isFreshLoading ? null : activeTab === "papers" ? (
               <div className="space-y-1">
                 <span className="font-medium text-foreground">
                   {literatureStatus === "loaded"
@@ -981,7 +983,7 @@ function SearchResults() {
               )
             ) : (
               <>
-            {streaming && filteredResults.length === 0 && (
+            {isFreshLoading && (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                 <LottieSearchLoader className="h-12 w-12" />
                 <span className="mt-4 text-sm">
@@ -991,7 +993,7 @@ function SearchResults() {
               </div>
             )}
 
-            {!streaming && filteredResults.length === 0 && (
+            {!isFreshLoading && !isFilterSearchAgainLoading && filteredResults.length === 0 && (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <SearchX className="h-8 w-8 text-muted-foreground/50" />
                 <p className="mt-3 text-sm text-muted-foreground">No sufficiently relevant datasets were found in our current catalog.</p>

@@ -26,7 +26,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { theme, toggle: toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  // Sidebar is collapsed by default and expands on hover
+  const collapsed = !isHovered;
 
   const isActive = (to: string) => to === "/" ? pathname === "/" : pathname.startsWith(to);
   const initials = (profile?.full_name || user?.email || "?").slice(0, 1).toUpperCase();
@@ -36,13 +39,17 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate({ to: "/" });
   };
 
-  const sidebarWidth = collapsed ? "w-16" : "w-60";
-  const mainPad = collapsed ? "md:pl-16" : "md:pl-60";
+  const sidebarWidth = collapsed ? "w-16" : "w-60 shadow-2xl";
+  const mainPad = "md:pl-16";
 
   return (
     <div className="relative min-h-screen">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-30 hidden ${sidebarWidth} flex-col border-r border-sidebar-border bg-sidebar/85 backdrop-blur-xl transition-all duration-200 hover:bg-sidebar-accent/20 md:flex`}>
+      <aside
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={`fixed inset-y-0 left-0 z-30 hidden ${sidebarWidth} flex-col border-r border-sidebar-border bg-sidebar/95 backdrop-blur-xl transition-all duration-200 md:flex`}
+      >
         <div className={`flex items-center ${collapsed ? "justify-center" : "justify-between"} px-3 py-5`}>
           <Link to="/" className="flex items-center gap-2">
             <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-[oklch(0.78_0.16_220)] to-[oklch(0.86_0.15_200)] glow-cyan shrink-0">
@@ -54,26 +61,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </span>
             )}
           </Link>
-          {!collapsed && (
-            <button
-              onClick={() => setCollapsed(true)}
-              className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors"
-              title="Collapse sidebar"
-            >
-              <PanelLeftClose className="h-4 w-4" />
-            </button>
-          )}
         </div>
-
-        {collapsed && (
-          <button
-            onClick={() => setCollapsed(false)}
-            className="mx-auto mb-2 grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors"
-            title="Expand sidebar"
-          >
-            <PanelLeft className="h-4 w-4" />
-          </button>
-        )}
 
         <nav className="flex-1 space-y-1 px-3">
           {nav.map((n) => {
