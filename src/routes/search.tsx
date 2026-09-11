@@ -8,6 +8,7 @@ import { AppShell } from "@/components/app/app-shell";
 import { useAuth } from "@/lib/auth-context";
 import { api, cleanSummaryText, type DatasetReactionSummary, type SearchResult, type LiteratureResult } from "@/lib/api-client";
 import { DislikeFeedbackModal, type DislikeReasonId } from "@/components/app/DislikeFeedbackModal";
+import { SearchResponseActionBar } from "@/components/app/SearchResponseActionBar";
 import { useSearchState } from "@/lib/search-state";
 import {
   FILTER_DIMENSIONS,
@@ -601,9 +602,29 @@ function SearchResults() {
                 </p>
               </div>
             ) : sourceFilteredResults.length > 0 ? (
-              <span className="font-medium text-foreground">{sourceFilteredResults.length} datasets found</span>
+              <div className="flex items-center gap-3">
+                <span className="font-medium text-foreground">{sourceFilteredResults.length} datasets found</span>
+                <SearchResponseActionBar
+                  query={search.q || ""}
+                  resultCount={sourceFilteredResults.length}
+                  activeFilters={activeFilters}
+                  onRefresh={() => {
+                    if (search.q) void runSearch(search.q, activeFilters);
+                  }}
+                />
+              </div>
             ) : search.q || hasActiveFilters ? (
-              <span><span className="font-medium text-foreground">0</span> datasets found</span>
+              <div className="flex items-center gap-3">
+                <span><span className="font-medium text-foreground">0</span> datasets found</span>
+                <SearchResponseActionBar
+                  query={search.q || ""}
+                  resultCount={0}
+                  activeFilters={activeFilters}
+                  onRefresh={() => {
+                    if (search.q) void runSearch(search.q, activeFilters);
+                  }}
+                />
+              </div>
             ) : null}
           </div>
 

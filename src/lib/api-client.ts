@@ -1260,7 +1260,22 @@ export const api = {
       return list.some((p) => this.getPaperId(p) === id);
     },
   },
+  searchFeedback: {
+    submit: (data: {
+      query: string;
+      filters?: Record<string, unknown>;
+      rating: "good" | "bad" | "none";
+      reasons?: string[];
+      comment?: string | null;
+      resultCount?: number;
+    }) =>
+      request<{ success: boolean }>("/query-logs/feedback", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+  },
   streamUrl: (queryId: string) => `${BASE_URL}/stream/${encodeURIComponent(queryId)}`,
   BASE_URL,
 };
+
 
